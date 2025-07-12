@@ -84,9 +84,10 @@ require_once "../includes/header.php";
     <!-- List of Existing Meetings -->
     <div class="table-container">
         <h3>تقویم اجرایی (جلسات ثبت شده)</h3>
-        <table class="table">
-            <thead>
-                <tr>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
                     <th>عنوان جلسه</th>
                     <th>تاریخ و زمان</th>
                     <th>سخنران</th>

@@ -72,7 +72,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>ورود به سامانه دبستان</title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body>
+<body class="login-page">
     <div class="login-wrapper">
         <h2>ورود به سامانه</h2>
         <p>لطفا اطلاعات خود را برای ورود وارد کنید.</p>

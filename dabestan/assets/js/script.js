@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get current time and format it
             const now = moment();
             const timeString = now.format('HH:mm:ss');
-            // Corrected format string to remove extra 'j'
-            const dateString = now.format('dddd، D MMMM YYYY');
+            // Final corrected format string for full Persian date
+            const dateString = now.format('dddd, jD jMMMM jYYYY');
 
             // Update the elements
             timeElement.textContent = timeString;

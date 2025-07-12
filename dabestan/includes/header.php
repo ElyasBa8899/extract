@@ -1,8 +1,16 @@
 <?php
-// session_start(); should be called in the parent file
+// This file is included in other files, so session_start() and other requires should be in the parent.
+// We need to make sure access_control is included before this file.
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
-    header("location: ../index.php");
+    header("location: /dabestan/index.php");
     exit;
+}
+// Ensure access control functions are available
+if (!function_exists('has_permission')) {
+    require_once __DIR__ . "/access_control.php";
 }
 ?>
 <!DOCTYPE html>
@@ -12,7 +20,7 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سامانه دبستان</title>
     <link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="/dabestan/assets/css/style.css">
 </head>
 <body>
     <div class="sidebar">
@@ -22,14 +30,18 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
         <ul class="nav-links">
             <li><a href="/dabestan/user/index.php"><i data-feather="home"></i><span>داشبورد</span></a></li>
 
-            <?php if(isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
+            <?php if(has_permission('manage_users')): // Main check for the whole admin section ?>
                 <li class="has-submenu">
                     <a href="#"><i data-feather="settings"></i><span>مدیریت سیستم</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
                     <ul class="submenu">
                         <li><a href="/dabestan/admin/manage_users.php"><span>مدیریت کاربران</span></a></li>
-                        <li><a href="/dabestan/admin/manage_roles.php"><span>مدیریت نقش‌ها</span></a></li>
-                        <li><a href="/dabestan/admin/manage_departments.php"><span>مدیریت بخش‌ها</span></a></li>
-                        <li><a href="/dabestan/admin/manage_forms.php"><span>مدیریت فرم‌ها</span></a></li>
+                        <?php if(has_permission('manage_roles')): ?>
+                            <li><a href="/dabestan/admin/manage_roles.php"><span>مدیریت نقش‌ها</span></a></li>
+                            <li><a href="/dabestan/admin/manage_departments.php"><span>مدیریت بخش‌ها</span></a></li>
+                        <?php endif; ?>
+                        <?php if(has_permission('manage_forms')): ?>
+                            <li><a href="/dabestan/admin/manage_forms.php"><span>مدیریت فرم‌ها</span></a></li>
+                        <?php endif; ?>
                         <li><a href="/dabestan/admin/manage_regions.php"><span>مدیریت مناطق</span></a></li>
                     </ul>
                 </li>
@@ -38,12 +50,14 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
             <li class="has-submenu">
                 <a href="#"><i data-feather="dollar-sign"></i><span>انبار و مالی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
                 <ul class="submenu">
-                    <?php if(isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
-                    <li><a href="/dabestan/admin/manage_categories.php"><span>دسته‌بندی انبار</span></a></li>
-                    <li><a href="/dabestan/admin/manage_inventory.php"><span>اقلام انبار</span></a></li>
-                    <li><a href="/dabestan/admin/manage_booklets.php"><span>مدیریت جزوات</span></a></li>
+                    <?php if(has_permission('manage_inventory')): ?>
+                        <li><a href="/dabestan/admin/manage_categories.php"><span>دسته‌بندی انبار</span></a></li>
+                        <li><a href="/dabestan/admin/manage_inventory.php"><span>اقلام انبار</span></a></li>
                     <?php endif; ?>
-                    <li><a href="/dabestan/user/financial_transactions.php"><span>ثبت تراکنش مالی</span></a></li>
+                    <?php if(has_permission('manage_financials')): ?>
+                        <li><a href="/dabestan/admin/manage_booklets.php"><span>مدیریت جزوات</span></a></li>
+                        <li><a href="/dabestan/user/financial_transactions.php"><span>ثبت تراکنش مالی</span></a></li>
+                    <?php endif; ?>
                     <li><a href="/dabestan/user/my_financial_status.php"><span>وضعیت حساب من</span></a></li>
                 </ul>
             </li>
@@ -52,17 +66,21 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
                 <a href="#"><i data-feather="briefcase"></i><span>بخش‌های سازمانی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
                  <ul class="submenu">
                     <li><a href="/dabestan/user/rental_items.php"><span>کرایه‌چی (پرورشی)</span></a></li>
-                    <li><a href="/dabestan/user/manage_parent_meetings.php"><span>جلسات اولیا</span></a></li>
-                    <li><a href="/dabestan/user/class_event_reports.php"><span>گزارش خدمت‌گزاری‌ها</span></a></li>
-                    <li><a href="/dabestan/user/manage_general_events.php"><span>پروژه‌های عمومی</span></a></li>
-                    <li><a href="/dabestan/user/manage_meetings.php"><span>جلسات ضمن خدمت</span></a></li>
+                    <?php if(has_permission('manage_meetings')): ?>
+                        <li><a href="/dabestan/user/manage_parent_meetings.php"><span>جلسات اولیا</span></a></li>
+                        <li><a href="/dabestan/user/class_event_reports.php"><span>گزارش خدمت‌گزاری‌ها</span></a></li>
+                        <li><a href="/dabestan/user/manage_general_events.php"><span>پروژه‌های عمومی</span></a></li>
+                        <li><a href="/dabestan/user/manage_meetings.php"><span>جلسات ضمن خدمت</span></a></li>
+                    <?php endif; ?>
                 </ul>
             </li>
 
             <li class="has-submenu">
                 <a href="#"><i data-feather="message-square"></i><span>ارتباطات</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
                 <ul class="submenu">
-                    <li><a href="/dabestan/user/new_ticket.php"><span>ایجاد تیکت جدید</span></a></li>
+                    <?php if(has_permission('submit_ticket')): ?>
+                        <li><a href="/dabestan/user/new_ticket.php"><span>ایجاد تیکت جدید</span></a></li>
+                    <?php endif; ?>
                     <li><a href="/dabestan/user/my_tickets.php"><span>تیکت‌های من</span></a></li>
                 </ul>
             </li>

@@ -1,7 +1,6 @@
 <?php
 session_start();
 require_once "../includes/db.php";
-require_once "../includes/access_control.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");

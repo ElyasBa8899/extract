@@ -238,3 +238,19 @@ main { padding: 32px; }
     height: 18px;
     stroke-width: 2.5px;
 }
+
+/* Responsive Table Wrapper */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* New Login Page Style */
+body.login-page {
+    background: linear-gradient(to right, #6a5af9, #d66d75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
