@@ -276,3 +276,27 @@ CREATE TABLE `booklet_transactions` (
   FOREIGN KEY (`booklet_id`) REFERENCES `booklets`(`id`),
   FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Parents (Oliya) Module Tables --
+
+CREATE TABLE `parent_meetings` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `class_id` INT(11) NOT NULL,
+  `meeting_date` DATETIME NOT NULL,
+  `location` VARCHAR(255),
+  `speaker` VARCHAR(255),
+  `status` ENUM('scheduled', 'completed', 'cancelled') NOT NULL DEFAULT 'scheduled',
+  `teacher_report_submission_id` INT(11), -- Links to a submission in form_submissions
+  `observer_report_submission_id` INT(11), -- Links to a submission in form_submissions
+  `created_by` INT(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`class_id`) REFERENCES `classes`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`),
+  FOREIGN KEY (`teacher_report_submission_id`) REFERENCES `form_submissions`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`observer_report_submission_id`) REFERENCES `form_submissions`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Financial Module (Booklets) Tables (Re-checking, already added, ensuring it's correct) --
+-- Note: The tables booklets and booklet_transactions were added in a previous step.
+-- This is a check to ensure the schema is consistent before proceeding.
+-- No new tables are added in this step, we will proceed with creating the PHP pages.
