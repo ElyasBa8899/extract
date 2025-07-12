@@ -208,11 +208,13 @@ CREATE TABLE `tickets` (
   `message` TEXT NOT NULL,
   `user_id` INT(11) NOT NULL,
   `assigned_to_department_id` INT(11),
+  `assigned_to_user_id` INT(11),
   `status` ENUM('open', 'in_progress', 'closed', 'urgent') NOT NULL DEFAULT 'open',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`),
-  FOREIGN KEY (`assigned_to_department_id`) REFERENCES `departments`(`id`)
+  FOREIGN KEY (`assigned_to_department_id`) REFERENCES `departments`(`id`),
+  FOREIGN KEY (`assigned_to_user_id`) REFERENCES `users`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `ticket_replies` (

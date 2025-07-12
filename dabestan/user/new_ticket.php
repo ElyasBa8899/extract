@@ -9,33 +9,36 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
 
 $err = $success_msg = "";
 
-// Fetch departments for the dropdown
-$departments = [];
-// First, add a general option
-$departments[] = ['id' => null, 'department_name' => 'عمومی (بدون ارجاع)'];
-// Then fetch from DB
-$sql_depts = "SELECT id, department_name FROM departments ORDER BY department_name ASC";
-if($result_depts = mysqli_query($link, $sql_depts)){
-    while($row = mysqli_fetch_assoc($result_depts)){
-        $departments[] = $row;
-    }
-}
+// Fetch departments and users for dropdowns
+$departments = mysqli_query($link, "SELECT id, department_name FROM departments ORDER BY department_name ASC");
+// Fetch only admin users for direct assignment
+$admins = mysqli_query($link, "SELECT id, username FROM users WHERE is_admin = 1 ORDER BY username ASC");
+
 
 // Handle New Ticket POST Request
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_ticket'])) {
     $title = trim($_POST['title']);
     $message = trim($_POST['message']);
-    $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
     $status = trim($_POST['priority']); // urgent or open
+    $assign_type = $_POST['assign_type'];
+
+    $department_id = null;
+    $assigned_user_id = null;
+
+    if($assign_type == 'department'){
+        $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
+    } else {
+        $assigned_user_id = !empty($_POST['user_id']) ? $_POST['user_id'] : null;
+    }
 
     if (empty($title) || empty($message)) {
         $err = "عنوان و متن پیام الزامی است.";
     } else {
-        $sql = "INSERT INTO tickets (title, message, user_id, assigned_to_department_id, status) VALUES (?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO tickets (title, message, user_id, assigned_to_department_id, assigned_to_user_id, status) VALUES (?, ?, ?, ?, ?, ?)";
         if ($stmt = mysqli_prepare($link, $sql)) {
-            mysqli_stmt_bind_param($stmt, "ssiis", $title, $message, $_SESSION['id'], $department_id, $status);
+            mysqli_stmt_bind_param($stmt, "ssiiis", $title, $message, $_SESSION['id'], $department_id, $assigned_user_id, $status);
             if (mysqli_stmt_execute($stmt)) {
-                $success_msg = "تیکت شما با موفقیت ثبت شد. به زودی پاسخ داده خواهد شد.";
+                $success_msg = "تیکت شما با موفقیت ثبت شد.";
             } else {
                 $err = "خطا در ثبت تیکت.";
             }
@@ -67,14 +70,37 @@ require_once "../includes/header.php";
                 <label for="message">متن پیام/درخواست <span style="color: red;">*</span></label>
                 <textarea name="message" id="message" class="form-control" rows="6" required></textarea>
             </div>
+
             <div class="form-group">
-                <label for="department_id">ارجاع به بخش</label>
+                <label>ارجاع به <span style="color: red;">*</span></label>
+                <div class="radio-group">
+                    <input type="radio" name="assign_type" value="department" id="type_dept" onclick="toggleAssignFields()" checked> <label for="type_dept">یک بخش</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" name="assign_type" value="user" id="type_user" onclick="toggleAssignFields()"> <label for="type_user">یک کاربر خاص (ادمین)</label>
+                </div>
+            </div>
+
+            <div id="department_field" class="form-group">
+                <label for="department_id">انتخاب بخش</label>
                 <select name="department_id" id="department_id" class="form-control">
-                    <?php foreach ($departments as $dept): ?>
+                    <option value="">عمومی (بدون ارجاع)</option>
+                    <?php while($dept = mysqli_fetch_assoc($departments)): ?>
                         <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
-                    <?php endforeach; ?>
+                    <?php endwhile; ?>
                 </select>
             </div>
+
+            <div id="user_field" class="form-group" style="display: none;">
+                <label for="user_id">انتخاب کاربر</label>
+                <select name="user_id" id="user_id" class="form-control">
+                    <option value="">انتخاب کنید...</option>
+                     <?php while($admin = mysqli_fetch_assoc($admins)): ?>
+                        <option value="<?php echo $admin['id']; ?>"><?php echo htmlspecialchars($admin['username']); ?></option>
+                    <?php endwhile; ?>
+                </select>
+            </div>
+
             <div class="form-group">
                 <label>اولویت <span style="color: red;">*</span></label>
                 <div class="radio-group">
@@ -90,6 +116,22 @@ require_once "../includes/header.php";
         </form>
     </div>
 </div>
+
+<script>
+function toggleAssignFields() {
+    const assignType = document.querySelector('input[name="assign_type"]:checked').value;
+    const deptField = document.getElementById('department_field');
+    const userField = document.getElementById('user_field');
+
+    if (assignType === 'department') {
+        deptField.style.display = 'block';
+        userField.style.display = 'none';
+    } else {
+        deptField.style.display = 'none';
+        userField.style.display = 'block';
+    }
+}
+</script>
 
 <?php
 mysqli_close($link);

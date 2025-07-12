@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once "../includes/db.php";
+require_once "../includes/functions.php"; // Include our new functions file
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
@@ -10,16 +11,17 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
 $user_id = $_SESSION['id'];
 
 // Fetch tickets created by the user.
-// In the future, we'll also fetch tickets assigned to the user's department.
+// Fetch tickets created by the user OR assigned to the user.
 $tickets = [];
-$sql = "SELECT t.id, t.title, t.status, t.created_at, d.department_name
+$sql = "SELECT t.id, t.title, t.status, t.created_at, d.department_name, au.username as assigned_username
         FROM tickets t
         LEFT JOIN departments d ON t.assigned_to_department_id = d.id
-        WHERE t.user_id = ?
+        LEFT JOIN users au ON t.assigned_to_user_id = au.id
+        WHERE t.user_id = ? OR t.assigned_to_user_id = ?
         ORDER BY t.created_at DESC";
 
 if($stmt = mysqli_prepare($link, $sql)){
-    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_bind_param($stmt, "ii", $user_id, $user_id);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     $tickets = mysqli_fetch_all($result, MYSQLI_ASSOC);
@@ -64,7 +66,7 @@ require_once "../includes/header.php";
             <thead>
                 <tr>
                     <th>عنوان تیکت</th>
-                    <th>ارجاع به بخش</th>
+                        <th>ارجاع به</th>
                     <th>وضعیت</th>
                     <th>تاریخ ایجاد</th>
                     <th>عملیات</th>
@@ -77,9 +79,19 @@ require_once "../includes/header.php";
                     <?php foreach ($tickets as $ticket): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($ticket['title']); ?></td>
-                            <td><?php echo htmlspecialchars($ticket['department_name'] ?? 'عمومی'); ?></td>
+                            <td>
+                                <?php
+                                if (!empty($ticket['assigned_username'])) {
+                                    echo 'کاربر: ' . htmlspecialchars($ticket['assigned_username']);
+                                } elseif (!empty($ticket['department_name'])) {
+                                    echo 'بخش: ' . htmlspecialchars($ticket['department_name']);
+                                } else {
+                                    echo 'عمومی';
+                                }
+                                ?>
+                            </td>
                             <td><?php echo get_status_badge($ticket['status']); ?></td>
-                            <td><?php echo htmlspecialchars($ticket['created_at']); ?></td>
+                            <td><?php echo to_persian_date($ticket['created_at']); ?></td>
                             <td>
                                 <a href="view_ticket.php?id=<?php echo $ticket['id']; ?>" class="btn btn-primary btn-sm">مشاهده و پاسخ</a>
                             </td>
