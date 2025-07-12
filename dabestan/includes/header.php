@@ -31,6 +31,8 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
             <li class="nav-section-title"><span>انبار و مالی</span></li>
             <li><a href="/dabestan/admin/manage_categories.php">مدیریت دسته‌بندی‌ها</a></li>
             <li><a href="/dabestan/admin/manage_inventory.php">مدیریت اقلام انبار</a></li>
+            <li><a href="/dabestan/admin/manage_booklets.php">مدیریت جزوات</a></li>
+            <li><a href="/dabestan/user/financial_transactions.php">ثبت تراکنش مالی</a></li>
 
             <li class="nav-section-title"><span>جذب و راه‌اندازی</span></li>
             <li><a href="/dabestan/user/add_student.php">ثبت دانش‌آموز جدید</a></li>
@@ -38,6 +40,7 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
 
             <li class="nav-section-title"><span>فعالیت‌های من</span></li>
             <li><a href="/dabestan/user/list_forms.php">تکمیل فرم‌ها</a></li>
+            <li><a href="/dabestan/user/my_financial_status.php">وضعیت حساب من</a></li>
 
             <li class="nav-section-title"><span>بخش‌های سازمانی</span></li>
             <li><a href="/dabestan/user/rental_items.php">کرایه‌چی (پرورشی)</a></li>

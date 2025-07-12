@@ -250,3 +250,29 @@ CREATE TABLE `meeting_attendance` (
   FOREIGN KEY (`meeting_id`) REFERENCES `service_meetings`(`id`) ON DELETE CASCADE,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Financial Module (Booklets) Tables --
+
+CREATE TABLE `booklets` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  `price` DECIMAL(10, 2) NOT NULL,
+  `description` TEXT,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `booklet_transactions` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `user_id` INT(11) NOT NULL, -- The user (teacher) involved in the transaction
+  `booklet_id` INT(11) DEFAULT NULL, -- Nullable for payments
+  `quantity` INT(11), -- Number of booklets for debit transactions
+  `transaction_type` ENUM('debit', 'credit') NOT NULL, -- debit for receiving booklets, credit for payment
+  `amount` DECIMAL(10, 2) NOT NULL, -- Total transaction amount
+  `notes` TEXT,
+  `transaction_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` INT(11) NOT NULL, -- The user who registered the transaction
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`),
+  FOREIGN KEY (`booklet_id`) REFERENCES `booklets`(`id`),
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
