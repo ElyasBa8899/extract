@@ -52,6 +52,10 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
             <li class="nav-section-title"><span>ضمن خدمت</span></li>
             <li><a href="/dabestan/user/manage_meetings.php">مدیریت جلسات</a></li>
 
+            <li class="nav-section-title"><span>ارتباطات</span></li>
+            <li><a href="/dabestan/user/new_ticket.php">ایجاد تیکت جدید</a></li>
+            <li><a href="/dabestan/user/my_tickets.php">تیکت‌های من</a></li>
+
             <li style="margin-top: auto;"><a href="/dabestan/logout.php" style="background: #c0392b;">خروج</a></li>
         </ul>
     </div>
