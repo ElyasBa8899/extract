@@ -41,7 +41,8 @@ $sql_admin = "INSERT IGNORE INTO `users` (`first_name`, `last_name`, `username`,
 if($stmt_admin = mysqli_prepare($link, $sql_admin)){
     $first = 'ادمین';
     $last = 'اصلی';
-    mysqli_stmt_bind_param($stmt_admin, "ssssi", $first, $last, $admin_user, $hashed_pass, 1);
+    $is_admin_val = 1; // The fix is here: using a variable instead of a literal.
+    mysqli_stmt_bind_param($stmt_admin, "ssssi", $first, $last, $admin_user, $hashed_pass, $is_admin_val);
     if(mysqli_stmt_execute($stmt_admin)){
         if(mysqli_stmt_affected_rows($stmt_admin) > 0){
             echo "<p>Admin user '<b>admin</b>' created successfully.</p>";
