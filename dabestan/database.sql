@@ -296,7 +296,18 @@ CREATE TABLE `parent_meetings` (
   FOREIGN KEY (`observer_report_submission_id`) REFERENCES `form_submissions`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Financial Module (Booklets) Tables (Re-checking, already added, ensuring it's correct) --
--- Note: The tables booklets and booklet_transactions were added in a previous step.
--- This is a check to ensure the schema is consistent before proceeding.
--- No new tables are added in this step, we will proceed with creating the PHP pages.
+-- General Events (Parvareshi) Module Tables --
+
+CREATE TABLE `general_events` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `event_name` VARCHAR(255) NOT NULL,
+  `event_year` INT(4),
+  `description` TEXT,
+  `proposal` TEXT, -- For the "Propozal" field
+  `required_workforce` TEXT, -- For "Niroo Ensani"
+  `required_budget` DECIMAL(12, 2),
+  `status` VARCHAR(50),
+  `created_by` INT(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

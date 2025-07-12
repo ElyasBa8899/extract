@@ -45,7 +45,8 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
             <li class="nav-section-title"><span>بخش‌های سازمانی</span></li>
             <li><a href="/dabestan/user/rental_items.php">کرایه‌چی (پرورشی)</a></li>
             <li><a href="#">بخش اولیا</a></li>
-            <li><a href="#">بخش پرورشی</a></li>
+            <li><a href="/dabestan/user/class_event_reports.php">گزارش خدمت‌گزاری‌ها (پرورشی)</a></li>
+            <li><a href="/dabestan/user/manage_general_events.php">پروژه‌های عمومی (پرورشی)</a></li>
             <li><a href="#">بخش نظارت</a></li>
             <li><a href="#">بخش مالی</a></li>
 
