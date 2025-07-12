@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get current time and format it
             const now = moment();
             const timeString = now.format('HH:mm:ss');
-            const dateString = now.format('jYYYY/jMM/jDD');
+            const dateString = now.format('dddd، jD jMMMM jYYYY');
 
             // Update the elements
             timeElement.textContent = timeString;
