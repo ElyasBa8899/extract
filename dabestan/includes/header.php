@@ -1,6 +1,5 @@
 <?php
 // This file is included in other files, so session_start() and other requires should be in the parent.
-// We need to make sure access_control is included before this file.
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
@@ -30,18 +29,15 @@ if (!function_exists('has_permission')) {
         <ul class="nav-links">
             <li><a href="/dabestan/user/index.php"><i data-feather="home"></i><span>داشبورد</span></a></li>
 
-            <?php if(has_permission('manage_users')): // Main check for the whole admin section ?>
+            <?php if(has_permission('manage_users')): ?>
                 <li class="has-submenu">
                     <a href="#"><i data-feather="settings"></i><span>مدیریت سیستم</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
                     <ul class="submenu">
                         <li><a href="/dabestan/admin/manage_users.php"><span>مدیریت کاربران</span></a></li>
-                        <?php if(has_permission('manage_roles')): ?>
-                            <li><a href="/dabestan/admin/manage_roles.php"><span>مدیریت نقش‌ها</span></a></li>
-                            <li><a href="/dabestan/admin/manage_departments.php"><span>مدیریت بخش‌ها</span></a></li>
-                        <?php endif; ?>
-                        <?php if(has_permission('manage_forms')): ?>
-                            <li><a href="/dabestan/admin/manage_forms.php"><span>مدیریت فرم‌ها</span></a></li>
-                        <?php endif; ?>
+                        <li><a href="/dabestan/admin/manage_roles.php"><span>مدیریت نقش‌ها</span></a></li>
+                        <li><a href="/dabestan/admin/manage_departments.php"><span>مدیریت بخش‌ها</span></a></li>
+                        <li><a href="/dabestan/admin/manage_classes.php"><span>مدیریت کلاس‌ها</span></a></li>
+                        <li><a href="/dabestan/admin/manage_forms.php"><span>مدیریت فرم‌ها</span></a></li>
                         <li><a href="/dabestan/admin/manage_regions.php"><span>مدیریت مناطق</span></a></li>
                     </ul>
                 </li>
