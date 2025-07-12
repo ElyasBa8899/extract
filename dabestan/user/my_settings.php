@@ -10,6 +10,13 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
 $user_id = $_SESSION['id'];
 $err = $success_msg = "";
 
+// --- Schema Migration: Add telegram_chat_id column if it doesn't exist ---
+$check_column_query = mysqli_query($link, "SHOW COLUMNS FROM `users` LIKE 'telegram_chat_id'");
+if (mysqli_num_rows($check_column_query) == 0) {
+    mysqli_query($link, "ALTER TABLE `users` ADD `telegram_chat_id` VARCHAR(50) NULL DEFAULT NULL AFTER `is_admin`");
+}
+// --- End Migration ---
+
 // Fetch current user data
 $user_query = mysqli_query($link, "SELECT telegram_chat_id FROM users WHERE id = $user_id");
 $user = mysqli_fetch_assoc($user_query);
