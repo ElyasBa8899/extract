@@ -66,9 +66,10 @@ require_once "../includes/header.php";
     <!-- Transactions History -->
     <div class="table-container">
         <h3>تاریخچه تراکنش‌ها</h3>
-        <table class="table">
-            <thead>
-                <tr>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
                     <th>نوع تراکنش</th>
                     <th>مبلغ (تومان)</th>
                     <th>جزئیات</th>

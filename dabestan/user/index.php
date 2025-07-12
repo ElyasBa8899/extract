@@ -97,6 +97,18 @@ require_once "../includes/header.php";
 
         <!-- More widgets can be added here -->
 
+        <!-- Self-Assessment Analysis Widget -->
+        <div class="widget">
+            <div class="widget-header">
+                <h3>تحلیل خوداظهاری شما</h3>
+                <a href="#">مشاهده کامل</a>
+            </div>
+            <div class="widget-body">
+                <p>این بخش به زودی با آنالیزهای مفید از فرم‌های شما تکمیل خواهد شد.</p>
+                <!-- Analysis data will be fetched and displayed here -->
+            </div>
+        </div>
+
     </div>
 </div>
 

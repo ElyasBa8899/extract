@@ -69,7 +69,7 @@ if (!function_exists('has_permission')) {
                     <?php if(has_permission('manage_meetings')): ?>
                         <li><a href="/dabestan/user/manage_parent_meetings.php"><span>جلسات اولیا</span></a></li>
                         <li><a href="/dabestan/user/class_event_reports.php"><span>گزارش خدمت‌گزاری‌ها</span></a></li>
-                        <li><a href="/dabestan/user/manage_general_events.php"><span>پروژه‌های عمومی</span></a></li>
+                        <li><a href="/dabestan/admin/manage_general_events.php"><span>پروژه‌های عمومی</span></a></li>
                         <li><a href="/dabestan/user/manage_meetings.php"><span>جلسات ضمن خدمت</span></a></li>
                     <?php endif; ?>
                 </ul>
@@ -84,6 +84,9 @@ if (!function_exists('has_permission')) {
                     <li><a href="/dabestan/user/my_tickets.php"><span>تیکت‌های من</span></a></li>
                 </ul>
             </li>
+
+            <li class="nav-section-title"><span>فرم‌ها و گزارش‌ها</span></li>
+            <li><a href="/dabestan/user/self_assessment_form.php"><i data-feather="edit-3"></i><span>فرم خوداظهاری</span></a></li>
 
             <li class="nav-section-title"><span>پروفایل</span></li>
             <li><a href="/dabestan/user/my_settings.php"><i data-feather="tool"></i><span>تنظیمات</span></a></li>
