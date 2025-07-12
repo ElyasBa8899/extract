@@ -23,7 +23,8 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
 
             <?php if(isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
                 <li class="nav-section-title"><span>مدیریت سیستم</span></li>
-                <li><a href="/dabestan/admin/create_user.php">ایجاد کاربر</a></li>
+            <li><a href="/dabestan/admin/manage_users.php">مدیریت کاربران</a></li>
+            <li><a href="/dabestan/admin/manage_roles.php">مدیریت نقش‌ها</a></li>
                 <li><a href="/dabestan/admin/manage_forms.php">مدیریت فرم‌ها</a></li>
                 <li><a href="/dabestan/admin/manage_regions.php">مدیریت مناطق</a></li>
             <?php endif; ?>

@@ -1,11 +1,15 @@
 <?php
 session_start();
 require_once "../includes/db.php";
+require_once "../includes/access_control.php";
 
-if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]) {
+if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
     exit;
 }
+
+// Now, instead of just checking for is_admin, we check for a specific permission.
+require_permission('manage_inventory');
 
 $err = $success_msg = "";
 
