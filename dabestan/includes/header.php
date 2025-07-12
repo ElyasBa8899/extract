@@ -72,6 +72,20 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
                     <span id="time"></span>
                     <span id="date"></span>
                 </div>
+                <div class="header-notifications">
+                    <div class="notification-icon" id="notification-icon">
+                        <span class="icon">&#128276;</span> <!-- Bell Icon -->
+                        <span class="notification-count" id="notification-count"></span>
+                    </div>
+                    <div class="notification-dropdown" id="notification-dropdown">
+                        <!-- Notifications will be loaded here by JS -->
+                        <div class="notification-header">اعلان‌ها</div>
+                        <div id="notification-list"></div>
+                        <div class="notification-footer">
+                            <a href="#">مشاهده همه</a>
+                        </div>
+                    </div>
+                </div>
                 <div class="user-info">
                     <span><?php echo htmlspecialchars($_SESSION["username"]); ?></span>
                 </div>

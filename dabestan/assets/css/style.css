@@ -256,3 +256,20 @@ a.btn { text-decoration: none; display: inline-block; }
 .financial-widget-body .balance { font-size: 2em; font-weight: bold; margin: 10px 0; }
 .balance.positive { color: #28a745; }
 .balance.negative { color: #dc3545; }
+
+/* Notification Styles */
+.header-notifications { position: relative; margin-left: 20px; }
+.notification-icon { cursor: pointer; }
+.notification-icon .icon { font-size: 20px; }
+.notification-count { position: absolute; top: -5px; right: -10px; background-color: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; display: none; /* Hidden by default */ }
+.notification-dropdown { display: none; /* Hidden by default */ position: absolute; top: 40px; left: -150px; width: 300px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); z-index: 1001; }
+.notification-dropdown.show { display: block; }
+.notification-header { padding: 10px 15px; font-weight: bold; border-bottom: 1px solid #eee; }
+#notification-list { max-height: 300px; overflow-y: auto; }
+.notification-item { padding: 10px 15px; border-bottom: 1px solid #eee; }
+.notification-item:last-child { border-bottom: none; }
+.notification-item a { text-decoration: none; color: #333; }
+.notification-item a:hover { color: var(--primary-color); }
+.notification-item small { display: block; color: #999; margin-top: 5px; }
+.notification-footer { padding: 10px 15px; text-align: center; border-top: 1px solid #eee; }
+.notification-footer a { text-decoration: none; font-weight: bold; }

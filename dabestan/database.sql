@@ -96,6 +96,19 @@ CREATE TABLE `forms` (
   FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Notifications Module Table --
+
+CREATE TABLE `notifications` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `user_id` INT(11) NOT NULL, -- The user who receives the notification
+  `message` VARCHAR(255) NOT NULL,
+  `link` VARCHAR(255), -- Link to the relevant page (e.g., ticket)
+  `is_read` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Form Fields table
 CREATE TABLE `form_fields` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,

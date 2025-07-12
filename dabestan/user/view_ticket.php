@@ -52,6 +52,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_reply'])) {
                     mysqli_query($link, "UPDATE tickets SET status = 'in_progress' WHERE id = $ticket_id");
                     $ticket['status'] = 'in_progress'; // update for current view
                 }
+
+                // Create a notification for the ticket owner (if they are not the one replying)
+                if ($ticket['user_id'] != $user_id) {
+                    $notif_message = "پاسخ جدیدی برای تیکت شما با عنوان \"" . $ticket['title'] . "\" ثبت شد.";
+                    $notif_link = "user/view_ticket.php?id=" . $ticket_id;
+                    $sql_notif = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
+                    if($stmt_notif = mysqli_prepare($link, $sql_notif)){
+                        mysqli_stmt_bind_param($stmt_notif, "iss", $ticket['user_id'], $notif_message, $notif_link);
+                        mysqli_stmt_execute($stmt_notif);
+                        mysqli_stmt_close($stmt_notif);
+                    }
+                }
+
                 $success_msg = "پاسخ شما با موفقیت ثبت شد.";
             } else {
                 $err = "خطا در ثبت پاسخ.";
