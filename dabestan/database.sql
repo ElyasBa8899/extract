@@ -10,6 +10,7 @@ CREATE TABLE `users` (
   `username` VARCHAR(50) NOT NULL UNIQUE,
   `password` VARCHAR(255) NOT NULL,
   `is_admin` TINYINT(1) NOT NULL DEFAULT 0,
+  `telegram_chat_id` VARCHAR(50) DEFAULT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

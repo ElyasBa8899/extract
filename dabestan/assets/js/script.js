@@ -104,4 +104,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Activate Feather Icons
     feather.replace();
+
+    // Sidebar Submenu Toggle
+    document.querySelectorAll('.has-submenu > a').forEach(function(menu) {
+        menu.addEventListener('click', function(event) {
+            event.preventDefault();
+            let parentLi = this.parentElement;
+
+            // Close other open submenus
+            document.querySelectorAll('.has-submenu.open').forEach(function(openMenu) {
+                if(openMenu !== parentLi) {
+                    openMenu.classList.remove('open');
+                    openMenu.querySelector('.submenu').style.maxHeight = null;
+                }
+            });
+
+            // Toggle current submenu
+            parentLi.classList.toggle('open');
+            let submenu = this.nextElementSibling;
+            if (submenu.style.maxHeight) {
+                submenu.style.maxHeight = null;
+            } else {
+                submenu.style.maxHeight = submenu.scrollHeight + "px";
+            }
+        });
+    });
 });

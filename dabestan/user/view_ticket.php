@@ -47,21 +47,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_reply'])) {
         if ($stmt_reply = mysqli_prepare($link, $sql_reply)) {
             mysqli_stmt_bind_param($stmt_reply, "iis", $ticket_id, $user_id, $reply_message);
             if (mysqli_stmt_execute($stmt_reply)) {
-                // Optionally, update ticket status to 'in_progress' if it was 'open'
                 if($ticket['status'] == 'open'){
                     mysqli_query($link, "UPDATE tickets SET status = 'in_progress' WHERE id = $ticket_id");
-                    $ticket['status'] = 'in_progress'; // update for current view
+                    $ticket['status'] = 'in_progress';
                 }
 
-                // Create a notification for the ticket owner (if they are not the one replying)
                 if ($ticket['user_id'] != $user_id) {
-                    $notif_message = "پاسخ جدیدی برای تیکت شما با عنوان \"" . $ticket['title'] . "\" ثبت شد.";
+                    $notif_message = "پاسخ جدیدی برای تیکت شما با عنوان \"" . htmlspecialchars($ticket['title']) . "\" ثبت شد.";
                     $notif_link = "user/view_ticket.php?id=" . $ticket_id;
+
+                    // Create web notification
                     $sql_notif = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
-                    if($stmt_notif = mysqli_prepare($link, $sql_notif)){
-                        mysqli_stmt_bind_param($stmt_notif, "iss", $ticket['user_id'], $notif_message, $notif_link);
-                        mysqli_stmt_execute($stmt_notif);
-                        mysqli_stmt_close($stmt_notif);
+                    $stmt_notif = mysqli_prepare($link, $sql_notif);
+                    mysqli_stmt_bind_param($stmt_notif, "iss", $ticket['user_id'], $notif_message, $notif_link);
+                    mysqli_stmt_execute($stmt_notif);
+                    mysqli_stmt_close($stmt_notif);
+
+                    // Send Telegram notification
+                    $owner_id = $ticket['user_id'];
+                    $owner_telegram_query = mysqli_query($link, "SELECT telegram_chat_id FROM users WHERE id = $owner_id");
+                    if($owner_telegram_query && mysqli_num_rows($owner_telegram_query) > 0){
+                        $owner_chat_id = mysqli_fetch_assoc($owner_telegram_query)['telegram_chat_id'];
+                        if(!empty($owner_chat_id)){
+                            send_telegram_message($owner_chat_id, $notif_message);
+                        }
                     }
                 }
 
