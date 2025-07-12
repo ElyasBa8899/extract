@@ -28,6 +28,10 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
                 <li><a href="/dabestan/admin/manage_regions.php">مدیریت مناطق</a></li>
             <?php endif; ?>
 
+            <li class="nav-section-title"><span>انبار و مالی</span></li>
+            <li><a href="/dabestan/admin/manage_categories.php">مدیریت دسته‌بندی‌ها</a></li>
+            <li><a href="/dabestan/admin/manage_inventory.php">مدیریت اقلام انبار</a></li>
+
             <li class="nav-section-title"><span>جذب و راه‌اندازی</span></li>
             <li><a href="/dabestan/user/add_student.php">ثبت دانش‌آموز جدید</a></li>
             <li><a href="/dabestan/user/list_students.php">لیست دانش‌آموزان</a></li>
@@ -36,6 +40,7 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
             <li><a href="/dabestan/user/list_forms.php">تکمیل فرم‌ها</a></li>
 
             <li class="nav-section-title"><span>بخش‌های سازمانی</span></li>
+            <li><a href="/dabestan/user/rental_items.php">کرایه‌چی (پرورشی)</a></li>
             <li><a href="#">بخش اولیا</a></li>
             <li><a href="#">بخش پرورشی</a></li>
             <li><a href="#">بخش نظارت</a></li>
