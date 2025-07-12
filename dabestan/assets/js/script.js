@@ -22,7 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get current time and format it
             const now = moment();
             const timeString = now.format('HH:mm:ss');
-            const dateString = now.format('dddd، jD jMMMM jYYYY');
+            // Corrected format string to remove extra 'j'
+            const dateString = now.format('dddd، D MMMM YYYY');
 
             // Update the elements
             timeElement.textContent = timeString;
@@ -100,4 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Activate Feather Icons
+    feather.replace();
 });

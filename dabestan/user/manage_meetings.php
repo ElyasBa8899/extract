@@ -24,7 +24,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_meeting'])) {
         if ($stmt = mysqli_prepare($link, $sql)) {
             mysqli_stmt_bind_param($stmt, "ssssi", $title, $meeting_date, $speaker, $location, $_SESSION['id']);
             if (mysqli_stmt_execute($stmt)) {
-                $new_meeting_id = mysqli_insert_id($stmt);
+                $new_meeting_id = mysqli_insert_id($link); // Corrected: use $link instead of $stmt
                 // Here we can auto-populate the checklist for the new meeting
                 // For now, we just show a success message.
                 $success_msg = "جلسه جدید با موفقیت ثبت شد.";
@@ -64,8 +64,8 @@ require_once "../includes/header.php";
                 <input type="text" name="title" id="title" class="form-control" required>
             </div>
             <div class="form-group">
-                <label for="meeting_date">تاریخ و زمان جلسه <span style="color: red;">*</span></label>
-                <input type="datetime-local" name="meeting_date" id="meeting_date" class="form-control" required>
+                <label for="meeting_date">تاریخ جلسه <span style="color: red;">*</span></label>
+                <input type="text" name="meeting_date" id="meeting_date_picker" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="speaker">نام استاد/سخنران</label>
@@ -120,3 +120,11 @@ require_once "../includes/header.php";
 mysqli_close($link);
 require_once "../includes/footer.php";
 ?>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $("#meeting_date_picker").pDatepicker({
+            format: 'YYYY-MM-DD',
+            autoClose: true
+        });
+    });
+</script>
