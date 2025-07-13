@@ -52,9 +52,8 @@ $sql = "
     SELECT
         r.id,
         r.name,
-        (SELECT COUNT(*) FROM recruited_students WHERE region_id = r.id) as student_count
-        -- We need a way to link classes to regions to get the active_classes count.
-        -- This will be implemented later. For now, it will be null.
+        (SELECT COUNT(*) FROM recruited_students WHERE region_id = r.id) as student_count,
+        (SELECT GROUP_CONCAT(class_name SEPARATOR ', ') FROM classes WHERE region_id = r.id AND status = 'active') as active_classes
     FROM regions r
     ORDER BY r.name ASC
 ";

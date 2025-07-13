@@ -127,4 +127,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Edit Telegram Chat ID
+    const editChatIdBtn = document.getElementById('edit-chat-id');
+    const chatIdInput = document.getElementById('telegram_chat_id');
+    const submitArea = document.getElementById('telegram-submit-area');
+
+    if (editChatIdBtn && chatIdInput && submitArea) {
+        editChatIdBtn.addEventListener('click', function() {
+            chatIdInput.readOnly = !chatIdInput.readOnly;
+            if (!chatIdInput.readOnly) {
+                chatIdInput.focus();
+                submitArea.style.display = 'block';
+                this.textContent = 'لغو';
+            } else {
+                submitArea.style.display = 'none';
+                this.textContent = 'ویرایش';
+            }
+        });
+    }
 });
