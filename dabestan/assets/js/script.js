@@ -16,18 +16,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateTime() {
         if (timeElement && dateElement) {
-            // Set locale to Persian
-            moment.locale('fa');
-
-            // Get current time and format it
-            const now = moment();
-            const timeString = now.format('HH:mm:ss');
-            // Final corrected format string for full Persian date
-            const dateString = now.format('dddd, jD jMMMM jYYYY');
-
-            // Update the elements
-            timeElement.textContent = timeString;
-            dateElement.textContent = dateString;
+            const now = new Date();
+            // Time
+            timeElement.textContent = now.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            // Date
+            dateElement.textContent = new Intl.DateTimeFormat('fa-IR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            }).format(now);
         }
     }
 

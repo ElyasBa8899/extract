@@ -39,6 +39,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_ticket'])) {
             mysqli_stmt_bind_param($stmt, "ssiiis", $title, $message, $_SESSION['id'], $department_id, $assigned_user_id, $status);
             if (mysqli_stmt_execute($stmt)) {
                 $success_msg = "تیکت شما با موفقیت ثبت شد.";
+
+                // Send Telegram Notification
+                require_once '../includes/telegram_bot.php';
+                $message = "✅ تیکت جدید با عنوان \"<b>" . htmlspecialchars($title) . "</b>\" توسط شما ثبت شد.";
+                // We need to get the user's chat_id
+                $user_info_query = mysqli_query($link, "SELECT telegram_chat_id FROM users WHERE id = {$_SESSION['id']}");
+                if($user_info = mysqli_fetch_assoc($user_info_query)){
+                    sendTelegramMessage($user_info['telegram_chat_id'], $message);
+                }
+
             } else {
                 $err = "خطا در ثبت تیکت.";
             }
