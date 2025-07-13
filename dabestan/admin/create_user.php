@@ -14,14 +14,14 @@ $err = $success_msg = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Validate input
-    if (empty(trim($_POST["username"])) || empty(trim($_POST["password"])) || empty(trim($_POST["first_name"])) || empty(trim($_POST["last_name"]))) {
-        $err = "لطفا تمام فیلدها را پر کنید.";
+    if (empty(trim($_POST["username"])) || empty(trim($_POST["password"])) || empty(trim($_POST["first_name"]))) {
+        $err = "لطفا فیلدهای ستاره‌دار را پر کنید.";
     } else {
         $username = trim($_POST["username"]);
         $password = trim($_POST["password"]);
         $first_name = trim($_POST["first_name"]);
-        $last_name = trim($_POST["last_name"]);
-        $is_admin = isset($_POST['is_admin']) ? 1 : 0;
+        $last_name = trim($_POST["last_name"]); // Last name is optional
+        $is_admin = 0; // is_admin is always 0 for new users
     }
 
     // Check if username is already taken
