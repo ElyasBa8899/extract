@@ -25,15 +25,17 @@ $message = "🤖 پیام تست از سامانه دبستان 🤖\n\n";
 $message .= "سلام " . htmlspecialchars($username) . " عزیز،\n";
 $message .= "اتصال حساب کاربری شما به ربات تلگرام با موفقیت برقرار است.";
 
+// Use the updated sendTelegramMessage function which now uses cURL
 $response = sendTelegramMessage($chat_id, $message);
 
 // Decode Telegram's response to check if it was successful
 $response_data = json_decode($response, true);
 
-if ($response_data && $response_data['ok']) {
+if ($response_data && isset($response_data['ok']) && $response_data['ok']) {
     echo json_encode(['success' => true]);
 } else {
-    $error_message = $response_data['description'] ?? 'Unknown error from Telegram API.';
+    // The description key should contain the error message from cURL or Telegram
+    $error_message = $response_data['description'] ?? 'An unknown error occurred.';
     echo json_encode(['success' => false, 'error' => $error_message]);
 }
 ?>

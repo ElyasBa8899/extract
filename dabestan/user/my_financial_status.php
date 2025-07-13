@@ -65,7 +65,10 @@ require_once "../includes/header.php";
 
     <!-- Transactions History -->
     <div class="table-container">
-        <h3>تاریخچه تراکنش‌ها</h3>
+        <div class="table-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>تاریخچه تراکنش‌ها</h3>
+            <a href="view_all_transactions.php" class="btn btn-secondary">مشاهده همه تراکنش‌ها</a>
+        </div>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -81,7 +84,7 @@ require_once "../includes/header.php";
                 <?php if(empty($transactions)): ?>
                     <tr><td colspan="5" style="text-align: center;">هیچ تراکنشی برای شما ثبت نشده است.</td></tr>
                 <?php else: ?>
-                    <?php foreach($transactions as $trans): ?>
+                    <?php foreach(array_slice($transactions, 0, 20) as $trans): // Show only last 20 ?>
                     <tr class="<?php echo $trans['transaction_type'] == 'debit' ? 'table-danger' : 'table-success'; ?>">
                         <td><?php echo $trans['transaction_type'] == 'debit' ? 'بدهی (تحویل جزوه)' : 'پرداخت'; ?></td>
                         <td><?php echo number_format($trans['amount']); ?></td>
@@ -93,7 +96,7 @@ require_once "../includes/header.php";
                             <?php endif; ?>
                         </td>
                         <td><?php echo htmlspecialchars($trans['notes']); ?></td>
-                        <td><?php echo $trans['transaction_date']; ?></td>
+                        <td><?php echo to_persian_date($trans['transaction_date']); ?></td>
                     </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>

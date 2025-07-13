@@ -17,11 +17,11 @@ $sql = "SELECT t.id, t.title, t.status, t.created_at, d.department_name, au.user
         FROM tickets t
         LEFT JOIN departments d ON t.assigned_to_department_id = d.id
         LEFT JOIN users au ON t.assigned_to_user_id = au.id
-        WHERE t.user_id = ? OR t.assigned_to_user_id = ?
+        WHERE t.user_id = ?
         ORDER BY t.created_at DESC";
 
 if($stmt = mysqli_prepare($link, $sql)){
-    mysqli_stmt_bind_param($stmt, "ii", $user_id, $user_id);
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     $tickets = mysqli_fetch_all($result, MYSQLI_ASSOC);
