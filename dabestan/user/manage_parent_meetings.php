@@ -135,9 +135,18 @@ $(document).ready(function() {
     $("#meeting_date_persian").pDatepicker({
         format: 'YYYY/MM/DD HH:mm',
         altField: '#meeting_date_gregorian',
-        altFormat: 'YYYY/MM/DD HH:mm:ss',
+        altFormat: 'YYYY-MM-DD HH:mm:ss', // Correct format for MySQL DATETIME
         timePicker: {
-            enabled: true
+            enabled: true,
+            meridiem: {
+                enabled: false
+            }
+        },
+        toolbox: {
+            enabled: true,
+            calendarSwitch: {
+                enabled: false,
+            }
         }
     });
 });

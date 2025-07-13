@@ -47,6 +47,6 @@ function get_db_connection() {
     return Database::getInstance()->getConnection();
 }
 
-// Assign the connection to a global variable for legacy code compatibility
-$link = get_db_connection();
+// DO NOT assign to a global variable here to prevent premature instantiation.
+// $link = get_db_connection();
 ?>
