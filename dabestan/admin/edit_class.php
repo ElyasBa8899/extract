@@ -36,13 +36,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_class'])) {
     $description = trim($_POST['description']);
     $status = trim($_POST['status']);
     $new_teachers = $_POST['teachers'] ?? [];
+    $region_id = $_POST['region_id']; // Get region_id from form
 
     mysqli_begin_transaction($link);
     try {
-        // 1. Update class info
-        $sql_update_class = "UPDATE classes SET class_name = ?, description = ?, status = ? WHERE id = ?";
+        // 1. Update class info, including region_id
+        $sql_update_class = "UPDATE classes SET class_name = ?, description = ?, status = ?, region_id = ? WHERE id = ?";
         $stmt_update_class = mysqli_prepare($link, $sql_update_class);
-        mysqli_stmt_bind_param($stmt_update_class, "sssi", $class_name, $description, $status, $class_id);
+        mysqli_stmt_bind_param($stmt_update_class, "sssii", $class_name, $description, $status, $region_id, $class_id);
         mysqli_stmt_execute($stmt_update_class);
 
         // 2. Delete old teacher assignments
@@ -87,19 +88,32 @@ require_once "../includes/header.php";
         <div class="form-container" style="margin-bottom: 30px;">
             <h4>اطلاعات پایه کلاس</h4>
             <div class="form-group">
-                <label>نام کلاس</label>
-                <input type="text" name="class_name" class="form-control" value="<?php echo htmlspecialchars($class['class_name']); ?>">
+                <label for="class_name">نام کلاس</label>
+                <input type="text" id="class_name" name="class_name" class="form-control" value="<?php echo htmlspecialchars($class['class_name']); ?>">
             </div>
             <div class="form-group">
-                <label>توضیحات</label>
-                <input type="text" name="description" class="form-control" value="<?php echo htmlspecialchars($class['description']); ?>">
+                <label for="description">توضیحات</label>
+                <input type="text" id="description" name="description" class="form-control" value="<?php echo htmlspecialchars($class['description']); ?>">
             </div>
             <div class="form-group">
-                <label>وضعیت</label>
-                <select name="status" class="form-control">
+                <label for="status">وضعیت</label>
+                <select name="status" id="status" class="form-control">
                     <option value="active" <?php if($class['status'] == 'active') echo 'selected'; ?>>فعال</option>
                     <option value="inactive" <?php if($class['status'] == 'inactive') echo 'selected'; ?>>غیرفعال</option>
                     <option value="archived" <?php if($class['status'] == 'archived') echo 'selected'; ?>>آرشیو شده</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="region_id">منطقه</label>
+                <select name="region_id" id="region_id" class="form-control">
+                    <option value="">-- انتخاب منطقه --</option>
+                    <?php
+                    $regions_query = mysqli_query($link, "SELECT id, name FROM regions ORDER BY name");
+                    while($region = mysqli_fetch_assoc($regions_query)){
+                        $selected = ($class['region_id'] == $region['id']) ? 'selected' : '';
+                        echo "<option value='{$region['id']}' {$selected}>" . htmlspecialchars($region['name']) . "</option>";
+                    }
+                    ?>
                 </select>
             </div>
         </div>
@@ -119,6 +133,7 @@ require_once "../includes/header.php";
 
         <div class="form-group" style="margin-top: 20px;">
             <input type="submit" name="update_class" class="btn btn-primary" value="ذخیره تغییرات">
+            <a href="manage_class_students.php?class_id=<?php echo $class_id; ?>" class="btn btn-info">مدیریت دانش‌آموزان</a>
         </div>
     </form>
 </div>

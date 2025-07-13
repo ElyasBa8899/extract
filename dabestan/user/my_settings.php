@@ -118,14 +118,23 @@ require_once "../includes/header.php";
 
     <div class="form-container">
         <h4>اتصال به تلگرام</h4>
-        <p>برای دریافت نوتیفیکیشن‌ها، شناسه عددی چت تلگرام خود را وارد کنید. برای دریافت شناسه، به ربات <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> پیام دهید و ID خود را کپی کنید.</p>
-        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
+        <p>برای دریافت نوتیفیکیشن‌ها، ابتدا ربات ما را در تلگرام استارت کنید و سپس شناسه عددی چت خود را در کادر زیر وارد نمایید.</p>
+        <p>
+            <strong>آیدی ربات: <a href="https://t.me/Dabestan_Site_Bot" target="_blank">@Dabestan_Site_Bot</a></strong>
+        </p>
+        <p class="text-muted" style="font-size: 0.9em;">برای دریافت شناسه، می‌توانید به ربات <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> پیام دهید و ID خود را کپی کنید.</p>
+
+        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post" id="telegram-form">
             <div class="form-group">
                 <label for="telegram_chat_id">شناسه چت تلگرام</label>
-                <input type="text" id="telegram_chat_id" name="telegram_chat_id" class="form-control" value="<?php echo htmlspecialchars($user_data['telegram_chat_id'] ?? ''); ?>">
+                <div class="input-group">
+                    <input type="text" id="telegram_chat_id" name="telegram_chat_id" class="form-control" value="<?php echo htmlspecialchars($user_data['telegram_chat_id'] ?? ''); ?>" placeholder="شناسه شما..." readonly>
+                    <button type="button" id="edit-chat-id" class="btn btn-secondary">ویرایش</button>
+                </div>
             </div>
-             <div class="form-group">
+             <div class="form-group" id="telegram-submit-area" style="display: none;">
                 <input type="submit" name="update_telegram" class="btn btn-primary" value="ذخیره">
+                <button type="button" id="send-test-message" class="btn btn-success">ارسال پیام تست</button>
             </div>
         </form>
     </div>

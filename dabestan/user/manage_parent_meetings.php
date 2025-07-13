@@ -75,7 +75,7 @@ require_once "../includes/header.php";
             </div>
             <div class="form-group">
                 <label for="meeting_date">تاریخ و زمان جلسه <span style="color: red;">*</span></label>
-                <input type="datetime-local" name="meeting_date" id="meeting_date" class="form-control" required>
+                <input type="text" name="meeting_date" id="meeting_date" class="form-control persian-datepicker" required>
             </div>
             <div class="form-group">
                 <label for="location">مکان جلسه</label>

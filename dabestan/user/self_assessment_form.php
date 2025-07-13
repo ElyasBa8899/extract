@@ -8,14 +8,16 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     exit;
 }
 
-// We assume the form ID is 4, created by the seeder script.
-const SELF_ASSESSMENT_FORM_ID = 4;
+// We assume the form ID is 1 for the self-assessment form.
+const SELF_ASSESSMENT_FORM_ID = 1;
 
 // Fetch form fields and map them for easier access by label
 $fields_query = mysqli_query($link, "SELECT id, field_label, field_type, field_options, is_required FROM form_fields WHERE form_id = " . SELF_ASSESSMENT_FORM_ID . " ORDER BY field_order ASC");
 $all_fields = [];
-while ($row = mysqli_fetch_assoc($fields_query)) {
-    $all_fields[$row['field_label']] = $row;
+if($fields_query) {
+    while ($row = mysqli_fetch_assoc($fields_query)) {
+        $all_fields[$row['field_label']] = $row;
+    }
 }
 
 // Helper function to render a field by its label
@@ -76,23 +78,50 @@ require_once "../includes/header.php";
 <div class="page-content">
     <h2>فرم خوداظهاری هفتگی</h2>
 
-    <div class="form-stepper">
-        <button class="step-btn active" data-target="section-1">اطلاعات پایه</button>
-        <button class="step-btn" data-target="section-2">حضور و غیاب</button>
-        <button class="step-btn" data-target="section-3">جزوه و داستان</button>
-        <button class="step-btn" data-target="section-4" style="display:none;">بخش تخصصی جزوه</button>
-        <button class="step-btn" data-target="section-5">محتوا</button>
-        <button class="step-btn" data-target="section-6">توضیحات</button>
-    </div>
+    <?php if (!isset($_GET['class_id'])): ?>
+        <div class="form-container">
+            <h3>انتخاب کلاس</h3>
+            <p>لطفاً کلاسی که می‌خواهید برای آن فرم خوداظهاری پر کنید را انتخاب نمایید.</p>
+            <form method="get" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+                <div class="form-group">
+                    <label for="class-select">کلاس‌های من:</label>
+                    <select name="class_id" id="class-select" class="form-control" onchange="this.form.submit()">
+                        <option value="">-- یک کلاس را انتخاب کنید --</option>
+                        <?php
+                        // Fetch classes for the current teacher
+                        $teacher_id = $_SESSION['id'];
+                        $classes_query = mysqli_query($link, "SELECT c.id, c.class_name FROM classes c JOIN class_teachers ct ON c.id = ct.class_id WHERE ct.teacher_id = $teacher_id ORDER BY c.class_name");
+                        while($class_item = mysqli_fetch_assoc($classes_query)) {
+                            echo "<option value='{$class_item['id']}'>" . htmlspecialchars($class_item['class_name']) . "</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
+            </form>
+        </div>
+    <?php else:
+        $selected_class_id = $_GET['class_id'];
+        // You can fetch and display class name if needed
+    ?>
+        <div class="form-stepper">
+            <button class="step-btn active" data-target="section-1">اطلاعات پایه</button>
+            <button class="step-btn" data-target="section-2">حضور و غیاب</button>
+            <button class="step-btn" data-target="section-3">جزوه و داستان</button>
+            <button class="step-btn" data-target="section-4" style="display:none;">بخش تخصصی جزوه</button>
+            <button class="step-btn" data-target="section-5">محتوا</button>
+            <button class="step-btn" data-target="section-6">توضیحات</button>
+        </div>
 
-    <form id="self-assessment-form" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post" class="form-container" novalidate>
+        <form id="self-assessment-form" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>?class_id=<?php echo $selected_class_id; ?>" method="post" class="form-container" novalidate>
+            <input type="hidden" name="class_id" value="<?php echo $selected_class_id; ?>">
 
         <div id="section-1" class="form-section active">
             <h3>اطلاعات پایه</h3>
             <?php echo render_field_by_label('نوع کلاس برگزار شده', $all_fields); ?>
-            <?php echo render_field_by_label('تاریخ روز جلسه', $all_fields); ?>
-            <?php echo render_field_by_label('تاریخ ماه جلسه', $all_fields); ?>
-            <?php echo render_field_by_label('تاریخ سال جلسه', $all_fields); ?>
+            <div class="form-group">
+                <label for="meeting_date">تاریخ جلسه</label>
+                <input type="text" name="meeting_date" id="meeting_date" class="form-control persian-datepicker" required>
+            </div>
         </div>
 
         <div id="section-2" class="form-section">
@@ -144,6 +173,7 @@ require_once "../includes/header.php";
             <input type="submit" name="submit_form" class="btn btn-primary" value="ثبت نهایی فرم">
         </div>
     </form>
+    <?php endif; ?>
 </div>
 
 <script>
@@ -167,8 +197,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const targetSection = document.getElementById(targetId);
             targetSection.classList.add('active');
 
-            // Scroll to the top of the section
-            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Scroll to the top of the form container, not the section itself
+            const formContainer = document.querySelector('.form-container');
+            if (formContainer) {
+                formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         });
     });
 

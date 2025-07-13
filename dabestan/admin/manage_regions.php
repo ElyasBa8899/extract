@@ -46,23 +46,28 @@ if (isset($_GET['delete_region'])) {
     }
 }
 
-// Fetch all existing regions
+// Fetch all existing regions with student and class counts
 $regions = [];
-$sql = "SELECT id, name FROM regions ORDER BY name ASC";
+$sql = "
+    SELECT
+        r.id,
+        r.name,
+        (SELECT COUNT(*) FROM recruited_students WHERE region_id = r.id) as student_count,
+        (SELECT GROUP_CONCAT(class_name SEPARATOR ', ') FROM classes WHERE region_id = r.id AND status = 'active') as active_classes
+    FROM regions r
+    ORDER BY r.name ASC
+";
 if($result = mysqli_query($link, $sql)){
-    if(mysqli_num_rows($result) > 0){
-        $regions = mysqli_fetch_all($result, MYSQLI_ASSOC);
-    }
-    mysqli_free_result($result);
+    $regions = mysqli_fetch_all($result, MYSQLI_ASSOC);
 }
-mysqli_close($link);
+// Note: mysqli_close($link) is removed from here to be at the end of the script.
 
 require_once "../includes/header.php";
 ?>
 
 <div class="page-content">
     <h2>مدیریت مناطق</h2>
-    <p>در این بخش می‌توانید مناطق جغرافیایی را برای دسته‌بندی دانش‌آموزان جذب شده تعریف کنید.</p>
+    <p>در این بخش، مناطق جغرافیایی و دانش‌آموزان جذب شده را مدیریت کنید.</p>
 
     <?php
     if(!empty($err)){ echo '<div class="alert alert-danger">' . $err . '</div>'; }
@@ -85,29 +90,36 @@ require_once "../includes/header.php";
 
     <!-- List of Existing Regions -->
     <div class="table-container">
-        <h3>مناطق موجود</h3>
-        <?php if (empty($regions)): ?>
-            <p>هیچ منطقه‌ای تاکنون تعریف نشده است.</p>
-        <?php else: ?>
+        <h3>لیست مناطق</h3>
+        <div class="table-responsive">
             <table class="table">
                 <thead>
                     <tr>
                         <th>نام منطقه</th>
+                        <th>تعداد دانش‌آموزان جذب شده</th>
+                        <th>کلاس‌های فعال در منطقه</th>
                         <th>عملیات</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($regions as $region): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($region['name']); ?></td>
-                            <td>
-                                <a href="manage_regions.php?delete_region=<?php echo $region['id']; ?>" class="btn btn-danger" onclick="return confirm('آیا از حذف این منطقه مطمئن هستید؟')">حذف</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+                    <?php if (empty($regions)): ?>
+                        <tr><td colspan="4">هیچ منطقه‌ای تاکنون تعریف نشده است.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($regions as $region): ?>
+                            <tr>
+                                <td><strong><?php echo htmlspecialchars($region['name']); ?></strong></td>
+                                <td><?php echo $region['student_count']; ?></td>
+                                <td><?php echo htmlspecialchars($region['active_classes'] ?? '---'); ?></td>
+                                <td>
+                                    <a href="view_region_students.php?region_id=<?php echo $region['id']; ?>" class="btn btn-sm btn-info">مشاهده دانش‌آموزان</a>
+                                    <a href="manage_regions.php?delete_region=<?php echo $region['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('آیا از حذف این منطقه مطمئن هستید؟')">حذف</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
-        <?php endif; ?>
+        </div>
     </div>
 </div>
 
