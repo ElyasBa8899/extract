@@ -119,8 +119,9 @@ require_once "../includes/header.php";
             <h3>اطلاعات پایه</h3>
             <?php echo render_field_by_label('نوع کلاس برگزار شده', $all_fields); ?>
             <div class="form-group">
-                <label for="meeting_date">تاریخ جلسه</label>
-                <input type="text" name="meeting_date" id="meeting_date" class="form-control persian-datepicker" required>
+                <label for="meeting_date_pd">تاریخ جلسه</label>
+                <input type="text" id="meeting_date_pd" class="form-control" required>
+                <input type="hidden" name="meeting_date" id="meeting_date">
             </div>
         </div>
 
@@ -254,10 +255,22 @@ document.addEventListener('DOMContentLoaded', function() {
         let firstErrorField = null;
 
         for (const section of formSections) {
-            if (section.offsetParent === null) continue; // Skip hidden sections
+            // Check only visible sections for errors
+            if (section.style.display === 'none' || section.offsetParent === null) continue;
 
             for (const field of section.querySelectorAll('[required]')) {
-                if ((field.type === 'radio' && !mainForm.querySelector(`[name="${field.name}"]:checked`)) || (field.value.trim() === '')) {
+                if (field.offsetParent === null) continue; // Skip fields hidden by conditional logic
+
+                let isInvalid = false;
+                if (field.type === 'radio') {
+                    if (!mainForm.querySelector(`[name="${field.name}"]:checked`)) {
+                        isInvalid = true;
+                    }
+                } else if (field.value.trim() === '') {
+                    isInvalid = true;
+                }
+
+                if (isInvalid) {
                     firstErrorField = field;
                     break;
                 }
@@ -273,15 +286,24 @@ document.addEventListener('DOMContentLoaded', function() {
             // Switch to the tab with the error
             document.querySelector(`.step-btn[data-target="${errorSectionId}"]`).click();
 
-            // Focus on the field
-            firstErrorField.focus();
-            firstErrorField.style.borderColor = 'var(--danger-color)';
-            alert('لطفاً تمام فیلدهای ستاره‌دار را تکمیل کنید.');
+            // Use a timeout to ensure the section is visible before focusing
+            setTimeout(() => {
+                firstErrorField.focus();
+                firstErrorField.style.borderColor = 'var(--danger-color)';
+                alert('لطفاً تمام فیلدهای ستاره‌دار را تکمیل کنید.');
+            }, 100);
         }
     });
 
     // Initial state setup
     toggleVisibility();
+
+    // Initialize Persian Datepicker
+    $("#meeting_date_pd").pDatepicker({
+        format: 'YYYY/MM/DD',
+        altField: '#meeting_date',
+        altFormat: 'X' // Unix timestamp
+    });
 });
 </script>
 

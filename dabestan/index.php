@@ -87,13 +87,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <input type="text" name="username" class="form-control" value="<?php echo $username; ?>">
             </div>
             <div class="form-group">
-                <label>رمز عبور</label>
-                <input type="password" name="password" class="form-control">
+                <label for="password">رمز عبور</label>
+                <div class="password-wrapper" style="position: relative;">
+                    <input type="password" id="password" name="password" class="form-control">
+                    <span class="toggle-password" onclick="togglePasswordVisibility()" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;">
+                        <i data-feather="eye"></i>
+                    </span>
+                </div>
             </div>
             <div class="form-group">
                 <input type="submit" class="btn btn-primary" value="ورود">
             </div>
         </form>
     </div>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>
+        feather.replace();
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.querySelector('.toggle-password i');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.setAttribute('data-feather', 'eye-off');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.setAttribute('data-feather', 'eye');
+            }
+            feather.replace();
+        }
+    </script>
 </body>
 </html>
