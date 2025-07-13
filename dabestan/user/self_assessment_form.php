@@ -69,9 +69,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_form'])) {
     mysqli_begin_transaction($link);
     try {
         // 1. Create a new submission record
+        $form_id = SELF_ASSESSMENT_FORM_ID;
         $sql_sub = "INSERT INTO form_submissions (form_id, user_id, class_id) VALUES (?, ?, ?)";
         $stmt_sub = mysqli_prepare($link, $sql_sub);
-        mysqli_stmt_bind_param($stmt_sub, "iii", SELF_ASSESSMENT_FORM_ID, $user_id, $class_id);
+        mysqli_stmt_bind_param($stmt_sub, "iii", $form_id, $user_id, $class_id);
         mysqli_stmt_execute($stmt_sub);
         $submission_id = mysqli_insert_id($link);
         mysqli_stmt_close($stmt_sub);
