@@ -133,18 +133,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatIdInput = document.getElementById('telegram_chat_id');
     const submitArea = document.getElementById('telegram-submit-area');
 
+    function toggleChatIdEdit(isInitial) {
+        const isCurrentlyEmpty = chatIdInput.value.trim() === '';
+        if (isInitial && !isCurrentlyEmpty) {
+            return; // Do nothing on load if already has value
+        }
+
+        chatIdInput.readOnly = !chatIdInput.readOnly;
+        if (!chatIdInput.readOnly) {
+            chatIdInput.focus();
+            submitArea.style.display = 'flex';
+            editChatIdBtn.textContent = 'لغو';
+        } else {
+            submitArea.style.display = 'none';
+            editChatIdBtn.textContent = 'ویرایش';
+        }
+    }
+
     if (editChatIdBtn && chatIdInput && submitArea) {
-        editChatIdBtn.addEventListener('click', function() {
-            chatIdInput.readOnly = !chatIdInput.readOnly;
-            if (!chatIdInput.readOnly) {
-                chatIdInput.focus();
-                submitArea.style.display = 'flex'; // Use flex for better alignment
-                this.textContent = 'لغو';
-            } else {
-                submitArea.style.display = 'none';
-                this.textContent = 'ویرایش';
-            }
-        });
+        // Allow editing by default if the field is empty on page load
+        if (chatIdInput.value.trim() === '') {
+            toggleChatIdEdit(true);
+        }
+        editChatIdBtn.addEventListener('click', () => toggleChatIdEdit(false));
     }
 
     // Send Test Telegram Message

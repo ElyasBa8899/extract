@@ -111,7 +111,9 @@ require_once "../includes/header.php";
                                 <td>
                                     <a href="#" class="btn btn-sm btn-warning">ویرایش</a>
                                     <a href="#" class="btn btn-sm btn-danger">حذف</a>
-                                    <a href="#" class="btn btn-sm btn-success">ثبت‌نام در کلاس</a>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="openEnrollModal(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars($student['student_name'], ENT_QUOTES); ?>')">
+                                        ثبت‌نام در کلاس
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -121,6 +123,55 @@ require_once "../includes/header.php";
         </div>
     </div>
 </div>
+
+<!-- Enroll Student Modal -->
+<div id="enrollModal" class="modal" style="display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:80%; max-width:500px; border-radius:8px;">
+        <span class="close" onclick="closeEnrollModal()" style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
+        <h3>ثبت‌نام دانش‌آموز</h3>
+        <p>دانش‌آموز <strong id="modalStudentName"></strong> را در کدام کلاس ثبت‌نام می‌کنید؟</p>
+        <form action="enroll_student.php" method="post">
+            <input type="hidden" name="student_id" id="modalStudentId">
+            <input type="hidden" name="region_id" value="<?php echo $region_id; ?>">
+            <div class="form-group">
+                <label for="class_id">انتخاب کلاس:</label>
+                <select name="class_id" id="class_id" class="form-control" required>
+                    <option value="">-- انتخاب کنید --</option>
+                    <?php
+                    // Fetch active classes in this region
+                    $classes_in_region_q = mysqli_query($link, "SELECT id, class_name FROM classes WHERE region_id = $region_id AND status = 'active'");
+                    while($class_item = mysqli_fetch_assoc($classes_in_region_q)) {
+                        echo "<option value='{$class_item['id']}'>" . htmlspecialchars($class_item['class_name']) . "</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <input type="submit" class="btn btn-primary" value="ثبت‌نام نهایی">
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEnrollModal(studentId, studentName) {
+    document.getElementById('modalStudentId').value = studentId;
+    document.getElementById('modalStudentName').textContent = studentName;
+    document.getElementById('enrollModal').style.display = 'block';
+}
+
+function closeEnrollModal() {
+    document.getElementById('enrollModal').style.display = 'none';
+}
+
+// Close modal if user clicks outside of it
+window.onclick = function(event) {
+    const modal = document.getElementById('enrollModal');
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
+}
+</script>
 
 <?php
 mysqli_close($link);

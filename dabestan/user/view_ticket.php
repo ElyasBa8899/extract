@@ -119,7 +119,7 @@ require_once "../includes/header.php";
     <div class="ticket-message is-creator">
         <div class="ticket-header">
             <strong><?php echo htmlspecialchars($ticket['creator_username']); ?></strong>
-            <span><?php echo htmlspecialchars($ticket['created_at']); ?></span>
+            <span><?php echo to_persian_date($ticket['created_at']); ?></span>
         </div>
         <div class="ticket-body">
             <?php echo nl2br(htmlspecialchars($ticket['message'])); ?>
@@ -131,7 +131,7 @@ require_once "../includes/header.php";
     <div class="ticket-reply <?php echo ($reply['user_id'] == $ticket['user_id']) ? 'is-creator' : 'is-responder'; ?>">
         <div class="reply-header">
             <strong><?php echo htmlspecialchars($reply['replier_username']); ?></strong>
-            <span><?php echo htmlspecialchars($reply['created_at']); ?></span>
+            <span><?php echo to_persian_date($reply['created_at']); ?></span>
         </div>
         <div class="reply-body">
             <?php echo nl2br(htmlspecialchars($reply['reply_message'])); ?>

@@ -17,5 +17,11 @@
 
     <!-- Custom Scripts -->
     <script src="../assets/js/script.js"></script>
+    <?php
+    // Close the database connection at the very end of the script
+    if (isset($link) && $link instanceof mysqli) {
+        mysqli_close($link);
+    }
+    ?>
 </body>
 </html>
