@@ -63,7 +63,7 @@ require_once "../includes/header.php";
 
 <div class="page-content">
     <a href="edit_class.php?class_id=<?php echo $class_id; ?>" class="btn btn-secondary" style="margin-bottom: 20px;">&larr; بازگشت به ویرایش کلاس</a>
-    <h2>مدیریت دانش‌آموزان کلاس: <?php echo htmlspecialchars($class['name']); ?></h2>
+    <h2>مدیریت دانش‌آموزان کلاس: <?php echo htmlspecialchars($class['class_name']); ?></h2>
 
     <?php
     if(!empty($err)){ echo '<div class="alert alert-danger">' . $err . '</div>'; }

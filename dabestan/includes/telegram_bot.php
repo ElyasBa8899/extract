@@ -16,21 +16,21 @@ function sendTelegramMessage($chat_id, $message) {
         'parse_mode' => 'HTML'
     ];
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_fields));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    // Using file_get_contents as an alternative to cURL
+    $options = [
+        'http' => [
+            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method'  => 'POST',
+            'content' => http_build_query($post_fields),
+            'timeout' => 10, // 10 seconds timeout
+        ],
+    ];
+    $context = stream_context_create($options);
+    $response = @file_get_contents($url, false, $context);
 
-    $response = curl_exec($ch);
-    $curl_error = curl_error($ch);
-    curl_close($ch);
-
-    if ($curl_error) {
-        // Return cURL errors as a structured response
-        return json_encode(['ok' => false, 'description' => 'cURL Error: ' . $curl_error]);
+    if ($response === FALSE) {
+        $error = error_get_last();
+        return json_encode(['ok' => false, 'description' => 'file_get_contents error: ' . ($error['message'] ?? 'Unknown error')]);
     }
 
     // Return Telegram's direct response (which is already JSON)
