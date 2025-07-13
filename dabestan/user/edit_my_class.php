@@ -97,6 +97,47 @@ require_once "../includes/header.php";
                 </div>
             </form>
         </div>
+
+        <hr style="margin: 40px 0;">
+
+        <div class="table-container">
+            <h3>مدیریت دانش‌آموزان کلاس</h3>
+            <!-- Add student form -->
+            <form action="add_student_to_class.php" method="post" style="margin-bottom: 20px;">
+                 <input type="hidden" name="class_id" value="<?php echo $class_id; ?>">
+                 <div class="form-group">
+                     <label for="student_name">نام و نام خانوادگی دانش‌آموز جدید:</label>
+                     <input type="text" name="student_name" id="student_name" class="form-control" required>
+                 </div>
+                 <button type="submit" class="btn btn-success">افزودن دانش‌آموز</button>
+            </form>
+
+            <!-- List of current students -->
+            <h4>لیست دانش‌آموزان فعلی</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>نام دانش‌آموز</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    // Fetch students for this class
+                    // This assumes a 'students' table linked to classes
+                    // This is a placeholder for the actual implementation
+                    ?>
+                    <tr>
+                        <td>دانش‌آموز نمونه ۱</td>
+                        <td><a href="#" class="btn btn-danger btn-sm">حذف</a></td>
+                    </tr>
+                     <tr>
+                        <td>دانش‌آموز نمونه ۲</td>
+                        <td><a href="#" class="btn btn-danger btn-sm">حذف</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     <?php endif; ?>
 </div>
 
