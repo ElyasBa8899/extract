@@ -69,7 +69,7 @@ require_once "../includes/header.php";
     .form-stepper { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; padding: 10px; background-color: #fff; border-radius: var(--radius-lg); position: sticky; top: 70px; /* Height of header */ z-index: 998; box-shadow: var(--shadow-md); }
     .step-btn { background: var(--background-color); border: 1px solid var(--border-color); padding: 8px 16px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-radius: var(--radius-md); transition: all 0.2s; }
     .step-btn.active { color: #fff; background-color: var(--primary-color); border-color: var(--primary-color); }
-    .form-section { display: none; animation: fadeIn 0.5s; }
+    .form-section { display: none; animation: fadeIn 0.5s; scroll-margin-top: 150px; /* Adjust this value based on your header/stepper height */ }
     .form-section.active { display: block; }
     .required-star { color: var(--danger-color); }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -169,6 +169,11 @@ require_once "../includes/header.php";
             <?php echo render_field_by_label('توضیحات', $all_fields); ?>
         </div>
 
+        <div id="section-7" class="form-section">
+            <h3>علت تعطیلی</h3>
+            <?php echo render_field_by_label('علت تعطیلی جلسه را توضیح دهید', $all_fields); ?>
+        </div>
+
         <div class="form-group" style="margin-top: 20px;">
             <input type="submit" name="submit_form" class="btn btn-primary" value="ثبت نهایی فرم">
         </div>
@@ -213,12 +218,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const classType = classTypeSelect ? classTypeSelect.value : '';
         const jozveType = jozveSelect ? jozveSelect.value : '';
 
-        // Toggle main sections based on class type
-        const isNormalClass = classType === 'عادی';
-        ['section-2', 'section-3', 'section-4', 'section-5'].forEach(id => {
+        // Determine which sections to show
+        const showNormalSections = (classType === 'عادی' || classType === 'جبرانی');
+        const showHolidaySection = (classType === 'تعطیلی');
+
+        // Toggle main sections
+        ['section-2', 'section-3', 'section-5'].forEach(id => {
             const sectionTab = document.querySelector(`[data-target="${id}"]`);
-            if (sectionTab) sectionTab.style.display = isNormalClass ? 'inline-flex' : 'none';
+            if (sectionTab) sectionTab.style.display = showNormalSections ? 'inline-flex' : 'none';
         });
+
+        const holidayTab = document.querySelector('[data-target="section-7"]');
+        if (holidayTab) holidayTab.style.display = showHolidaySection ? 'inline-flex' : 'none';
 
         // Toggle specialized jozve section
         const specializedTab = document.querySelector('[data-target="section-4"]');

@@ -32,11 +32,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_class'])) {
     }
 }
 
-// Fetch all existing classes
+// Fetch all existing classes with their teachers
 $classes = [];
-$sql_classes = "SELECT id, class_name, description, status FROM classes ORDER BY class_name ASC";
+$sql_classes = "
+    SELECT
+        c.id,
+        c.class_name,
+        c.description,
+        c.status,
+        GROUP_CONCAT(DISTINCT u.first_name, ' ', u.last_name SEPARATOR ', ') as teachers
+    FROM classes c
+    LEFT JOIN class_teachers ct ON c.id = ct.class_id
+    LEFT JOIN users u ON ct.teacher_id = u.id
+    GROUP BY c.id
+    ORDER BY c.class_name ASC
+";
 if($result = mysqli_query($link, $sql_classes)){
     $classes = mysqli_fetch_all($result, MYSQLI_ASSOC);
+}
+
+function translate_class_status($status) {
+    $translation = [
+        'active' => 'فعال',
+        'inactive' => 'غیرفعال',
+        'archived' => 'آرشیو شده',
+        'disbanded' => 'منحل شده',
+        'setup' => 'تحویل مقدمات'
+    ];
+    return $translation[$status] ?? $status;
 }
 
 require_once "../includes/header.php";
@@ -82,16 +105,22 @@ require_once "../includes/header.php";
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($classes as $class): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($class['class_name']); ?></td>
-                            <td><?php echo htmlspecialchars($class['description']); ?></td>
-                            <td><?php echo htmlspecialchars($class['status']); ?></td>
-                            <td>
-                                <a href="edit_class.php?class_id=<?php echo $class['id']; ?>" class="btn btn-secondary btn-sm">ویرایش و تخصیص مدرس</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+                    <?php if(empty($classes)): ?>
+                        <tr><td colspan="5">هیچ کلاسی یافت نشد.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($classes as $class): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($class['class_name']); ?></td>
+                                <td><?php echo htmlspecialchars($class['description']); ?></td>
+                                <td><?php echo htmlspecialchars($class['teachers'] ?? '---'); ?></td>
+                                <td><?php echo translate_class_status($class['status']); ?></td>
+                                <td>
+                                    <a href="edit_class.php?class_id=<?php echo $class['id']; ?>" class="btn btn-warning btn-sm">ویرایش</a>
+                                    <a href="manage_class_students.php?class_id=<?php echo $class['id']; ?>" class="btn btn-info btn-sm">دانش‌آموزان</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>

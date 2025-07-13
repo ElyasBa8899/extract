@@ -41,56 +41,58 @@ if (!function_exists('has_permission')) {
                 </li>
             <?php endif; ?>
 
-            <!-- New Structure based on Departments -->
-            <li class="has-submenu">
-                <a href="#"><i data-feather="eye"></i><span>نظارت</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                <ul class="submenu">
-                    <li><a href="/dabestan/user/self_assessment_form.php"><span>فرم خوداظهاری</span></a></li>
-                    <!-- Add link to visitor form -->
-                    <!-- Add link to analysis page -->
-                </ul>
-            </li>
-            <li class="has-submenu">
-                <a href="#"><i data-feather="gift"></i><span>پرورشی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                <ul class="submenu">
-                    <li><a href="/dabestan/user/class_event_reports.php"><span>گزارش خدمت‌گزاری‌ها</span></a></li>
-                    <li><a href="/dabestan/admin/manage_general_events.php"><span>پروژه‌های عمومی</span></a></li>
-                    <li><a href="/dabestan/user/rental_items.php"><span>کرایه‌چی</span></a></li>
-                </ul>
-            </li>
-             <li class="has-submenu">
-                <a href="#"><i data-feather="users"></i><span>اولیا</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                <ul class="submenu">
-                     <li><a href="/dabestan/user/manage_parent_meetings.php"><span>جلسات اولیا</span></a></li>
-                </ul>
-            </li>
-            <li class="has-submenu">
-                <a href="#"><i data-feather-cpu></i><span>ضمن خدمت</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                <ul class="submenu">
-                     <li><a href="/dabestan/user/manage_meetings.php"><span>جلسات ضمن خدمت</span></a></li>
-                </ul>
-            </li>
-             <li class="has-submenu">
-                <a href="#"><i data-feather="crosshair"></i><span>جذب و راه‌اندازی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                <ul class="submenu">
-                     <li><a href="/dabestan/admin/manage_regions.php"><span>مدیریت مناطق</span></a></li>
-                     <!-- Add link to recruited students list -->
-                </ul>
-            </li>
-            <li class="has-submenu">
-                <a href="#"><i data-feather="dollar-sign"></i><span>مالی و پشتیبانی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                <ul class="submenu">
-                    <?php if(has_permission('manage_inventory')): ?>
-                        <li><a href="/dabestan/admin/manage_categories.php"><span>دسته‌بندی انبار</span></a></li>
-                        <li><a href="/dabestan/admin/manage_inventory.php"><span>اقلام انبار</span></a></li>
-                    <?php endif; ?>
-                    <?php if(has_permission('manage_financials')): ?>
-                        <li><a href="/dabestan/admin/manage_booklets.php"><span>مدیریت جزوات</span></a></li>
-                        <li><a href="/dabestan/user/financial_transactions.php"><span>ثبت تراکنش مالی</span></a></li>
-                    <?php endif; ?>
-                    <li><a href="/dabestan/user/my_financial_status.php"><span>وضعیت حساب من</span></a></li>
-                </ul>
-            </li>
+            <?php if(has_permission('view_department_menu')): // A new permission to see these menus ?>
+                <!-- New Structure based on Departments -->
+                <li class="has-submenu">
+                    <a href="#"><i data-feather="eye"></i><span>نظارت</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
+                    <ul class="submenu">
+                        <li><a href="/dabestan/user/self_assessment_form.php"><span>فرم خوداظهاری</span></a></li>
+                        <!-- Add link to visitor form -->
+                        <!-- Add link to analysis page -->
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#"><i data-feather="gift"></i><span>پرورشی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
+                    <ul class="submenu">
+                        <li><a href="/dabestan/user/class_event_reports.php"><span>گزارش خدمت‌گزاری‌ها</span></a></li>
+                        <li><a href="/dabestan/admin/manage_general_events.php"><span>پروژه‌های عمومی</span></a></li>
+                        <li><a href="/dabestan/user/rental_items.php"><span>کرایه‌چی</span></a></li>
+                    </ul>
+                </li>
+                 <li class="has-submenu">
+                    <a href="#"><i data-feather="users"></i><span>اولیا</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
+                    <ul class="submenu">
+                         <li><a href="/dabestan/user/manage_parent_meetings.php"><span>جلسات اولیا</span></a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#"><i data-feather-cpu></i><span>ضمن خدمت</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
+                    <ul class="submenu">
+                         <li><a href="/dabestan/user/manage_meetings.php"><span>جلسات ضمن خدمت</span></a></li>
+                    </ul>
+                </li>
+                 <li class="has-submenu">
+                    <a href="#"><i data-feather="crosshair"></i><span>جذب و راه‌اندازی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
+                    <ul class="submenu">
+                         <li><a href="/dabestan/admin/manage_regions.php"><span>مدیریت مناطق</span></a></li>
+                         <!-- Add link to recruited students list -->
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#"><i data-feather="dollar-sign"></i><span>مالی و پشتیبانی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
+                    <ul class="submenu">
+                        <?php if(has_permission('manage_inventory')): ?>
+                            <li><a href="/dabestan/admin/manage_categories.php"><span>دسته‌بندی انبار</span></a></li>
+                            <li><a href="/dabestan/admin/manage_inventory.php"><span>اقلام انبار</span></a></li>
+                        <?php endif; ?>
+                        <?php if(has_permission('manage_financials')): ?>
+                            <li><a href="/dabestan/admin/manage_booklets.php"><span>مدیریت جزوات</span></a></li>
+                            <li><a href="/dabestan/user/financial_transactions.php"><span>ثبت تراکنش مالی</span></a></li>
+                        <?php endif; ?>
+                        <li><a href="/dabestan/user/my_financial_status.php"><span>وضعیت حساب من</span></a></li>
+                    </ul>
+                </li>
+            <?php endif; ?>
 
 
 
@@ -131,7 +133,7 @@ if (!function_exists('has_permission')) {
                         <div class="notification-header">اعلان‌ها</div>
                         <div id="notification-list"></div>
                         <div class="notification-footer">
-                            <a href="#">مشاهده همه</a>
+                            <a href="/dabestan/user/view_all_notifications.php">مشاهده همه</a>
                         </div>
                     </div>
                 </div>
