@@ -130,7 +130,19 @@ require_once "../includes/header.php";
     </div>
 </div>
 
+<script>
+$(document).ready(function() {
+    $("#meeting_date_persian").pDatepicker({
+        format: 'YYYY/MM/DD HH:mm',
+        altField: '#meeting_date_gregorian',
+        altFormat: 'YYYY/MM/DD HH:mm:ss',
+        timePicker: {
+            enabled: true
+        }
+    });
+});
+</script>
+
 <?php
-mysqli_close($link);
 require_once "../includes/footer.php";
 ?>
