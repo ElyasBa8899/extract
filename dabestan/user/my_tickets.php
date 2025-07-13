@@ -27,7 +27,7 @@ if($stmt = mysqli_prepare($link, $sql)){
     mysqli_stmt_close($stmt);
 }
 
-mysqli_close($link);
+// mysqli_close($link); // Removed from here
 
 function get_status_badge($status) {
     switch ($status) {

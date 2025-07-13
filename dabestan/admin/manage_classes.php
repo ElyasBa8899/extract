@@ -51,16 +51,6 @@ if($result = mysqli_query($link, $sql_classes)){
     $classes = mysqli_fetch_all($result, MYSQLI_ASSOC);
 }
 
-function translate_class_status($status) {
-    $translation = [
-        'active' => 'فعال',
-        'inactive' => 'غیرفعال',
-        'archived' => 'آرشیو شده',
-        'disbanded' => 'منحل شده',
-        'setup' => 'تحویل مقدمات'
-    ];
-    return $translation[$status] ?? $status;
-}
 
 require_once "../includes/header.php";
 ?>

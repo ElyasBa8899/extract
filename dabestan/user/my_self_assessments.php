@@ -14,7 +14,7 @@ $user_id = $_SESSION['id'];
 $submissions = [];
 $sql = "SELECT s.id, s.submitted_at, c.class_name
         FROM form_submissions s
-        JOIN classes c ON s.class_id = c.id
+        LEFT JOIN classes c ON s.class_id = c.id
         WHERE s.form_id = 1 AND s.user_id = ?
         ORDER BY s.submitted_at DESC";
 
