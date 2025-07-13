@@ -16,7 +16,7 @@ $class_id = $_GET['class_id'];
 $err = $success_msg = "";
 
 // Fetch class details
-$class_query = mysqli_query($link, "SELECT name, region_id FROM classes WHERE id = $class_id");
+$class_query = mysqli_query($link, "SELECT class_name, region_id FROM classes WHERE id = $class_id");
 if(mysqli_num_rows($class_query) == 0){
     header("location: manage_classes.php");
     exit;

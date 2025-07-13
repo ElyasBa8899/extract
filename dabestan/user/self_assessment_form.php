@@ -8,14 +8,16 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     exit;
 }
 
-// We assume the form ID is 4, created by the seeder script.
-const SELF_ASSESSMENT_FORM_ID = 4;
+// We assume the form ID is 1 for the self-assessment form.
+const SELF_ASSESSMENT_FORM_ID = 1;
 
 // Fetch form fields and map them for easier access by label
 $fields_query = mysqli_query($link, "SELECT id, field_label, field_type, field_options, is_required FROM form_fields WHERE form_id = " . SELF_ASSESSMENT_FORM_ID . " ORDER BY field_order ASC");
 $all_fields = [];
-while ($row = mysqli_fetch_assoc($fields_query)) {
-    $all_fields[$row['field_label']] = $row;
+if($fields_query) {
+    while ($row = mysqli_fetch_assoc($fields_query)) {
+        $all_fields[$row['field_label']] = $row;
+    }
 }
 
 // Helper function to render a field by its label

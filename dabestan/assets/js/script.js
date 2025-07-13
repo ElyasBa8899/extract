@@ -138,12 +138,39 @@ document.addEventListener('DOMContentLoaded', function() {
             chatIdInput.readOnly = !chatIdInput.readOnly;
             if (!chatIdInput.readOnly) {
                 chatIdInput.focus();
-                submitArea.style.display = 'block';
+                submitArea.style.display = 'flex'; // Use flex for better alignment
                 this.textContent = 'لغو';
             } else {
                 submitArea.style.display = 'none';
                 this.textContent = 'ویرایش';
             }
+        });
+    }
+
+    // Send Test Telegram Message
+    const testMessageBtn = document.getElementById('send-test-message');
+    if (testMessageBtn) {
+        testMessageBtn.addEventListener('click', function() {
+            const chatId = chatIdInput.value;
+            if (!chatId) {
+                alert('لطفاً ابتدا شناسه چت را وارد کنید.');
+                return;
+            }
+            // Using fetch to call a dedicated PHP script for sending the test message
+            fetch('send_test_telegram.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('پیام تست با موفقیت ارسال شد!');
+                } else {
+                    alert('خطا در ارسال پیام تست: ' + data.error);
+                }
+            })
+            .catch(err => alert('خطای اساسی در ارسال درخواست.'));
         });
     }
 });

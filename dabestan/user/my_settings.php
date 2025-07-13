@@ -133,7 +133,8 @@ require_once "../includes/header.php";
                 </div>
             </div>
              <div class="form-group" id="telegram-submit-area" style="display: none;">
-                <input type="submit" name="update_telegram" class="btn btn-primary" value="ذخیره و ارسال پیام تست">
+                <input type="submit" name="update_telegram" class="btn btn-primary" value="ذخیره">
+                <button type="button" id="send-test-message" class="btn btn-success">ارسال پیام تست</button>
             </div>
         </form>
     </div>
