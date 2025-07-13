@@ -106,7 +106,8 @@ if (!function_exists('has_permission')) {
                 </ul>
             </li>
 
-            <li class="nav-section-title"><span>فرم‌ها و گزارش‌ها</span></li>
+            <li class="nav-section-title"><span>ابزارها</span></li>
+            <li><a href="/dabestan/user/my_classes.php"><i data-feather="book-open"></i><span>مدیریت کلاس‌های من</span></a></li>
             <li><a href="/dabestan/user/self_assessment_form.php"><i data-feather="edit-3"></i><span>فرم خوداظهاری</span></a></li>
 
             <li class="nav-section-title"><span>پروفایل</span></li>

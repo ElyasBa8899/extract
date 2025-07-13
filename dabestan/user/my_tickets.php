@@ -13,10 +13,9 @@ $user_id = $_SESSION['id'];
 // Fetch tickets created by the user.
 // Fetch tickets created by the user OR assigned to the user.
 $tickets = [];
-$sql = "SELECT t.id, t.title, t.status, t.created_at, d.department_name, au.username as assigned_username
+$sql = "SELECT t.id, t.title, t.status, t.created_at, d.department_name
         FROM tickets t
         LEFT JOIN departments d ON t.assigned_to_department_id = d.id
-        LEFT JOIN users au ON t.assigned_to_user_id = au.id
         WHERE t.user_id = ?
         ORDER BY t.created_at DESC";
 

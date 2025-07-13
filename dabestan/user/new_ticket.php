@@ -82,31 +82,11 @@ require_once "../includes/header.php";
             </div>
 
             <div class="form-group">
-                <label>ارجاع به <span style="color: red;">*</span></label>
-                <div class="radio-group">
-                    <input type="radio" name="assign_type" value="department" id="type_dept" onclick="toggleAssignFields()" checked> <label for="type_dept">یک بخش</label>
-                </div>
-                <div class="radio-group">
-                    <input type="radio" name="assign_type" value="user" id="type_user" onclick="toggleAssignFields()"> <label for="type_user">یک کاربر خاص (ادمین)</label>
-                </div>
-            </div>
-
-            <div id="department_field" class="form-group">
-                <label for="department_id">انتخاب بخش</label>
+                <label for="department_id">ارسال به</label>
                 <select name="department_id" id="department_id" class="form-control">
-                    <option value="">عمومی (بدون ارجاع)</option>
+                    <option value="0">ادمین کل</option>
                     <?php while($dept = mysqli_fetch_assoc($departments)): ?>
-                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
-                    <?php endwhile; ?>
-                </select>
-            </div>
-
-            <div id="user_field" class="form-group" style="display: none;">
-                <label for="user_id">انتخاب کاربر</label>
-                <select name="user_id" id="user_id" class="form-control">
-                    <option value="">انتخاب کنید...</option>
-                     <?php while($admin = mysqli_fetch_assoc($admins)): ?>
-                        <option value="<?php echo $admin['id']; ?>"><?php echo htmlspecialchars($admin['username']); ?></option>
+                        <option value="<?php echo $dept['id']; ?>">بخش <?php echo htmlspecialchars($dept['department_name']); ?></option>
                     <?php endwhile; ?>
                 </select>
             </div>
