@@ -29,24 +29,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         $student_info = mysqli_fetch_assoc($student_info_q);
 
-        // 2. Add student to the main 'students' table (or whatever your main student roster is)
-        // This is a placeholder for the actual table you'll use for enrolled students.
-        // Let's assume a table 'class_students' exists with (class_id, student_name, phone_number)
-
-        // For now, we will just simulate this by adding a note.
-        // A real implementation would look something like this:
-        /*
-        $sql_add_to_roster = "INSERT INTO class_students (class_id, student_name, original_recruitment_id) VALUES (?, ?, ?)";
-        $stmt_roster = mysqli_prepare($link, $sql_add_to_roster);
-        mysqli_stmt_bind_param($stmt_roster, "isi", $class_id, $student_info['student_name'], $student_id);
-        mysqli_stmt_execute($stmt_roster);
-        */
-
-        // 3. Delete the student from the recruited_students table
-        $sql_delete_recruited = "DELETE FROM recruited_students WHERE id = ?";
-        $stmt_delete = mysqli_prepare($link, $sql_delete_recruited);
-        mysqli_stmt_bind_param($stmt_delete, "i", $student_id);
-        mysqli_stmt_execute($stmt_delete);
+        // 2. Instead of deleting, we update the student's record to link them to the class.
+        // This preserves their recruitment history.
+        $sql_enroll = "UPDATE recruited_students SET class_id = ? WHERE id = ?";
+        $stmt_enroll = mysqli_prepare($link, $sql_enroll);
+        mysqli_stmt_bind_param($stmt_enroll, "ii", $class_id, $student_id);
+        mysqli_stmt_execute($stmt_enroll);
 
         // If all queries were successful, commit the transaction
         mysqli_commit($link);

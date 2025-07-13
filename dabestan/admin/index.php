@@ -79,6 +79,5 @@ require_once "../includes/header.php";
 </div>
 
 <?php
-mysqli_close($link);
 require_once "../includes/footer.php";
 ?>

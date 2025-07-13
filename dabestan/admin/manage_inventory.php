@@ -53,7 +53,6 @@ if($result_items = mysqli_query($link, $sql_items)){
     $items = mysqli_fetch_all($result_items, MYSQLI_ASSOC);
 }
 
-mysqli_close($link);
 require_once "../includes/header.php";
 ?>
 

@@ -97,6 +97,53 @@ require_once "../includes/header.php";
                 </div>
             </form>
         </div>
+
+        <hr style="margin: 40px 0;">
+
+        <div class="table-container">
+            <h3>مدیریت متربیان کلاس</h3>
+            <!-- Add student form -->
+            <form action="add_student_to_class.php" method="post" style="margin-bottom: 20px;">
+                 <input type="hidden" name="class_id" value="<?php echo $class_id; ?>">
+                 <div class="form-group">
+                     <label for="student_name">نام و نام خانوادگی متربی جدید:</label>
+                     <input type="text" name="student_name" class="form-control" required>
+                 </div>
+                 <button type="submit" class="btn btn-success">افزودن متربی</button>
+            </form>
+
+            <!-- List of current students -->
+            <h4>لیست متربیان فعلی</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>نام متربی</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    // Fetch students for this class
+                    $class_students_q = mysqli_query($link, "SELECT id, student_name FROM class_students WHERE class_id = $class_id ORDER BY student_name ASC");
+                    if(mysqli_num_rows($class_students_q) > 0):
+                        while($student = mysqli_fetch_assoc($class_students_q)):
+                    ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($student['student_name']); ?></td>
+                        <td>
+                            <a href="delete_student_from_class.php?student_id=<?php echo $student['id']; ?>&class_id=<?php echo $class_id; ?>" class="btn btn-danger btn-sm" onclick="return confirm('آیا از حذف این متربی مطمئن هستید؟')">
+                                حذف
+                            </a>
+                        </td>
+                    </tr>
+                    <?php
+                        endwhile;
+                    else: ?>
+                        <tr><td colspan="2">هنوز متربی‌ای به این کلاس اضافه نشده است.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     <?php endif; ?>
 </div>
 

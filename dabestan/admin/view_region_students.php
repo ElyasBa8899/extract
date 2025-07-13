@@ -46,15 +46,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_student'])) {
     }
 }
 
-// Fetch all students for this region
-$students = [];
-$sql_students = "SELECT * FROM recruited_students WHERE region_id = ? ORDER BY student_name ASC";
-if($stmt = mysqli_prepare($link, $sql_students)){
-    mysqli_stmt_bind_param($stmt, "i", $region_id);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $students = mysqli_fetch_all($result, MYSQLI_ASSOC);
-    mysqli_stmt_close($stmt);
+// Fetch unregistered students (still in recruited_students table)
+$unregistered_students = [];
+$sql_unregistered = "SELECT id, student_name, phone_number FROM recruited_students WHERE region_id = ? AND class_id IS NULL ORDER BY student_name ASC";
+if($stmt_unregistered = mysqli_prepare($link, $sql_unregistered)){
+    mysqli_stmt_bind_param($stmt_unregistered, "i", $region_id);
+    mysqli_stmt_execute($stmt_unregistered);
+    $result_unregistered = mysqli_stmt_get_result($stmt_unregistered);
+    $unregistered_students = mysqli_fetch_all($result_unregistered, MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt_unregistered);
+}
+
+// Fetch registered students (moved to main students table or linked to a class)
+$registered_students = [];
+$sql_registered = "SELECT rs.student_name, c.class_name
+                   FROM recruited_students rs
+                   JOIN classes c ON rs.class_id = c.id
+                   WHERE rs.region_id = ? AND rs.class_id IS NOT NULL";
+if($stmt_registered = mysqli_prepare($link, $sql_registered)){
+    mysqli_stmt_bind_param($stmt_registered, "i", $region_id);
+    mysqli_stmt_execute($stmt_registered);
+    $result_registered = mysqli_stmt_get_result($stmt_registered);
+    $registered_students = mysqli_fetch_all($result_registered, MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt_registered);
 }
 
 
@@ -89,8 +103,8 @@ require_once "../includes/header.php";
         </form>
     </div>
 
-    <div class="table-container">
-        <h3>لیست دانش‌آموزان</h3>
+    <div class="table-container" style="margin-bottom: 30px;">
+        <h3>دانش‌آموزان در صف انتظار</h3>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -101,20 +115,44 @@ require_once "../includes/header.php";
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($students)): ?>
-                        <tr><td colspan="3">هیچ دانش‌آموزی در این منطقه ثبت نشده است.</td></tr>
+                    <?php if (empty($unregistered_students)): ?>
+                        <tr><td colspan="3">هیچ دانش‌آموزی در صف انتظار این منطقه نیست.</td></tr>
                     <?php else: ?>
-                        <?php foreach ($students as $student): ?>
+                        <?php foreach ($unregistered_students as $student): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($student['student_name']); ?></td>
                                 <td><?php echo htmlspecialchars($student['phone_number']); ?></td>
                                 <td>
-                                    <a href="#" class="btn btn-sm btn-warning">ویرایش</a>
-                                    <a href="#" class="btn btn-sm btn-danger">حذف</a>
                                     <button type="button" class="btn btn-sm btn-success" onclick="openEnrollModal(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars($student['student_name'], ENT_QUOTES); ?>')">
                                         ثبت‌نام در کلاس
                                     </button>
                                 </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <h3>دانش‌آموزان ثبت‌نام شده</h3>
+         <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>نام دانش‌آموز</th>
+                        <th>کلاس</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($registered_students)): ?>
+                        <tr><td colspan="2">هیچ دانش‌آموز ثبت‌نام شده‌ای در این منطقه وجود ندارد.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($registered_students as $student): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($student['student_name']); ?></td>
+                                <td><?php echo htmlspecialchars($student['class_name']); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
