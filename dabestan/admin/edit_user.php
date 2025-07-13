@@ -41,6 +41,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_user'])) {
         mysqli_stmt_bind_param($stmt_update_user, "ssi", $first_name, $last_name, $user_id_to_edit);
         mysqli_stmt_execute($stmt_update_user);
 
+        // Update password if a new one is provided
+        if (!empty(trim($_POST['password']))) {
+            $new_password = password_hash(trim($_POST['password']), PASSWORD_DEFAULT);
+            $sql_update_pass = "UPDATE users SET password = ? WHERE id = ?";
+            $stmt_update_pass = mysqli_prepare($link, $sql_update_pass);
+            mysqli_stmt_bind_param($stmt_update_pass, "si", $new_password, $user_id_to_edit);
+            mysqli_stmt_execute($stmt_update_pass);
+        }
+
         // 2. Delete old roles for this user
         mysqli_query($link, "DELETE FROM user_roles WHERE user_id = $user_id_to_edit");
 

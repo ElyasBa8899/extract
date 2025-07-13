@@ -76,6 +76,7 @@ require_once "../includes/header.php";
                     <tr>
                         <th>نام کلاس</th>
                         <th>توضیحات</th>
+                            <th>مدرس(ها)</th>
                         <th>وضعیت</th>
                         <th>عملیات</th>
                     </tr>

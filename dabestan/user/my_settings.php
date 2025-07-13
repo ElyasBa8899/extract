@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once "../includes/db.php";
+require_once "../includes/telegram_bot.php"; // For notifications
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
@@ -10,60 +11,127 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
 $user_id = $_SESSION['id'];
 $err = $success_msg = "";
 
-// --- Schema Migration: Add telegram_chat_id column if it doesn't exist ---
-$check_column_query = mysqli_query($link, "SHOW COLUMNS FROM `users` LIKE 'telegram_chat_id'");
-if (mysqli_num_rows($check_column_query) == 0) {
-    mysqli_query($link, "ALTER TABLE `users` ADD `telegram_chat_id` VARCHAR(50) NULL DEFAULT NULL AFTER `is_admin`");
+// Handle Password Change
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['change_password'])) {
+    $current_password = $_POST['current_password'];
+    $new_password = $_POST['new_password'];
+    $confirm_password = $_POST['confirm_password'];
+
+    // Fetch current password from DB
+    $sql_pass = "SELECT password, telegram_chat_id FROM users WHERE id = ?";
+    if($stmt_pass = mysqli_prepare($link, $sql_pass)){
+        mysqli_stmt_bind_param($stmt_pass, "i", $user_id);
+        mysqli_stmt_execute($stmt_pass);
+        $result = mysqli_stmt_get_result($stmt_pass);
+        $user = mysqli_fetch_assoc($result);
+        $hashed_password = $user['password'];
+        $chat_id = $user['telegram_chat_id'];
+
+        // Verify current password
+        if(password_verify($current_password, $hashed_password)){
+            // Check if new passwords match
+            if($new_password === $confirm_password){
+                // Check password strength (simple version)
+                if(strlen($new_password) >= 8){
+                    $new_hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                    $sql_update = "UPDATE users SET password = ? WHERE id = ?";
+                    if($stmt_update = mysqli_prepare($link, $sql_update)){
+                        mysqli_stmt_bind_param($stmt_update, "si", $new_hashed_password, $user_id);
+                        if(mysqli_stmt_execute($stmt_update)){
+                            $success_msg = "رمز عبور شما با موفقیت تغییر کرد.";
+                            // Send Telegram notification
+                            sendTelegramMessage($chat_id, "✅ رمز عبور شما در سامانه دبستان با موفقیت تغییر کرد.");
+                        } else {
+                            $err = "خطایی در به‌روزرسانی رمز عبور رخ داد.";
+                        }
+                        mysqli_stmt_close($stmt_update);
+                    }
+                } else {
+                    $err = "رمز عبور جدید باید حداقل ۸ کاراکتر باشد.";
+                }
+            } else {
+                $err = "رمز عبور جدید و تکرار آن یکسان نیستند.";
+            }
+        } else {
+            $err = "رمز عبور فعلی شما صحیح نیست.";
+        }
+        mysqli_stmt_close($stmt_pass);
+    }
 }
-// --- End Migration ---
 
-// Fetch current user data
-$user_query = mysqli_query($link, "SELECT telegram_chat_id FROM users WHERE id = $user_id");
-$user = mysqli_fetch_assoc($user_query);
-
-// Handle Update Settings POST Request
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_settings'])) {
+// Handle Telegram Chat ID update
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_telegram'])) {
     $telegram_chat_id = trim($_POST['telegram_chat_id']);
 
-    $sql = "UPDATE users SET telegram_chat_id = ? WHERE id = ?";
-    if ($stmt = mysqli_prepare($link, $sql)) {
+    $sql_update = "UPDATE users SET telegram_chat_id = ? WHERE id = ?";
+    if($stmt = mysqli_prepare($link, $sql_update)){
         mysqli_stmt_bind_param($stmt, "si", $telegram_chat_id, $user_id);
-        if (mysqli_stmt_execute($stmt)) {
-            $success_msg = "تنظیمات شما با موفقیت ذخیره شد.";
-            $user['telegram_chat_id'] = $telegram_chat_id; // Update for display
+        if(mysqli_stmt_execute($stmt)){
+            $success_msg = "شناسه چت تلگرام شما با موفقیت ذخیره شد.";
+             sendTelegramMessage($telegram_chat_id, "✅ حساب کاربری شما در سامانه دبستان با موفقیت به این چت متصل شد.");
         } else {
-            $err = "خطا در ذخیره تنظیمات.";
+            $err = "خطا در ذخیره شناسه چت تلگرام.";
         }
         mysqli_stmt_close($stmt);
     }
 }
 
+// Fetch current user data for display
+$user_data_query = mysqli_query($link, "SELECT telegram_chat_id FROM users WHERE id = $user_id");
+$user_data = mysqli_fetch_assoc($user_data_query);
+
+
 require_once "../includes/header.php";
 ?>
 
 <div class="page-content">
-    <h2>تنظیمات کاربری</h2>
+    <h2>تنظیمات من</h2>
+    <p>در این بخش می‌توانید تنظیمات حساب کاربری خود را مدیریت کنید.</p>
 
     <?php
     if(!empty($err)){ echo '<div class="alert alert-danger">' . $err . '</div>'; }
     if(!empty($success_msg)){ echo '<div class="alert alert-success">' . $success_msg . '</div>'; }
     ?>
 
-    <div class="form-container">
-        <h3>تنظیمات اعلان تلگرام</h3>
-        <p>برای دریافت اعلان‌ها در تلگرام، ابتدا به ربات ما پیام دهید تا چت آیدی خود را دریافت کنید و سپس آن را در کادر زیر وارد نمایید.</p>
-        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
+    <div class="form-container" style="margin-bottom: 30px;">
+        <h4>تغییر رمز عبور</h4>
+        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post" id="setting-form">
             <div class="form-group">
-                <label for="telegram_chat_id">چت آیدی تلگرام</label>
-                <input type="text" name="telegram_chat_id" id="telegram_chat_id" class="form-control" value="<?php echo htmlspecialchars($user['telegram_chat_id'] ?? ''); ?>" style="direction: ltr; text-align: left;">
+                <label for="current_password">رمز عبور فعلی</label>
+                <input type="password" id="current_password" name="current_password" class="form-control" required>
             </div>
             <div class="form-group">
-                <input type="submit" name="update_settings" class="btn btn-primary" value="ذخیره تنظیمات">
+                <label for="password">رمز عبور جدید</label>
+                <input type="password" id="password" name="new_password" class="form-control" required>
+                 <div id="password-strength-bar"><div></div></div>
+                <small id="password-strength-text"></small>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">تکرار رمز عبور جدید</label>
+                <input type="password" id="confirm_password" name="confirm_password" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <input type="submit" name="change_password" class="btn btn-primary" value="تغییر رمز عبور">
             </div>
         </form>
     </div>
-</div>
 
+    <div class="form-container">
+        <h4>اتصال به تلگرام</h4>
+        <p>برای دریافت نوتیفیکیشن‌ها، شناسه عددی چت تلگرام خود را وارد کنید. برای دریافت شناسه، به ربات <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> پیام دهید و ID خود را کپی کنید.</p>
+        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
+            <div class="form-group">
+                <label for="telegram_chat_id">شناسه چت تلگرام</label>
+                <input type="text" id="telegram_chat_id" name="telegram_chat_id" class="form-control" value="<?php echo htmlspecialchars($user_data['telegram_chat_id'] ?? ''); ?>">
+            </div>
+             <div class="form-group">
+                <input type="submit" name="update_telegram" class="btn btn-primary" value="ذخیره">
+            </div>
+        </form>
+    </div>
+
+</div>
+<script src="../assets/js/password-strength.js"></script>
 <?php
 mysqli_close($link);
 require_once "../includes/footer.php";
