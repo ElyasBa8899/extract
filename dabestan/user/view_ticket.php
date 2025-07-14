@@ -180,7 +180,65 @@ require_once "../includes/header.php";
             </div>
         </form>
     </div>
+
+    <?php if(!empty($_SESSION['is_admin'])): // Only show for admins for now ?>
+    <hr>
+    <div class="form-container">
+        <h3>ارجاع تیکت</h3>
+        <form action="reassign_ticket.php" method="post">
+            <input type="hidden" name="ticket_id" value="<?php echo $ticket_id; ?>">
+            <div class="form-group">
+                <label>نوع ارجاع</label>
+                <div class="radio-group">
+                    <input type="radio" name="assign_type" value="department" id="assign_type_dept_re" checked onchange="toggleReassignFields()"> <label for="assign_type_dept_re">ارجاع به بخش</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" name="assign_type" value="user" id="assign_type_user_re" onchange="toggleReassignFields()"> <label for="assign_type_user_re">ارجاع به کاربر</label>
+                </div>
+            </div>
+            <div id="department_field_re" class="form-group">
+                <label for="department_id_re">انتخاب بخش</label>
+                <select name="department_id" id="department_id_re" class="form-control">
+                    <?php
+                    $departments = mysqli_query($link, "SELECT id, department_name FROM departments ORDER BY department_name ASC");
+                    while($dept = mysqli_fetch_assoc($departments)): ?>
+                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
+                    <?php endwhile; ?>
+                </select>
+            </div>
+            <div id="user_field_re" class="form-group" style="display: none;">
+                <label for="user_id_re">انتخاب کاربر</label>
+                <select name="user_id" id="user_id_re" class="form-control">
+                    <?php
+                     $users = mysqli_query($link, "SELECT id, username FROM users ORDER BY username ASC");
+                    while($user = mysqli_fetch_assoc($users)): ?>
+                        <option value="<?php echo $user['id']; ?>"><?php echo htmlspecialchars($user['username']); ?></option>
+                    <?php endwhile; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-info">ارجاع</button>
+            </div>
+        </form>
+    </div>
+    <?php endif; ?>
 </div>
+
+<script>
+function toggleReassignFields() {
+    const assignType = document.querySelector('input[name="assign_type"]:checked').value;
+    const deptField = document.getElementById('department_field_re');
+    const userField = document.getElementById('user_field_re');
+
+    if (assignType === 'department') {
+        deptField.style.display = 'block';
+        userField.style.display = 'none';
+    } else {
+        deptField.style.display = 'none';
+        userField.style.display = 'block';
+    }
+}
+</script>
 
 <?php
 // mysqli_close($link);

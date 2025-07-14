@@ -192,6 +192,14 @@ if (!function_exists('has_permission')) {
                 </ul>
             </li>
 
+             <li class="has-submenu">
+                <a href="#"><i data-feather="check-square"></i><span>مدیریت وظایف</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
+                <ul class="submenu">
+                    <li><a href="/dabestan/user/manage_tasks.php"><span>لیست وظایف</span></a></li>
+                    <li><a href="/dabestan/user/create_task.php"><span>ایجاد وظیفه جدید</span></a></li>
+                </ul>
+            </li>
+
             <li class="nav-section-title"><span>ابزارها</span></li>
             <li><a href="/dabestan/user/my_classes.php"><i data-feather="book-open"></i><span>مدیریت کلاس‌های من</span></a></li>
             <li><a href="/dabestan/user/self_assessment_form.php"><i data-feather="edit-3"></i><span>فرم خوداظهاری</span></a></li>
@@ -231,87 +239,82 @@ if (!function_exists('has_permission')) {
         </header>
         <main>
             <!-- Page content will be loaded here -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-$(document).ready(function() {
-    const notificationIcon = $('#notification-icon');
-    const notificationDropdown = $('#notification-dropdown');
-    const notificationCount = $('#notification-count');
-    const notificationList = $('#notification-list');
-    const rootPath = '/dabestan'; // Adjust if your project is in a different subfolder
+// Plain JavaScript - No jQuery needed
+document.addEventListener('DOMContentLoaded', function() {
+    const notificationIcon = document.getElementById('notification-icon');
+    const notificationDropdown = document.getElementById('notification-dropdown');
+    const notificationCount = document.getElementById('notification-count');
+    const notificationList = document.getElementById('notification-list');
+    const rootPath = '/dabestan';
 
     function fetchNotifications(showDropdown = false) {
-        $.ajax({
-            url: rootPath + '/includes/fetch_notifications.php',
-            type: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.error) {
-                    console.error(response.error);
+        fetch(rootPath + '/includes/fetch_notifications.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error(data.error);
                     return;
                 }
 
-                // Update notification count badge
-                if (response.unread_count > 0) {
-                    notificationCount.text(response.unread_count).show();
+                // Update badge
+                if (data.unread_count > 0) {
+                    notificationCount.textContent = data.unread_count;
+                    notificationCount.style.display = 'block';
                 } else {
-                    notificationCount.hide();
+                    notificationCount.style.display = 'none';
                 }
 
-                // Populate notification list
-                notificationList.empty();
-                if (response.notifications.length > 0) {
-                    response.notifications.forEach(function(notif) {
-                        const notifDate = new Date(notif.created_at);
-                        // A simple time ago function could be implemented here for better UX
-                        const timeString = notifDate.toLocaleTimeString('fa-IR') + ' - ' + notifDate.toLocaleDateString('fa-IR');
+                // Populate list
+                notificationList.innerHTML = ''; // Clear previous list
+                if (data.notifications.length > 0) {
+                    data.notifications.forEach(notif => {
+                        const item = document.createElement('a');
+                        item.className = 'notification-item';
+                        item.href = notif.link ? rootPath + notif.link : '#';
 
-                        const item = $('<a></a>')
-                            .addClass('notification-item')
-                            .attr('href', notif.link ? rootPath + notif.link : '#')
-                            .html(notif.message + '<small>' + timeString + '</small>');
-                        notificationList.append(item);
+                        const time = new Date(notif.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+                        const date = new Date(notif.created_at).toLocaleDateString('fa-IR');
+
+                        item.innerHTML = `${notif.message}<small>${date} - ${time}</small>`;
+                        notificationList.appendChild(item);
                     });
                 } else {
-                    notificationList.html('<div class="no-notification">هیچ اعلان جدیدی وجود ندارد.</div>');
+                    notificationList.innerHTML = '<div class="no-notification">هیچ اعلان جدیدی وجود ندارد.</div>';
                 }
 
                 if (showDropdown) {
-                    notificationDropdown.addClass('show');
+                    notificationDropdown.classList.add('show');
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error("An error occurred: " + status + " " + error);
+            })
+            .catch(error => {
+                console.error('Error fetching notifications:', error);
                 if (showDropdown) {
-                    notificationList.html('<div class="no-notification">خطا در بارگذاری اعلان‌ها.</div>');
-                    notificationDropdown.addClass('show');
+                    notificationList.innerHTML = '<div class="no-notification">خطا در بارگذاری اعلان‌ها.</div>';
+                    notificationDropdown.classList.add('show');
                 }
-            }
-        });
+            });
     }
 
-    // Toggle dropdown
-    notificationIcon.on('click', function(e) {
+    // Toggle dropdown on icon click
+    notificationIcon.addEventListener('click', function(e) {
         e.stopPropagation();
-        // If the dropdown is not visible, fetch notifications first, then show it.
-        // Otherwise, just toggle it.
-        if (!notificationDropdown.hasClass('show')) {
-            fetchNotifications(true); // Pass true to force showing the dropdown
+        if (notificationDropdown.classList.contains('show')) {
+            notificationDropdown.classList.remove('show');
         } else {
-            notificationDropdown.removeClass('show');
+            fetchNotifications(true); // Fetch and then show
         }
     });
 
-    // Close dropdown if clicked outside
-    $(document).on('click', function(e) {
-        if (!notificationIcon.is(e.target) && notificationIcon.has(e.target).length === 0 &&
-            !notificationDropdown.is(e.target) && notificationDropdown.has(e.target).length === 0) {
-            notificationDropdown.removeClass('show');
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!notificationIcon.contains(e.target) && !notificationDropdown.contains(e.target)) {
+            notificationDropdown.classList.remove('show');
         }
     });
 
-    // Fetch notifications on page load and then every 60 seconds
+    // Initial fetch and periodic refresh
     fetchNotifications();
-    setInterval(fetchNotifications, 60000);
+    setInterval(fetchNotifications, 60000); // Refresh every 60 seconds
 });
 </script>

@@ -48,7 +48,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_ticket'])) {
             if (mysqli_stmt_execute($stmt)) {
                 $success_msg = "تیکت شما با موفقیت ثبت شد.";
 
-                $ticket_id = mysqli_insert_id($stmt); // Get the ID of the new ticket
+                $ticket_id = mysqli_insert_id($link); // Corrected: Pass the connection link, not the statement
 
                 // --- Create In-App Notification ---
                 $notification_message = "تیکت جدیدی با عنوان '" . htmlspecialchars($title) . "' برای شما ثبت شد.";
