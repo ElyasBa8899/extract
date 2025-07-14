@@ -46,7 +46,7 @@ if (!function_exists('has_permission')) {
                 <li class="has-submenu">
                     <a href="#"><i data-feather="eye"></i><span>نظارت</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
                     <ul class="submenu">
-                        <li><a href="/dabestan/user/self_assessment_form.php"><span>فرم خوداظهاری</span></a></li>
+                        <li><a href="/dabestan/admin/view_all_assessments.php"><span>مشاهده خوداظهاری‌ها</span></a></li>
                         <!-- Add link to visitor form -->
                         <!-- Add link to analysis page -->
                     </ul>

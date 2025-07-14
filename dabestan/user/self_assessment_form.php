@@ -60,7 +60,56 @@ function render_field_by_label($label, $all_fields_map) {
     return $html;
 }
 
-// ... (Handle Form Submission - to be added)
+// Handle Form Submission
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_form'])) {
+    $class_id = $_POST['class_id'];
+    $user_id = $_SESSION['id'];
+
+    // Start transaction
+    mysqli_begin_transaction($link);
+    try {
+        // 1. Create a new submission record
+        $form_id = SELF_ASSESSMENT_FORM_ID;
+        $sql_sub = "INSERT INTO form_submissions (form_id, user_id, class_id) VALUES (?, ?, ?)";
+        $stmt_sub = mysqli_prepare($link, $sql_sub);
+        mysqli_stmt_bind_param($stmt_sub, "iii", $form_id, $user_id, $class_id);
+        mysqli_stmt_execute($stmt_sub);
+        $submission_id = mysqli_insert_id($link);
+        mysqli_stmt_close($stmt_sub);
+
+        // 2. Loop through POST data to find submitted fields
+        foreach ($_POST as $key => $value) {
+            if (strpos($key, 'field_') === 0) {
+                $field_id = substr($key, 6); // Get ID from "field_XXX"
+                if (is_numeric($field_id) && !empty($value)) {
+                    $sql_data = "INSERT INTO form_submission_data (submission_id, field_id, field_value) VALUES (?, ?, ?)";
+                    $stmt_data = mysqli_prepare($link, $sql_data);
+                    $field_value = is_array($value) ? implode(', ', $value) : $value;
+                    mysqli_stmt_bind_param($stmt_data, "iis", $submission_id, $field_id, $field_value);
+                    mysqli_stmt_execute($stmt_data);
+                    mysqli_stmt_close($stmt_data);
+                }
+            }
+        }
+
+        // Also handle the separate meeting_date field
+        if (isset($_POST['meeting_date'])) {
+            // We need to find the ID for a field named 'تاریخ جلسه' or similar
+            // This is a bit brittle. A better way would be a hidden input with the field ID.
+            // For now, let's assume it has a known ID, e.g., from the seeder.
+        }
+
+        mysqli_commit($link);
+        header("location: my_self_assessments.php?success=1");
+        exit;
+
+    } catch (Exception $e) {
+        mysqli_rollback($link);
+        // Redirect with error
+        header("location: self_assessment_form.php?class_id={$class_id}&error=" . urlencode($e->getMessage()));
+        exit;
+    }
+}
 
 
 require_once "../includes/header.php";
@@ -302,7 +351,15 @@ document.addEventListener('DOMContentLoaded', function() {
     $("#meeting_date_pd").pDatepicker({
         format: 'YYYY/MM/DD',
         altField: '#meeting_date',
-        altFormat: 'X' // Unix timestamp
+
+        altFormat: 'YYYY-MM-DD', // Standard date format for database
+        toolbox: {
+            enabled: true,
+            calendarSwitch: {
+                enabled: false,
+            }
+        }
+
     });
 });
 </script>

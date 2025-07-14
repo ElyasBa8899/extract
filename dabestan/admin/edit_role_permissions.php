@@ -94,16 +94,18 @@ require_once "../includes/header.php";
     <div class="form-container">
         <form action="edit_role_permissions.php?role_id=<?php echo $role_id; ?>" method="post">
             <h3>لیست دسترسی‌ها</h3>
-            <?php foreach($all_permissions as $permission): ?>
-                <div class="checkbox-group">
-                    <input type="checkbox" name="permissions[]" value="<?php echo $permission['id']; ?>" id="perm_<?php echo $permission['id']; ?>"
-                        <?php if(in_array($permission['id'], $current_permissions)) echo 'checked'; ?>>
-                    <label for="perm_<?php echo $permission['id']; ?>">
-                        <strong><?php echo htmlspecialchars($permission['permission_name']); ?></strong> -
-                        <small><?php echo htmlspecialchars($permission['permission_description']); ?></small>
-                    </label>
-                </div>
-            <?php endforeach; ?>
+            <div class="checkbox-grid">
+                <?php foreach($all_permissions as $permission): ?>
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="permissions[]" value="<?php echo $permission['id']; ?>" id="perm_<?php echo $permission['id']; ?>"
+                            <?php if(in_array($permission['id'], $current_permissions)) echo 'checked'; ?>>
+                        <label for="perm_<?php echo $permission['id']; ?>">
+                            <strong><?php echo htmlspecialchars($permission['permission_description']); ?></strong>
+                            <small class="text-muted d-block">(<?php echo htmlspecialchars($permission['permission_name']); ?>)</small>
+                        </label>
+                    </div>
+                <?php endforeach; ?>
+            </div>
 
             <div class="form-group" style="margin-top: 20px;">
                 <input type="submit" name="update_permissions" class="btn btn-primary" value="ذخیره تغییرات">

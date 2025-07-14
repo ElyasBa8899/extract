@@ -52,6 +52,7 @@ if($result = mysqli_query($link, $sql_classes)){
 }
 
 
+require_once "../includes/functions.php";
 require_once "../includes/header.php";
 ?>
 
