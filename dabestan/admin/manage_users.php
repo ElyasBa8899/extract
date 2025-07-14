@@ -13,7 +13,7 @@ $sql = "SELECT id, username, first_name, last_name, is_admin FROM users ORDER BY
 if($result = mysqli_query($link, $sql)){
     $users = mysqli_fetch_all($result, MYSQLI_ASSOC);
 }
-mysqli_close($link);
+// mysqli_close($link); // Removed from here, will be closed in footer
 
 require_once "../includes/header.php";
 ?>
