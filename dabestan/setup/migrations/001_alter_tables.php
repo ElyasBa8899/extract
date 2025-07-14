@@ -29,6 +29,11 @@ function run_migration_001_alter_tables($link) {
         if (mysqli_num_rows($check_phone_col_q) > 0) {
              $queries[] = "ALTER TABLE `class_students`
                            CHANGE COLUMN `phone_number` `added_by_user_id` INT(11) NULL DEFAULT NULL;";
+             // Before adding the constraint, we need to make sure existing data doesn't violate it.
+             // Let's set any existing non-null, non-matching values to NULL.
+             // We assume that if a value is not a valid user ID, it should be nullified.
+             // A simple way is to set all to NULL if they are not 0, as 0 is not a valid user ID.
+             $queries[] = "UPDATE `class_students` SET `added_by_user_id` = NULL WHERE `added_by_user_id` NOT IN (SELECT id FROM users) AND `added_by_user_id` IS NOT NULL;";
              $queries[] = "ALTER TABLE `class_students`
                            ADD CONSTRAINT `class_students_ibfk_2` FOREIGN KEY (`added_by_user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL;";
         }
