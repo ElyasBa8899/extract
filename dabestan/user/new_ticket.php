@@ -19,7 +19,7 @@ $admins = mysqli_query($link, "SELECT id, username FROM users WHERE is_admin = 1
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_ticket'])) {
     $title = trim($_POST['title']);
     $message = trim($_POST['message']);
-    $status = trim($_POST['priority']); // urgent or open
+    $priority = trim($_POST['priority']); // urgent or normal
     $assign_type = $_POST['assign_type'];
 
     $department_id = null;
@@ -27,16 +27,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_ticket'])) {
 
     if($assign_type == 'department'){
         $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
-    } else {
+        if(empty($department_id)){
+            $err = "لطفاً یک بخش برای ارجاع انتخاب کنید.";
+        }
+    } else { // user
         $assigned_user_id = !empty($_POST['user_id']) ? $_POST['user_id'] : null;
+         if(empty($assigned_user_id)){
+            $err = "لطفاً یک کاربر برای ارجاع انتخاب کنید.";
+        }
     }
 
     if (empty($title) || empty($message)) {
         $err = "عنوان و متن پیام الزامی است.";
-    } else {
-        $sql = "INSERT INTO tickets (title, message, user_id, assigned_to_department_id, assigned_to_user_id, status) VALUES (?, ?, ?, ?, ?, ?)";
+    }
+
+    if (empty($err)) {
+        $sql = "INSERT INTO tickets (title, message, user_id, assigned_to_department_id, assigned_to_user_id, priority, status) VALUES (?, ?, ?, ?, ?, ?, 'open')";
         if ($stmt = mysqli_prepare($link, $sql)) {
-            mysqli_stmt_bind_param($stmt, "ssiiis", $title, $message, $_SESSION['id'], $department_id, $assigned_user_id, $status);
+            mysqli_stmt_bind_param($stmt, "ssiiis", $title, $message, $_SESSION['id'], $department_id, $assigned_user_id, $priority);
             if (mysqli_stmt_execute($stmt)) {
                 $success_msg = "تیکت شما با موفقیت ثبت شد.";
 
@@ -82,19 +90,40 @@ require_once "../includes/header.php";
             </div>
 
             <div class="form-group">
-                <label for="department_id">ارسال به</label>
+                <label>نوع ارجاع</label>
+                 <div class="radio-group">
+                    <input type="radio" name="assign_type" value="department" id="assign_type_dept" checked onchange="toggleAssignFields()"> <label for="assign_type_dept">ارجاع به بخش</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" name="assign_type" value="user" id="assign_type_user" onchange="toggleAssignFields()"> <label for="assign_type_user">ارجاع به کاربر خاص (ادمین)</label>
+                </div>
+            </div>
+
+            <div id="department_field" class="form-group">
+                <label for="department_id">انتخاب بخش</label>
                 <select name="department_id" id="department_id" class="form-control">
-                    <option value="0">ادمین کل</option>
-                    <?php while($dept = mysqli_fetch_assoc($departments)): ?>
-                        <option value="<?php echo $dept['id']; ?>">بخش <?php echo htmlspecialchars($dept['department_name']); ?></option>
+                     <option value="">-- انتخاب کنید --</option>
+                    <?php mysqli_data_seek($departments, 0); while($dept = mysqli_fetch_assoc($departments)): ?>
+                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
                     <?php endwhile; ?>
                 </select>
             </div>
 
+            <div id="user_field" class="form-group" style="display: none;">
+                <label for="user_id">انتخاب کاربر</label>
+                <select name="user_id" id="user_id" class="form-control">
+                    <option value="">-- انتخاب کنید --</option>
+                    <?php while($admin = mysqli_fetch_assoc($admins)): ?>
+                        <option value="<?php echo $admin['id']; ?>"><?php echo htmlspecialchars($admin['username']); ?></option>
+                    <?php endwhile; ?>
+                </select>
+            </div>
+
+
             <div class="form-group">
                 <label>اولویت <span style="color: red;">*</span></label>
                 <div class="radio-group">
-                    <input type="radio" name="priority" value="open" id="priority_normal" checked> <label for="priority_normal">عادی</label>
+                    <input type="radio" name="priority" value="normal" id="priority_normal" checked> <label for="priority_normal">عادی</label>
                 </div>
                 <div class="radio-group">
                     <input type="radio" name="priority" value="urgent" id="priority_urgent"> <label for="priority_urgent">فوری</label>

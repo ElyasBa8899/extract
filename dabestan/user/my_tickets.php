@@ -10,14 +10,14 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
 
 $user_id = $_SESSION['id'];
 
-// Fetch tickets created by the user.
 // Fetch tickets created by the user OR assigned to the user.
 $tickets = [];
-$sql = "SELECT t.id, t.title, t.status, t.created_at, d.department_name
+$sql = "SELECT t.id, t.title, t.status, t.priority, t.created_at, d.department_name, u_assigned.username as assigned_username
         FROM tickets t
         LEFT JOIN departments d ON t.assigned_to_department_id = d.id
+        LEFT JOIN users u_assigned ON t.assigned_to_user_id = u_assigned.id
         WHERE t.user_id = ?
-        ORDER BY t.created_at DESC";
+        ORDER BY t.priority = 'urgent' DESC, t.created_at DESC";
 
 if($stmt = mysqli_prepare($link, $sql)){
     mysqli_stmt_bind_param($stmt, "i", $user_id);
@@ -37,11 +37,16 @@ function get_status_badge($status) {
             return '<span class="badge badge-warning">در حال بررسی</span>';
         case 'closed':
             return '<span class="badge badge-secondary">بسته شده</span>';
-        case 'urgent':
-            return '<span class="badge badge-danger">فوری</span>';
         default:
             return '<span class="badge badge-light">نامشخص</span>';
     }
+}
+
+function get_priority_badge($priority) {
+    if ($priority === 'urgent') {
+        return '<span class="badge badge-danger">فوری</span>';
+    }
+    return ''; // No badge for normal priority
 }
 
 require_once "../includes/header.php";
@@ -54,6 +59,14 @@ require_once "../includes/header.php";
 .badge-danger { color: #fff; background-color: #dc3545; }
 .badge-warning { color: #000; background-color: #ffc107; }
 .badge-light { color: #000; background-color: #f8f9fa; }
+
+.ticket-row.priority-urgent {
+    background-color: #fff3f3; /* Light red background for urgent tickets */
+    font-weight: bold;
+}
+.ticket-row.priority-urgent:hover {
+    background-color: #ffe8e8;
+}
 </style>
 
 <div class="page-content">
@@ -76,8 +89,11 @@ require_once "../includes/header.php";
                     <tr><td colspan="5" style="text-align: center;">شما تاکنون هیچ تیکتی ارسال نکرده‌اید.</td></tr>
                 <?php else: ?>
                     <?php foreach ($tickets as $ticket): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($ticket['title']); ?></td>
+                        <tr class="ticket-row priority-<?php echo htmlspecialchars($ticket['priority']); ?>">
+                            <td>
+                                <?php echo htmlspecialchars($ticket['title']); ?>
+                                <?php echo get_priority_badge($ticket['priority']); ?>
+                            </td>
                             <td>
                                 <?php
                                 if (!empty($ticket['assigned_username'])) {
