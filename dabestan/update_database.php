@@ -6,9 +6,9 @@ session_start();
 require_once "includes/db.php"; // Connect to the database
 
 // --- Basic Security: Only allow admins to run this ---
-if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !isset($_SESSION["is_admin"]) || !$_SESSION["is_admin"]) {
+if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || empty($_SESSION["is_admin"])) {
     header("HTTP/1.1 403 Forbidden");
-    echo "<h1>403 Forbidden</h1><p>You do not have permission to access this page.</p>";
+    echo "<h1>403 Forbidden</h1><p>You do not have permission to access this page. Please ensure you are logged in as an administrator.</p>";
     exit;
 }
 // ----------------------------------------------------
