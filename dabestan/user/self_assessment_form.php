@@ -351,6 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
     $("#meeting_date_pd").pDatepicker({
         format: 'YYYY/MM/DD',
         altField: '#meeting_date',
+
         altFormat: 'YYYY-MM-DD', // Standard date format for database
         toolbox: {
             enabled: true,
@@ -358,6 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 enabled: false,
             }
         }
+
     });
 });
 </script>

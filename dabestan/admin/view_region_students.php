@@ -59,11 +59,13 @@ if($stmt_unregistered = mysqli_prepare($link, $sql_unregistered)){
 
 // Fetch registered students (moved to main students table or linked to a class)
 $registered_students = [];
+
 $sql_registered = "SELECT rs.student_name, c.class_name, c.id as class_id
                    FROM recruited_students rs
                    JOIN classes c ON rs.class_id = c.id
                    WHERE rs.region_id = ? AND rs.class_id IS NOT NULL
                    ORDER BY c.class_name, rs.student_name";
+
 if($stmt_registered = mysqli_prepare($link, $sql_registered)){
     mysqli_stmt_bind_param($stmt_registered, "i", $region_id);
     mysqli_stmt_execute($stmt_registered);
@@ -137,6 +139,7 @@ require_once "../includes/header.php";
     </div>
 
     <div class="table-container">
+
         <h3>کلاس‌های فعال در این منطقه</h3>
         <div class="accordion">
             <?php
@@ -166,6 +169,7 @@ require_once "../includes/header.php";
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
+
         </div>
     </div>
 </div>

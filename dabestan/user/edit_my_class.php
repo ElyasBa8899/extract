@@ -109,10 +109,12 @@ require_once "../includes/header.php";
                      <label for="student_name">نام و نام خانوادگی متربی جدید:</label>
                      <input type="text" name="student_name" class="form-control" required>
                  </div>
+
                  <div class="form-group">
                      <label for="phone_number">شماره تلفن اولیا:</label>
                      <input type="text" name="phone_number" class="form-control" required>
                  </div>
+
                  <button type="submit" class="btn btn-success">افزودن متربی</button>
             </form>
 

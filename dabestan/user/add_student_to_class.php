@@ -10,7 +10,9 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $class_id = $_POST['class_id'];
     $student_name = trim($_POST['student_name']);
+
     $phone_number = trim($_POST['phone_number']);
+
     $user_id = $_SESSION['id'];
 
     // Security Check: Ensure the user is a teacher of this class
@@ -26,9 +28,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // --- Main Logic ---
     // 1. Add the student to the class_students table
+
     $sql_add = "INSERT INTO class_students (class_id, student_name, phone_number) VALUES (?, ?, ?)";
     $stmt_add = mysqli_prepare($link, $sql_add);
     mysqli_stmt_bind_param($stmt_add, "iss", $class_id, $student_name, $phone_number);
+
     mysqli_stmt_execute($stmt_add);
     mysqli_stmt_close($stmt_add);
 
