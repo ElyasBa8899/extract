@@ -82,7 +82,7 @@ if($stmt_items = mysqli_prepare($link, $base_sql_items)){
 }
 
 
-mysqli_close($link);
+// mysqli_close($link);
 require_once "../includes/header.php";
 ?>
 

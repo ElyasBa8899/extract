@@ -61,5 +61,5 @@ echo "<p>Admin user setup complete.</p>";
 echo "<hr><h1>Setup Complete!</h1>";
 echo "<p style='color:red; font-weight:bold;'>Please delete this file (setup.php) immediately for security reasons.</p>";
 
-mysqli_close($link);
+// mysqli_close($link);
 ?>

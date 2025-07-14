@@ -240,7 +240,7 @@ $(document).ready(function() {
     const notificationList = $('#notification-list');
     const rootPath = '/dabestan'; // Adjust if your project is in a different subfolder
 
-    function fetchNotifications() {
+    function fetchNotifications(showDropdown = false) {
         $.ajax({
             url: rootPath + '/includes/fetch_notifications.php',
             type: 'GET',
@@ -275,9 +275,17 @@ $(document).ready(function() {
                 } else {
                     notificationList.html('<div class="no-notification">هیچ اعلان جدیدی وجود ندارد.</div>');
                 }
+
+                if (showDropdown) {
+                    notificationDropdown.addClass('show');
+                }
             },
             error: function(xhr, status, error) {
                 console.error("An error occurred: " + status + " " + error);
+                if (showDropdown) {
+                    notificationList.html('<div class="no-notification">خطا در بارگذاری اعلان‌ها.</div>');
+                    notificationDropdown.addClass('show');
+                }
             }
         });
     }
@@ -285,7 +293,13 @@ $(document).ready(function() {
     // Toggle dropdown
     notificationIcon.on('click', function(e) {
         e.stopPropagation();
-        notificationDropdown.toggleClass('show');
+        // If the dropdown is not visible, fetch notifications first, then show it.
+        // Otherwise, just toggle it.
+        if (!notificationDropdown.hasClass('show')) {
+            fetchNotifications(true); // Pass true to force showing the dropdown
+        } else {
+            notificationDropdown.removeClass('show');
+        }
     });
 
     // Close dropdown if clicked outside

@@ -93,5 +93,5 @@ try {
     echo "An error occurred: " . $e->getMessage();
 }
 
-mysqli_close($link);
+// mysqli_close($link);
 ?>

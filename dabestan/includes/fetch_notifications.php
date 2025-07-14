@@ -26,7 +26,7 @@ $result_count = mysqli_stmt_get_result($stmt_count);
 $count_data = mysqli_fetch_assoc($result_count);
 $unread_count = $count_data['unread_count'];
 
-mysqli_close($link);
+// mysqli_close($link);
 
 echo json_encode(['notifications' => $notifications, 'unread_count' => $unread_count]);
 ?>

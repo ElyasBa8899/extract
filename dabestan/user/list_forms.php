@@ -16,7 +16,7 @@ if($result = mysqli_query($link, $sql)){
         mysqli_free_result($result);
     }
 }
-mysqli_close($link);
+// mysqli_close($link);
 
 require_once "../includes/header.php";
 ?>

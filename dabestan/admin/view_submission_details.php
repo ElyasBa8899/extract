@@ -49,7 +49,7 @@ if($stmt_data = mysqli_prepare($link, $sql_data)){
     mysqli_stmt_close($stmt_data);
 }
 
-mysqli_close($link);
+// mysqli_close($link);
 
 require_once "../includes/header.php";
 ?>

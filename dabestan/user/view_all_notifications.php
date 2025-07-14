@@ -63,6 +63,6 @@ require_once "../includes/header.php";
 </style>
 
 <?php
-mysqli_close($link);
+// mysqli_close($link);
 require_once "../includes/footer.php";
 ?>

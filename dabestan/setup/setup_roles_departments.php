@@ -67,6 +67,6 @@ echo "\nDepartments setup finished.\n";
 
 
 // --- Finalize ---
-mysqli_close($link);
+// mysqli_close($link);
 echo "\nSetup complete!\n";
 ?>

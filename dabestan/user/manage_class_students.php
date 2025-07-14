@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_student'])) {
         $err = "نام متربی نمی‌تواند خالی باشد.";
     } else {
         // Add student to the class
-        $sql_add = "INSERT INTO class_students (class_id, student_name, added_by) VALUES (?, ?, ?)";
+        $sql_add = "INSERT INTO class_students (class_id, student_name, added_by_user_id) VALUES (?, ?, ?)";
         if ($stmt = mysqli_prepare($link, $sql_add)) {
             mysqli_stmt_bind_param($stmt, "isi", $class_id, $student_name, $user_id);
             if (mysqli_stmt_execute($stmt)) {
@@ -95,7 +95,7 @@ require_once "../includes/header.php";
                 // 1. Get students added by teachers
                 $sql_teacher_added = "SELECT cs.id, cs.student_name, u.full_name as added_by_name, 'teacher' as source
                                       FROM class_students cs
-                                      JOIN users u ON cs.added_by = u.id
+                                      JOIN users u ON cs.added_by_user_id = u.id
                                       WHERE cs.class_id = ?";
                 if($stmt_teacher = mysqli_prepare($link, $sql_teacher_added)) {
                     mysqli_stmt_bind_param($stmt_teacher, "i", $class_id);
@@ -185,6 +185,6 @@ function closeDeleteModal() {
 </script>
 
 <?php
-mysqli_close($link);
+// mysqli_close($link);
 require_once "../includes/footer.php";
 ?>

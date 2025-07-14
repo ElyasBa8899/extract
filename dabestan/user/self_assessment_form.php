@@ -308,6 +308,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <?php
-mysqli_close($link);
+// mysqli_close($link);
 require_once "../includes/footer.php";
 ?>

@@ -126,6 +126,6 @@ require_once "../includes/header.php";
 </div>
 
 <?php
-// mysqli_close($link); // Removed from here, will be closed in footer
+// // mysqli_close($link); // Removed from here, will be closed in footer
 require_once "../includes/footer.php";
 ?>

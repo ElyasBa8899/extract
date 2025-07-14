@@ -39,7 +39,7 @@ if($stmt = mysqli_prepare($link, $sql)){
     $err = "خطا در آماده‌سازی کوئری.";
 }
 
-mysqli_close($link);
+// mysqli_close($link);
 require_once "../includes/header.php";
 ?>
 

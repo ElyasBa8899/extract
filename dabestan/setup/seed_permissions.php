@@ -140,5 +140,5 @@ try {
     echo "<p style='color:red;'>Transaction rolled back. Error: " . $e->getMessage() . "</p>";
 }
 
-mysqli_close($link);
+// mysqli_close($link);
 ?>

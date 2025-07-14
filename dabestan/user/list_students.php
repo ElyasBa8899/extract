@@ -45,7 +45,7 @@ if($stmt = mysqli_prepare($link, $sql)){
     echo "Error preparing statement.";
 }
 
-mysqli_close($link);
+// mysqli_close($link);
 require_once "../includes/header.php";
 ?>
 

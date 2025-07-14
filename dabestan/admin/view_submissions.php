@@ -45,7 +45,7 @@ if($stmt = mysqli_prepare($link, $sql)){
     $submissions = mysqli_fetch_all($result, MYSQLI_ASSOC);
     mysqli_stmt_close($stmt);
 }
-mysqli_close($link);
+// mysqli_close($link);
 
 require_once "../includes/header.php";
 ?>

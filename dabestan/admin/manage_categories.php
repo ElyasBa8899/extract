@@ -50,7 +50,7 @@ $sql = "SELECT id, name FROM inventory_categories ORDER BY name ASC";
 if($result = mysqli_query($link, $sql)){
     $categories = mysqli_fetch_all($result, MYSQLI_ASSOC);
 }
-mysqli_close($link);
+// mysqli_close($link);
 
 require_once "../includes/header.php";
 ?>
