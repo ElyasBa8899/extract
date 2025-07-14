@@ -70,4 +70,36 @@ function translate_class_status($status) {
     ];
     return $translation[$status] ?? $status;
 }
+
+/**
+ * Returns an HTML badge for a given ticket status.
+ *
+ * @param string $status The status of the ticket.
+ * @return string The HTML badge.
+ */
+function get_status_badge($status) {
+    switch ($status) {
+        case 'open':
+            return '<span class="badge badge-primary">باز</span>';
+        case 'in_progress':
+            return '<span class="badge badge-warning">در حال بررسی</span>';
+        case 'closed':
+            return '<span class="badge badge-secondary">بسته شده</span>';
+        default:
+            return '<span class="badge badge-light">نامشخص</span>';
+    }
+}
+
+/**
+ * Returns an HTML badge for urgent priority tickets.
+ *
+ * @param string $priority The priority of the ticket.
+ * @return string The HTML badge or an empty string.
+ */
+function get_priority_badge($priority) {
+    if ($priority === 'urgent') {
+        return '<span class="badge badge-danger">فوری</span>';
+    }
+    return '';
+}
 ?>
