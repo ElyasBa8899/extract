@@ -16,7 +16,42 @@
     <script src="https://unpkg.com/feather-icons"></script>
 
     <!-- Custom Scripts -->
-    <script src="../assets/js/script.js"></script>
+    <script src="/dabestan/assets/js/script.js"></script>
+    <script>
+        // Initialize Persian Datepicker on all elements with the class 'persian-datepicker'
+        $(document).ready(function() {
+            $(".persian-datepicker").pDatepicker({
+                format: 'YYYY/MM/DD',
+                autoClose: true,
+                initialValue: false, // Do not set a default value
+                observer: true, // Re-initializes on new elements
+                calendar: {
+                    persian: {
+                        locale: 'fa'
+                    }
+                },
+                toolbox: {
+                    enabled: true,
+                    calendarSwitch: {
+                        enabled: true,
+                        format: 'YYYY'
+                    },
+                    todayButton: {
+                        enabled: true,
+                        text: {
+                            fa: 'امروز'
+                        }
+                    },
+                     submitButton: {
+                        enabled: true,
+                        text: {
+                            fa: 'تایید'
+                        }
+                    }
+                }
+            });
+        });
+    </script>
     <?php
     // Close the database connection at the very end of the script
     if (isset($link) && $link instanceof mysqli && $link->thread_id) {

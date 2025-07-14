@@ -119,9 +119,8 @@ require_once "../includes/header.php";
             <h3>اطلاعات پایه</h3>
             <?php echo render_field_by_label('نوع کلاس برگزار شده', $all_fields); ?>
             <div class="form-group">
-                <label for="meeting_date_pd">تاریخ جلسه</label>
-                <input type="text" id="meeting_date_pd" class="form-control" required>
-                <input type="hidden" name="meeting_date" id="meeting_date">
+                <label for="meeting_date">تاریخ جلسه</label>
+                <input type="text" name="meeting_date" class="form-control persian-datepicker" required>
             </div>
         </div>
 
@@ -298,12 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial state setup
     toggleVisibility();
 
-    // Initialize Persian Datepicker
-    $("#meeting_date_pd").pDatepicker({
-        format: 'YYYY/MM/DD',
-        altField: '#meeting_date',
-        altFormat: 'X' // Unix timestamp
-    });
+    // Datepicker is now initialized globally in footer.php
 });
 </script>
 
