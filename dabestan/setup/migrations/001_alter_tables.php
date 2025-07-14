@@ -4,7 +4,7 @@
 // Description: Alters general_events and class_students tables to add new columns and constraints.
 // Date: 2024-07-15
 
-function run_migration_001($link) {
+function run_migration_001_alter_tables($link) {
     $queries = [];
     $errors = [];
     $success_count = 0;
