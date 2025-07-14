@@ -80,12 +80,21 @@ sort($all_migration_files); // Sort files to ensure they run in order
                 echo "<h3>اجرای نسخه: $version</h3>";
                 require_once $file;
 
-                $function_name = 'run_migration_' . preg_replace('/_/', '', str_replace('-', '_', $version), 1);
+                $version_name_for_function = str_replace(['-', '_'], '', $version);
+                // Remove leading numbers to comply with function naming rules
+                $version_name_for_function = preg_replace('/^[0-9]+/', '', $version_name_for_function);
 
-                if (function_exists($function_name)) {
+                $function_name = 'run_migration_' . $version_name_for_function;
+
+                // Let's correct the function name in the migration file itself to be simpler
+                // The function name will be run_migration_001
+                $function_name_simple = 'run_migration_' . str_replace('-', '_', $version);
+
+
+                if (function_exists($function_name_simple)) {
                     mysqli_begin_transaction($link);
                     try {
-                        $result = $function_name($link);
+                        $result = $function_name_simple($link);
                         if ($result === true) {
                             // Mark this migration as applied
                             $stmt = mysqli_prepare($link, "INSERT INTO `$migrations_table` (version) VALUES (?)");
