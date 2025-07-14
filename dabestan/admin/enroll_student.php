@@ -36,6 +36,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         mysqli_stmt_bind_param($stmt_enroll, "ii", $class_id, $student_id);
         mysqli_stmt_execute($stmt_enroll);
 
+        // 3. Get teacher_id from the class
+        $class_info_q = mysqli_query($link, "SELECT teacher_id, class_name FROM classes WHERE id = $class_id");
+        if (mysqli_num_rows($class_info_q) == 0) {
+            throw new Exception("Class not found.");
+        }
+        $class_info = mysqli_fetch_assoc($class_info_q);
+        $teacher_id = $class_info['teacher_id'];
+        $class_name = $class_info['class_name'];
+        $student_name = $student_info['student_name'];
+
+        // 4. Create a notification for the teacher
+        $notification_message = "یک متربی جدید به نام '" . $student_name . "' به کلاس شما (" . $class_name . ") اضافه شد.";
+        $notification_link = "/user/manage_class_students.php?class_id=" . $class_id; // Link to the class management page
+        $sql_notify = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
+        $stmt_notify = mysqli_prepare($link, $sql_notify);
+        mysqli_stmt_bind_param($stmt_notify, "iss", $teacher_id, $notification_message, $notification_link);
+        mysqli_stmt_execute($stmt_notify);
+
+
         // If all queries were successful, commit the transaction
         mysqli_commit($link);
 

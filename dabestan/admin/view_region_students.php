@@ -71,6 +71,22 @@ if($stmt_registered = mysqli_prepare($link, $sql_registered)){
     mysqli_stmt_close($stmt_registered);
 }
 
+// Fetch active classes in the region that have at least one student
+$active_classes_with_students = [];
+$sql_classes = "SELECT DISTINCT c.id, c.class_name, u.full_name as teacher_name
+                FROM classes c
+                JOIN users u ON c.teacher_id = u.id
+                JOIN recruited_students rs ON c.id = rs.class_id
+                WHERE c.region_id = ? AND c.status = 'active'";
+
+if ($stmt_classes = mysqli_prepare($link, $sql_classes)) {
+    mysqli_stmt_bind_param($stmt_classes, "i", $region_id);
+    mysqli_stmt_execute($stmt_classes);
+    $result_classes = mysqli_stmt_get_result($stmt_classes);
+    $active_classes_with_students = mysqli_fetch_all($result_classes, MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt_classes);
+}
+
 
 require_once "../includes/header.php";
 ?>
@@ -136,7 +152,37 @@ require_once "../includes/header.php";
     </div>
 
     <div class="table-container">
-        <h3>دانش‌آموزان ثبت‌نام شده</h3>
+        <h3>کلاس‌های فعال در این منطقه</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>نام کلاس</th>
+                        <th>مدرس</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($active_classes_with_students)): ?>
+                        <tr><td colspan="3">هیچ کلاس فعالی با متربی ثبت‌نام شده در این منطقه وجود ندارد.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($active_classes_with_students as $class): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($class['class_name']); ?></td>
+                                <td><?php echo htmlspecialchars($class['teacher_name']); ?></td>
+                                <td>
+                                    <a href="manage_class_students.php?class_id=<?php echo $class['id']; ?>" class="btn btn-sm btn-info">مدیریت متربیان</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="table-container" style="margin-top: 40px;">
+        <h3>دانش‌آموزان ثبت‌نام شده (نمایش کلی)</h3>
          <div class="table-responsive">
             <table class="table">
                 <thead>

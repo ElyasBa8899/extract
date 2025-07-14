@@ -22,6 +22,92 @@ if (!function_exists('has_permission')) {
     <link rel="stylesheet" href="/dabestan/assets/css/style.css">
 </head>
 <body>
+<style>
+    /* Basic styling for notification dropdown */
+    .header-notifications {
+        position: relative;
+        display: inline-block;
+    }
+
+    .notification-icon {
+        cursor: pointer;
+        position: relative;
+    }
+
+    .notification-count {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background-color: red;
+        color: white;
+        border-radius: 50%;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: bold;
+        display: none; /* Hidden by default */
+    }
+
+    .notification-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        width: 300px;
+        max-height: 400px;
+        overflow-y: auto;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        z-index: 1000;
+    }
+    .notification-dropdown.show {
+        display: block;
+    }
+
+    .notification-header, .notification-footer {
+        padding: 10px;
+        font-weight: bold;
+        text-align: center;
+        background-color: #f7f7f7;
+    }
+
+    #notification-list {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    #notification-list .notification-item {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+        color: #333;
+        text-decoration: none;
+        display: block;
+        transition: background-color 0.2s;
+    }
+    #notification-list .notification-item:hover {
+        background-color: #f2f2f2;
+    }
+     #notification-list .notification-item small {
+        display: block;
+        color: #999;
+        font-size: 11px;
+        margin-top: 4px;
+    }
+     #notification-list .no-notification {
+        padding: 20px;
+        text-align: center;
+        color: #888;
+     }
+
+    .notification-footer a {
+        color: #007bff;
+        text-decoration: none;
+    }
+</style>
+
     <div class="sidebar">
         <div class="sidebar-header">
             <h3>دبستان</h3>
@@ -145,3 +231,73 @@ if (!function_exists('has_permission')) {
         </header>
         <main>
             <!-- Page content will be loaded here -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    const notificationIcon = $('#notification-icon');
+    const notificationDropdown = $('#notification-dropdown');
+    const notificationCount = $('#notification-count');
+    const notificationList = $('#notification-list');
+    const rootPath = '/dabestan'; // Adjust if your project is in a different subfolder
+
+    function fetchNotifications() {
+        $.ajax({
+            url: rootPath + '/includes/fetch_notifications.php',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.error) {
+                    console.error(response.error);
+                    return;
+                }
+
+                // Update notification count badge
+                if (response.unread_count > 0) {
+                    notificationCount.text(response.unread_count).show();
+                } else {
+                    notificationCount.hide();
+                }
+
+                // Populate notification list
+                notificationList.empty();
+                if (response.notifications.length > 0) {
+                    response.notifications.forEach(function(notif) {
+                        const notifDate = new Date(notif.created_at);
+                        // A simple time ago function could be implemented here for better UX
+                        const timeString = notifDate.toLocaleTimeString('fa-IR') + ' - ' + notifDate.toLocaleDateString('fa-IR');
+
+                        const item = $('<a></a>')
+                            .addClass('notification-item')
+                            .attr('href', notif.link ? rootPath + notif.link : '#')
+                            .html(notif.message + '<small>' + timeString + '</small>');
+                        notificationList.append(item);
+                    });
+                } else {
+                    notificationList.html('<div class="no-notification">هیچ اعلان جدیدی وجود ندارد.</div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("An error occurred: " + status + " " + error);
+            }
+        });
+    }
+
+    // Toggle dropdown
+    notificationIcon.on('click', function(e) {
+        e.stopPropagation();
+        notificationDropdown.toggleClass('show');
+    });
+
+    // Close dropdown if clicked outside
+    $(document).on('click', function(e) {
+        if (!notificationIcon.is(e.target) && notificationIcon.has(e.target).length === 0 &&
+            !notificationDropdown.is(e.target) && notificationDropdown.has(e.target).length === 0) {
+            notificationDropdown.removeClass('show');
+        }
+    });
+
+    // Fetch notifications on page load and then every 60 seconds
+    fetchNotifications();
+    setInterval(fetchNotifications, 60000);
+});
+</script>
