@@ -16,11 +16,67 @@ $users = mysqli_query($link, "SELECT id, username FROM users ORDER BY username A
 
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_task'])) {
-    // TODO: Implement task creation logic
     $title = trim($_POST['title']);
-    // ... and so on
+    $description = trim($_POST['description']);
+    $deadline = !empty(trim($_POST['deadline'])) ? trim($_POST['deadline']) : null;
+    $priority = trim($_POST['priority']);
+    $assign_type = $_POST['assign_type'];
+    $assigned_to_dept_id = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
+    $assigned_to_user_id = !empty($_POST['user_id']) ? $_POST['user_id'] : null;
 
-    $err = "قابلیت ایجاد وظیفه هنوز پیاده‌سازی نشده است.";
+    if (empty($title)) {
+        $err = "عنوان وظیفه الزامی است.";
+    } elseif ($assign_type === 'department' && empty($assigned_to_dept_id)) {
+        $err = "لطفاً بخش مورد نظر را برای ارجاع انتخاب کنید.";
+    } elseif ($assign_type === 'user' && empty($assigned_to_user_id)) {
+        $err = "لطفاً کاربر مورد نظر را برای ارجاع انتخاب کنید.";
+    } else {
+        mysqli_begin_transaction($link);
+        try {
+            // 1. Insert the task
+            $sql_task = "INSERT INTO tasks (title, description, priority, deadline, created_by) VALUES (?, ?, ?, ?, ?)";
+            $stmt_task = mysqli_prepare($link, $sql_task);
+            mysqli_stmt_bind_param($stmt_task, "ssssi", $title, $description, $priority, $deadline, $_SESSION['id']);
+            mysqli_stmt_execute($stmt_task);
+            $task_id = mysqli_insert_id($link);
+
+            // 2. Insert assignment
+            $sql_assign = "INSERT INTO task_assignments (task_id, assigned_to_user_id, assigned_to_department_id) VALUES (?, ?, ?)";
+            $stmt_assign = mysqli_prepare($link, $sql_assign);
+            mysqli_stmt_bind_param($stmt_assign, "iii", $task_id, $assigned_to_user_id, $assigned_to_dept_id);
+            mysqli_stmt_execute($stmt_assign);
+
+            // 3. Create notifications
+            $notification_message = "وظیفه جدیدی با عنوان '" . htmlspecialchars($title) . "' برای شما ثبت شد.";
+            $notification_link = "/user/view_task.php?id=" . $task_id; // This page needs to be created
+            $target_user_ids = [];
+            if ($assigned_to_user_id) {
+                $target_user_ids[] = $assigned_to_user_id;
+            } elseif ($assigned_to_dept_id) {
+                $sql_users = "SELECT user_id FROM user_departments WHERE department_id = ?";
+                $stmt_users = mysqli_prepare($link, $sql_users);
+                mysqli_stmt_bind_param($stmt_users, "i", $assigned_to_dept_id);
+                mysqli_stmt_execute($stmt_users);
+                $result_users = mysqli_stmt_get_result($stmt_users);
+                while ($row = mysqli_fetch_assoc($result_users)) $target_user_ids[] = $row['user_id'];
+            }
+            if (!empty($target_user_ids)) {
+                $sql_notify = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
+                $stmt_notify = mysqli_prepare($link, $sql_notify);
+                foreach ($target_user_ids as $target_id) {
+                    mysqli_stmt_bind_param($stmt_notify, "iss", $target_id, $notification_message, $notification_link);
+                    mysqli_stmt_execute($stmt_notify);
+                }
+            }
+
+            mysqli_commit($link);
+            $success_msg = "وظیفه با موفقیت ایجاد و ارجاع داده شد.";
+
+        } catch (Exception $e) {
+            mysqli_rollback($link);
+            $err = "خطا در ایجاد وظیفه: " . $e->getMessage();
+        }
+    }
 }
 
 require_once "../includes/header.php";

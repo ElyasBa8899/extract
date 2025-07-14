@@ -48,7 +48,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // 4. Create a notification for the teacher
         $notification_message = "یک متربی جدید به نام '" . $student_name . "' به کلاس شما (" . $class_name . ") اضافه شد.";
-        $notification_link = "/user/manage_class_students.php?class_id=" . $class_id; // Link to the class management page
+        $notification_link = "/user/manage_class_students.php?class_id=" . $class_id;
         $sql_notify = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
         $stmt_notify = mysqli_prepare($link, $sql_notify);
         mysqli_stmt_bind_param($stmt_notify, "iss", $teacher_id, $notification_message, $notification_link);

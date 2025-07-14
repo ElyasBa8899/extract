@@ -110,7 +110,7 @@ require_once "../includes/header.php";
             <?php foreach ($notifications as $notif): ?>
                 <div class="notification-list-item <?php echo $notif['is_read'] ? 'is-read' : ''; ?>">
                     <div class="notification-content">
-                        <a href="<?php echo $notif['link'] ? '..' . htmlspecialchars($notif['link']) : '#'; ?>">
+                        <a href="<?php echo $notif['link'] ? '/dabestan' . htmlspecialchars($notif['link']) : '#'; ?>">
                             <?php echo htmlspecialchars($notif['message']); ?>
                         </a>
                         <small><?php echo to_persian_date($notif['created_at']); ?></small>
