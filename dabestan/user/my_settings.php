@@ -142,6 +142,6 @@ require_once "../includes/header.php";
 </div>
 <script src="../assets/js/password-strength.js"></script>
 <?php
-mysqli_close($link);
+// mysqli_close($link); // This is now handled in the footer
 require_once "../includes/footer.php";
 ?>
