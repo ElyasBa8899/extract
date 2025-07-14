@@ -48,14 +48,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_ticket'])) {
             if (mysqli_stmt_execute($stmt)) {
                 $success_msg = "تیکت شما با موفقیت ثبت شد.";
 
-                // Send Telegram Notification
-                require_once '../includes/telegram_bot.php';
-                $message = "✅ تیکت جدید با عنوان \"<b>" . htmlspecialchars($title) . "</b>\" توسط شما ثبت شد.";
-                // We need to get the user's chat_id
-                $user_info_query = mysqli_query($link, "SELECT telegram_chat_id FROM users WHERE id = {$_SESSION['id']}");
-                if($user_info = mysqli_fetch_assoc($user_info_query)){
-                    sendTelegramMessage($user_info['telegram_chat_id'], $message);
+                $ticket_id = mysqli_insert_id($stmt); // Get the ID of the new ticket
+
+                // --- Create In-App Notification ---
+                $notification_message = "تیکت جدیدی با عنوان '" . htmlspecialchars($title) . "' برای شما ثبت شد.";
+                $notification_link = "/user/view_ticket.php?id=" . $ticket_id;
+
+                $target_user_ids = [];
+                if ($assigned_user_id) {
+                    $target_user_ids[] = $assigned_user_id;
+                } elseif ($department_id) {
+                    // Find all users in the department
+                    $sql_users = "SELECT user_id FROM user_departments WHERE department_id = ?";
+                    if ($stmt_users = mysqli_prepare($link, $sql_users)) {
+                        mysqli_stmt_bind_param($stmt_users, "i", $department_id);
+                        mysqli_stmt_execute($stmt_users);
+                        $result_users = mysqli_stmt_get_result($stmt_users);
+                        while ($row = mysqli_fetch_assoc($result_users)) {
+                            $target_user_ids[] = $row['user_id'];
+                        }
+                        mysqli_stmt_close($stmt_users);
+                    }
                 }
+
+                // Insert notification for each target user
+                if (!empty($target_user_ids)) {
+                    $sql_notify = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
+                    if ($stmt_notify = mysqli_prepare($link, $sql_notify)) {
+                        foreach ($target_user_ids as $target_id) {
+                            mysqli_stmt_bind_param($stmt_notify, "iss", $target_id, $notification_message, $notification_link);
+                            mysqli_stmt_execute($stmt_notify);
+                        }
+                        mysqli_stmt_close($stmt_notify);
+                    }
+                }
+                // --- End In-App Notification ---
 
             } else {
                 $err = "خطا در ثبت تیکت.";

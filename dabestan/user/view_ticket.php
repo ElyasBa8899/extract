@@ -30,9 +30,23 @@ if($stmt_ticket = mysqli_prepare($link, $sql_ticket)){
     mysqli_stmt_close($stmt_ticket);
 }
 
-// Security Check: Only ticket owner or admin can view
-if (!$ticket || ($ticket['user_id'] != $user_id && !$_SESSION['is_admin'])) {
-    // In future, we'll also check for department membership
+// Security Check: User can view if they are the creator, an admin, or in the assigned department/user
+$can_view = false;
+if ($ticket) {
+    if ($ticket['user_id'] == $user_id || !empty($_SESSION['is_admin'])) {
+        $can_view = true;
+    } elseif ($ticket['assigned_to_user_id'] == $user_id) {
+        $can_view = true;
+    } elseif ($ticket['assigned_to_department_id']) {
+        $dept_id = $ticket['assigned_to_department_id'];
+        $check_dept = mysqli_query($link, "SELECT 1 FROM user_departments WHERE user_id = $user_id AND department_id = $dept_id");
+        if (mysqli_num_rows($check_dept) > 0) {
+            $can_view = true;
+        }
+    }
+}
+
+if (!$can_view) {
     echo "دسترسی غیرمجاز یا تیکت یافت نشد.";
     exit;
 }
@@ -113,7 +127,16 @@ require_once "../includes/header.php";
 </style>
 
 <div class="page-content">
-    <a href="my_tickets.php" class="btn btn-secondary" style="margin-bottom: 20px;">&larr; بازگشت به لیست تیکت‌ها</a>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="my_tickets.php" class="btn btn-secondary">&larr; بازگشت به لیست تیکت‌ها</a>
+        <div>
+            <span class="badge badge-info" style="font-size: 1em; padding: 0.5em 1em;"><?php echo get_status_badge($ticket['status']); ?></span>
+            <?php if($ticket['priority'] == 'urgent'): ?>
+                <span class="badge badge-danger" style="font-size: 1em; padding: 0.5em 1em;">فوری</span>
+            <?php endif; ?>
+        </div>
+    </div>
+
     <h2>موضوع: <?php echo htmlspecialchars($ticket['title']); ?></h2>
 
     <!-- Original Ticket Message -->
