@@ -6,11 +6,15 @@ session_start();
 require_once "includes/db.php"; // Connect to the database
 
 // --- Basic Security: Only allow admins to run this ---
+// This check is temporarily removed as requested by the user for local testing.
+// It should be re-enabled for production.
+/*
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || empty($_SESSION["is_admin"])) {
     header("HTTP/1.1 403 Forbidden");
     echo "<h1>403 Forbidden</h1><p>You do not have permission to access this page. Please ensure you are logged in as an administrator.</p>";
     exit;
 }
+*/
 // ----------------------------------------------------
 
 // Table to track which migrations have been run
@@ -76,7 +80,7 @@ sort($all_migration_files); // Sort files to ensure they run in order
                 echo "<h3>اجرای نسخه: $version</h3>";
                 require_once $file;
 
-                $function_name = 'run_migration_' . str_replace('-', '_', $version);
+                $function_name = 'run_migration_' . preg_replace('/_/', '', str_replace('-', '_', $version), 1);
 
                 if (function_exists($function_name)) {
                     mysqli_begin_transaction($link);
