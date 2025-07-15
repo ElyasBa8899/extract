@@ -105,6 +105,15 @@ if (!function_exists('has_permission')) {
                         <li><a href="/dabestan/user/new_ticket.php"><span>ایجاد تیکت جدید</span></a></li>
                     <?php endif; ?>
                     <li><a href="/dabestan/user/my_tickets.php"><span>تیکت‌های من</span></a></li>
+                </ul>
+            </li>
+
+            <li class="has-submenu">
+                <a href="#"><i data-feather="briefcase"></i><span>وظایف</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
+                <ul class="submenu">
+                    <?php if(has_permission('manage_tasks')): ?>
+                        <li><a href="/dabestan/admin/manage_tasks.php"><span>ایجاد وظیفه جدید</span></a></li>
+                    <?php endif; ?>
                     <li><a href="/dabestan/user/my_tasks.php"><span>وظایف من</span></a></li>
                 </ul>
             </li>
@@ -115,7 +124,6 @@ if (!function_exists('has_permission')) {
 
             <li class="nav-section-title"><span>پروفایل</span></li>
             <li><a href="/dabestan/user/my_settings.php"><i data-feather="tool"></i><span>تنظیمات</span></a></li>
-            <li><a href="/dabestan/user/change_password.php"><i data-feather="key"></i><span>تغییر رمز عبور</span></a></li>
             <li><a href="/dabestan/logout.php"><i data-feather="log-out"></i><span>خروج</span></a></li>
         </ul>
     </div>

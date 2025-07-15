@@ -25,8 +25,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $status = $_POST['status'];
         $priority = $_POST['priority'];
         $deadline = !empty($_POST['deadline']) ? $_POST['deadline'] : null;
-        $assigned_to_user_id = !empty($_POST['assigned_to_user_id']) ? $_POST['assigned_to_user_id'] : null;
-        $assigned_to_department_id = !empty($_POST['assigned_to_department_id']) ? $_POST['assigned_to_department_id'] : null;
+        $assign_to_all = isset($_POST['assign_to_all']);
+        $assigned_to_user_id = !$assign_to_all && !empty($_POST['assigned_to_user_id']) ? $_POST['assigned_to_user_id'] : null;
+        $assigned_to_department_id = !$assign_to_all && !empty($_POST['assigned_to_department_id']) ? $_POST['assigned_to_department_id'] : null;
 
         if (empty($title)) {
             $form_err = "عنوان وظیفه نمی‌تواند خالی باشد.";
@@ -42,39 +43,61 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     mysqli_stmt_close($stmt);
 
                     // Assign task
-                    $sql_assign = "INSERT INTO task_assignments (task_id, assigned_to_user_id, assigned_to_department_id) VALUES (?, ?, ?)";
-                    if ($stmt_assign = mysqli_prepare($link, $sql_assign)) {
-                        mysqli_stmt_bind_param($stmt_assign, "iii", $new_task_id, $assigned_to_user_id, $assigned_to_department_id);
-                        mysqli_stmt_execute($stmt_assign);
-                        mysqli_stmt_close($stmt_assign);
+                    if ($assign_to_all) {
+                        $all_users_query = mysqli_query($link, "SELECT id FROM users");
+                        while ($user = mysqli_fetch_assoc($all_users_query)) {
+                            $sql_assign = "INSERT INTO task_assignments (task_id, assigned_to_user_id) VALUES (?, ?)";
+                            if ($stmt_assign = mysqli_prepare($link, $sql_assign)) {
+                                mysqli_stmt_bind_param($stmt_assign, "ii", $new_task_id, $user['id']);
+                                mysqli_stmt_execute($stmt_assign);
+                                mysqli_stmt_close($stmt_assign);
 
-                        // Send notification
-                        if ($assigned_to_user_id) {
-                            $message = "وظیفه جدیدی با عنوان '" . htmlspecialchars($title) . "' برای شما ثبت شد.";
-                            $link_notif = "user/view_task.php?id=" . $new_task_id;
-                            $sql_notif = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
-                            if($stmt_notif = mysqli_prepare($link, $sql_notif)){
-                                mysqli_stmt_bind_param($stmt_notif, "iss", $assigned_to_user_id, $message, $link_notif);
-                                mysqli_stmt_execute($stmt_notif);
-                                mysqli_stmt_close($stmt_notif);
-                            }
-                        } elseif ($assigned_to_department_id) {
-                            $message = "وظیفه جدیدی با عنوان '" . htmlspecialchars($title) . "' برای بخش شما ثبت شد.";
-                            $link_notif = "user/view_task.php?id=" . $new_task_id;
-                            $sql_users_in_dept = "SELECT user_id FROM user_departments WHERE department_id = ?";
-                            if($stmt_users = mysqli_prepare($link, $sql_users_in_dept)){
-                                mysqli_stmt_bind_param($stmt_users, "i", $assigned_to_department_id);
-                                mysqli_stmt_execute($stmt_users);
-                                $result_users = mysqli_stmt_get_result($stmt_users);
-                                while($user_row = mysqli_fetch_assoc($result_users)){
-                                    $sql_notif = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
-                                    if($stmt_notif = mysqli_prepare($link, $sql_notif)){
-                                        mysqli_stmt_bind_param($stmt_notif, "iss", $user_row['user_id'], $message, $link_notif);
-                                        mysqli_stmt_execute($stmt_notif);
-                                        mysqli_stmt_close($stmt_notif);
-                                    }
+                                // Send notification
+                                $message = "وظیفه جدیدی با عنوان '" . htmlspecialchars($title) . "' برای شما ثبت شد.";
+                                $link_notif = "user/view_task.php?id=" . $new_task_id;
+                                $sql_notif = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
+                                if($stmt_notif = mysqli_prepare($link, $sql_notif)){
+                                    mysqli_stmt_bind_param($stmt_notif, "iss", $user['id'], $message, $link_notif);
+                                    mysqli_stmt_execute($stmt_notif);
+                                    mysqli_stmt_close($stmt_notif);
                                 }
-                                mysqli_stmt_close($stmt_users);
+                            }
+                        }
+                    } else {
+                        $sql_assign = "INSERT INTO task_assignments (task_id, assigned_to_user_id, assigned_to_department_id) VALUES (?, ?, ?)";
+                        if ($stmt_assign = mysqli_prepare($link, $sql_assign)) {
+                            mysqli_stmt_bind_param($stmt_assign, "iii", $new_task_id, $assigned_to_user_id, $assigned_to_department_id);
+                            mysqli_stmt_execute($stmt_assign);
+                            mysqli_stmt_close($stmt_assign);
+
+                            // Send notification
+                            if ($assigned_to_user_id) {
+                                $message = "وظیفه جدیدی با عنوان '" . htmlspecialchars($title) . "' برای شما ثبت شد.";
+                                $link_notif = "user/view_task.php?id=" . $new_task_id;
+                                $sql_notif = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
+                                if($stmt_notif = mysqli_prepare($link, $sql_notif)){
+                                    mysqli_stmt_bind_param($stmt_notif, "iss", $assigned_to_user_id, $message, $link_notif);
+                                    mysqli_stmt_execute($stmt_notif);
+                                    mysqli_stmt_close($stmt_notif);
+                                }
+                            } elseif ($assigned_to_department_id) {
+                                $message = "وظیفه جدیدی با عنوان '" . htmlspecialchars($title) . "' برای بخش شما ثبت شد.";
+                                $link_notif = "user/view_task.php?id=" . $new_task_id;
+                                $sql_users_in_dept = "SELECT user_id FROM user_departments WHERE department_id = ?";
+                                if($stmt_users = mysqli_prepare($link, $sql_users_in_dept)){
+                                    mysqli_stmt_bind_param($stmt_users, "i", $assigned_to_department_id);
+                                    mysqli_stmt_execute($stmt_users);
+                                    $result_users = mysqli_stmt_get_result($stmt_users);
+                                    while($user_row = mysqli_fetch_assoc($result_users)){
+                                        $sql_notif = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
+                                        if($stmt_notif = mysqli_prepare($link, $sql_notif)){
+                                            mysqli_stmt_bind_param($stmt_notif, "iss", $user_row['user_id'], $message, $link_notif);
+                                            mysqli_stmt_execute($stmt_notif);
+                                            mysqli_stmt_close($stmt_notif);
+                                        }
+                                    }
+                                    mysqli_stmt_close($stmt_users);
+                                }
                             }
                         }
                     }
@@ -186,7 +209,11 @@ $departments = mysqli_query($link, "SELECT id, department_name FROM departments 
                         <label for="description">توضیحات</label>
                         <textarea name="description" id="description" class="form-control"><?php echo htmlspecialchars($description); ?></textarea>
                     </div>
-                    <div class="row">
+                    <div class="form-group form-check">
+                        <input type="checkbox" name="assign_to_all" id="assign_to_all" class="form-check-input">
+                        <label for="assign_to_all" class="form-check-label">ارسال برای همه کاربران</label>
+                    </div>
+                    <div class="row" id="assignment_selectors">
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="assigned_to_user_id">محول شده به کاربر</label>
@@ -236,7 +263,7 @@ $departments = mysqli_query($link, "SELECT id, department_name FROM departments 
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="deadline">مهلت انجام</label>
-                                <input type="datetime-local" name="deadline" id="deadline" class="form-control" value="<?php echo $deadline; ?>">
+                                <input type="text" name="deadline" id="deadline" class="form-control persian-datepicker" value="<?php echo $deadline; ?>">
                             </div>
                         </div>
                     </div>
@@ -295,6 +322,27 @@ $departments = mysqli_query($link, "SELECT id, department_name FROM departments 
     </div>
 </div>
 
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script>
+$(document).ready(function() {
+    $(".persian-datepicker").pDatepicker({
+        format: 'YYYY/MM/DD HH:mm:ss',
+        timePicker: {
+            enabled: true
+        }
+    });
+});
+
+document.getElementById('assign_to_all').addEventListener('change', function() {
+    var selectors = document.getElementById('assignment_selectors');
+    if (this.checked) {
+        selectors.style.display = 'none';
+    } else {
+        selectors.style.display = 'flex'; // or 'block' depending on your layout
+    }
+});
+</script>
 <?php
 require_once "../includes/footer.php";
 ?>
