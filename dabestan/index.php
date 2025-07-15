@@ -1,7 +1,6 @@
 <?php
 session_start();
-require_once "includes/db_singleton.php";
-$link = get_db_connection(); // Get connection
+require_once "includes/db.php";
 
 $username = $password = "";
 $err = "";
@@ -62,6 +61,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             mysqli_stmt_close($stmt);
         }
     }
+    mysqli_close($link);
 }
 ?>
 <!DOCTYPE html>
@@ -118,6 +118,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </script>
 </body>
 </html>
-<?php
-// mysqli_close($link); // This is already closed in the POST request block
 ?>
