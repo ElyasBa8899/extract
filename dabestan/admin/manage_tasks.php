@@ -3,7 +3,7 @@ session_start();
 require_once "../includes/db_singleton.php";
 $link = get_db_connection();
 require_once "../includes/access_control.php";
-require_once "../includes/header.php";
+require_once "../includes/functions.php";
 
 if (!has_permission('manage_tasks')) {
     header("location: ../index.php");
@@ -176,6 +176,7 @@ $tasks = mysqli_query($link, $tasks_query);
 $users = mysqli_query($link, "SELECT id, username FROM users ORDER BY username");
 $departments = mysqli_query($link, "SELECT id, department_name FROM departments ORDER BY department_name");
 
+require_once "../includes/header.php";
 ?>
 
 <div class="page-content">
@@ -303,7 +304,7 @@ $departments = mysqli_query($link, "SELECT id, department_name FROM departments 
                                     <td><?php echo htmlspecialchars($row['assignee_user'] ? $row['assignee_user'] : $row['assignee_dept']); ?></td>
                                     <td><?php echo $row['status']; ?></td>
                                     <td><?php echo $row['priority']; ?></td>
-                                    <td><?php echo $row['deadline']; ?></td>
+                                    <td><?php echo $row['deadline'] ? to_persian_date($row['deadline'], 'Y/m/d H:i') : 'ندارد'; ?></td>
                                     <td><?php echo htmlspecialchars($row['creator']); ?></td>
                                     <td>
                                         <a href="manage_tasks.php?edit=<?php echo $row['id']; ?>" class="btn btn-sm btn-warning">ویرایش</a>
