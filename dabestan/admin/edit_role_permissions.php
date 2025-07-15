@@ -31,7 +31,8 @@ $initial_permissions = [
     ['manage_meetings', 'توانایی مدیریت جلسات (ضمن خدمت، اولیا و...)'],
     ['manage_events', 'توانایی مدیریت رویدادهای عمومی'],
     ['submit_ticket', 'توانایی ارسال تیکت جدید'],
-    ['view_all_tickets', 'توانایی مشاهده تمام تیکت‌های سیستم']
+    ['view_all_tickets', 'توانایی مشاهده تمام تیکت‌های سیستم'],
+    ['manage_tasks', 'توانایی مدیریت وظایف']
 ];
 $sql_seed = "INSERT IGNORE INTO `permissions` (`permission_name`, `permission_description`) VALUES (?, ?)";
 $stmt_seed = mysqli_prepare($link, $sql_seed);

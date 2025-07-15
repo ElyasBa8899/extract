@@ -48,6 +48,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
     }
 }
 
+// Handle re-assignment
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['reassign_task'])) {
+    $assign_to_user = !empty($_POST['assign_to_user']) ? $_POST['assign_to_user'] : null;
+    $assign_to_dept = !empty($_POST['assign_to_dept']) ? $_POST['assign_to_dept'] : null;
+
+    $sql_reassign = "UPDATE task_assignments SET assigned_to_user_id = ?, assigned_to_department_id = ? WHERE task_id = ?";
+    if($stmt_reassign = mysqli_prepare($link, $sql_reassign)){
+        mysqli_stmt_bind_param($stmt_reassign, "iii", $assign_to_user, $assign_to_dept, $task_id);
+        mysqli_stmt_execute($stmt_reassign);
+        mysqli_stmt_close($stmt_reassign);
+
+        // Add to history
+        $action_detail = "وظیفه به " . ($assign_to_user ? "کاربر " . $assign_to_user : "بخش " . $assign_to_dept) . " ارجاع داده شد.";
+        $sql_history = "INSERT INTO task_history (task_id, user_id, action, details) VALUES (?, ?, 'reassign', ?)";
+        if($stmt_history = mysqli_prepare($link, $sql_history)){
+            mysqli_stmt_bind_param($stmt_history, "iis", $task_id, $user_id, $action_detail);
+            mysqli_stmt_execute($stmt_history);
+            mysqli_stmt_close($stmt_history);
+        }
+
+        // Send notification to new assignee
+        if ($assign_to_user) {
+            $message = "وظیفه '" . htmlspecialchars($task['title']) . "' به شما ارجاع داده شد.";
+            $link_notif = "user/view_task.php?id=" . $task_id;
+            $sql_notif = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
+            if($stmt_notif = mysqli_prepare($link, $sql_notif)){
+                mysqli_stmt_bind_param($stmt_notif, "iss", $assign_to_user, $message, $link_notif);
+                mysqli_stmt_execute($stmt_notif);
+                mysqli_stmt_close($stmt_notif);
+            }
+        }
+
+        header("location: view_task.php?id=" . $task_id);
+        exit;
+    }
+}
+
 function get_status_badge($status) {
     switch ($status) {
         case 'pending': return '<span class="badge badge-warning">در انتظار</span>';
@@ -116,6 +153,47 @@ function get_priority_badge($priority) {
                         </select>
                     </div>
                     <button type="submit" name="update_status" class="btn btn-primary">بروزرسانی وضعیت</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                ارجاع وظیفه
+            </div>
+            <div class="card-body">
+                <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>?id=<?php echo $task_id; ?>" method="post">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="assign_to_user">ارجاع به کاربر</label>
+                                <select name="assign_to_user" id="assign_to_user" class="form-control">
+                                    <option value="">-- انتخاب کنید --</option>
+                                    <?php
+                                    $users_query = mysqli_query($link, "SELECT id, username FROM users ORDER BY username");
+                                    while ($user = mysqli_fetch_assoc($users_query)) {
+                                        echo "<option value='{$user['id']}'>" . htmlspecialchars($user['username']) . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="assign_to_dept">ارجاع به بخش</label>
+                                <select name="assign_to_dept" id="assign_to_dept" class="form-control">
+                                    <option value="">-- انتخاب کنید --</option>
+                                    <?php
+                                    $depts_query = mysqli_query($link, "SELECT id, department_name FROM departments ORDER BY department_name");
+                                    while ($dept = mysqli_fetch_assoc($depts_query)) {
+                                        echo "<option value='{$dept['id']}'>" . htmlspecialchars($dept['department_name']) . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" name="reassign_task" class="btn btn-info">ارجاع</button>
                 </form>
             </div>
         </div>

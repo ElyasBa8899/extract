@@ -47,6 +47,29 @@ CREATE TABLE `departments` (
   `description` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
+--
+-- Dumping data for table `permissions`
+--
+
+INSERT INTO `permissions` (`id`, `name`, `description`) VALUES
+(1, 'submit_ticket', 'اجازه ثبت تیکت جدید'),
+(2, 'view_own_financials', 'مشاهده وضعیت مالی خود'),
+(3, 'fill_self_assessment', 'پر کردن فرم خوداظهاری'),
+(4, 'edit_own_class_info', 'ویرایش اطلاعات کلاس‌های خود'),
+(5, 'view_department_menu', 'مشاهده منوهای بخش‌های سازمانی'),
+(6, 'manage_users', 'مدیریت کامل کاربران (ایجاد، ویرایش، حذف)'),
+(7, 'manage_roles', 'مدیریت نقش‌ها و مجوزها'),
+(8, 'manage_classes', 'مدیریت تمام کلاس‌ها'),
+(9, 'manage_forms', 'ایجاد و مدیریت فرم‌های پویا'),
+(10, 'manage_inventory', 'مدیریت انبار و اموال'),
+(11, 'manage_financials', 'مدیریت امور مالی کلی (جزوات، تراکنش‌ها)'),
+(12, 'manage_donations', 'مدیریت کمک‌های مالی (صله)'),
+(13, 'manage_recruitment', 'مدیریت بخش جذب و راه‌اندازی'),
+(14, 'view_all_submissions', 'مشاهده تمام فرم‌های ثبت شده توسط دیگران'),
+(15, 'view_analytics', 'مشاهده تحلیل‌ها و گزارشات'),
+(16, 'manage_meetings', 'مدیریت جلسات (اولیا، ضمن خدمت و...)'),
+(17, 'manage_tasks', 'دسترسی برای مدیریت وظایف');
+
 -- --------------------------------------------------------
 
 --
@@ -429,6 +452,152 @@ ALTER TABLE `ticket_replies`
 --
 ALTER TABLE `files`
   ADD CONSTRAINT `files_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tasks`
+--
+
+CREATE TABLE `tasks` (
+  `id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text,
+  `status` enum('pending','in_progress','completed','cancelled') NOT NULL DEFAULT 'pending',
+  `priority` enum('low','medium','high','urgent') NOT NULL DEFAULT 'medium',
+  `deadline` datetime DEFAULT NULL,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `completed_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `task_assignments`
+--
+
+CREATE TABLE `task_assignments` (
+  `id` int(11) NOT NULL,
+  `task_id` int(11) NOT NULL,
+  `assigned_to_user_id` int(11) DEFAULT NULL,
+  `assigned_to_department_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `task_comments`
+--
+
+CREATE TABLE `task_comments` (
+  `id` int(11) NOT NULL,
+  `task_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `comment` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `task_history`
+--
+
+CREATE TABLE `task_history` (
+  `id` int(11) NOT NULL,
+  `task_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `action` varchar(255) NOT NULL,
+  `details` text,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
+
+
+--
+-- Indexes for table `tasks`
+--
+ALTER TABLE `tasks`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `task_assignments`
+--
+ALTER TABLE `task_assignments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `task_id` (`task_id`),
+  ADD KEY `assigned_to_user_id` (`assigned_to_user_id`),
+  ADD KEY `assigned_to_department_id` (`assigned_to_department_id`);
+
+--
+-- Indexes for table `task_comments`
+--
+ALTER TABLE `task_comments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `task_id` (`task_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `task_history`
+--
+ALTER TABLE `task_history`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `task_id` (`task_id`),
+  ADD KEY `user_id` (`user_id`);
+
+
+--
+-- AUTO_INCREMENT for table `tasks`
+--
+ALTER TABLE `tasks`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `task_assignments`
+--
+ALTER TABLE `task_assignments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `task_comments`
+--
+ALTER TABLE `task_comments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `task_history`
+--
+ALTER TABLE `task_history`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Constraints for table `tasks`
+--
+ALTER TABLE `tasks`
+  ADD CONSTRAINT `tasks_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `task_assignments`
+--
+ALTER TABLE `task_assignments`
+  ADD CONSTRAINT `task_assignments_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `task_assignments_ibfk_2` FOREIGN KEY (`assigned_to_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `task_assignments_ibfk_3` FOREIGN KEY (`assigned_to_department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `task_comments`
+--
+ALTER TABLE `task_comments`
+  ADD CONSTRAINT `task_comments_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `task_comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `task_history`
+--
+ALTER TABLE `task_history`
+  ADD CONSTRAINT `task_history_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `task_history_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

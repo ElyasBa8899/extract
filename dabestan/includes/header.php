@@ -38,6 +38,7 @@ if (!function_exists('has_permission')) {
                         <li><a href="/dabestan/admin/manage_departments.php"><span>بخش‌ها</span></a></li>
                         <li><a href="/dabestan/admin/manage_classes.php"><span>کلاس‌ها</span></a></li>
                         <li><a href="/dabestan/admin/manage_forms.php"><span>فرم‌ها</span></a></li>
+                        <li><a href="/dabestan/admin/manage_tasks.php"><span>وظایف</span></a></li>
                     </ul>
                 </li>
             <?php endif; ?>
@@ -104,6 +105,7 @@ if (!function_exists('has_permission')) {
                         <li><a href="/dabestan/user/new_ticket.php"><span>ایجاد تیکت جدید</span></a></li>
                     <?php endif; ?>
                     <li><a href="/dabestan/user/my_tickets.php"><span>تیکت‌های من</span></a></li>
+                    <li><a href="/dabestan/user/my_tasks.php"><span>وظایف من</span></a></li>
                 </ul>
             </li>
 
