@@ -1,7 +1,8 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
+<?php
+require_once __DIR__ . '/config_path.php';
 session_start();
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once PROJECT_ROOT . '/includes/db.php';
 
 $username = $password = "";
 $err = "";
