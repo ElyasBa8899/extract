@@ -27,7 +27,7 @@ SET time_zone = "+00:00";
 -- Table structure for table `users`
 --
 
-CREATE TABLE `users` (
+CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE `users` (
 -- Table structure for table `departments`
 --
 
-CREATE TABLE `departments` (
+CREATE TABLE IF NOT EXISTS `departments` (
   `id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL
@@ -76,7 +76,7 @@ INSERT INTO `permissions` (`id`, `name`, `description`) VALUES
 -- Table structure for table `user_departments`
 --
 
-CREATE TABLE `user_departments` (
+CREATE TABLE IF NOT EXISTS `user_departments` (
   `user_id` int(11) NOT NULL,
   `department_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
@@ -87,7 +87,7 @@ CREATE TABLE `user_departments` (
 -- Table structure for table `permissions`
 --
 
-CREATE TABLE `permissions` (
+CREATE TABLE IF NOT EXISTS `permissions` (
   `id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL
@@ -99,7 +99,7 @@ CREATE TABLE `permissions` (
 -- Table structure for table `user_permissions`
 --
 
-CREATE TABLE `user_permissions` (
+CREATE TABLE IF NOT EXISTS `user_permissions` (
   `user_id` int(11) NOT NULL,
   `permission_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
@@ -110,7 +110,7 @@ CREATE TABLE `user_permissions` (
 -- Table structure for table `department_permissions`
 --
 
-CREATE TABLE `department_permissions` (
+CREATE TABLE IF NOT EXISTS `department_permissions` (
   `department_id` int(11) NOT NULL,
   `permission_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
@@ -121,7 +121,7 @@ CREATE TABLE `department_permissions` (
 -- Table structure for table `forms`
 --
 
-CREATE TABLE `forms` (
+CREATE TABLE IF NOT EXISTS `forms` (
   `id` int(11) NOT NULL,
   `title` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
@@ -135,7 +135,7 @@ CREATE TABLE `forms` (
 -- Table structure for table `form_fields`
 --
 
-CREATE TABLE `form_fields` (
+CREATE TABLE IF NOT EXISTS `form_fields` (
   `id` int(11) NOT NULL,
   `form_id` int(11) NOT NULL,
   `label` varchar(255) NOT NULL,
@@ -151,7 +151,7 @@ CREATE TABLE `form_fields` (
 -- Table structure for table `form_submissions`
 --
 
-CREATE TABLE `form_submissions` (
+CREATE TABLE IF NOT EXISTS `form_submissions` (
   `id` int(11) NOT NULL,
   `form_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -164,7 +164,7 @@ CREATE TABLE `form_submissions` (
 -- Table structure for table `form_submission_data`
 --
 
-CREATE TABLE `form_submission_data` (
+CREATE TABLE IF NOT EXISTS `form_submission_data` (
   `id` int(11) NOT NULL,
   `submission_id` int(11) NOT NULL,
   `field_id` int(11) NOT NULL,
@@ -177,7 +177,7 @@ CREATE TABLE `form_submission_data` (
 -- Table structure for table `tickets`
 --
 
-CREATE TABLE `tickets` (
+CREATE TABLE IF NOT EXISTS `tickets` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `department_id` int(11) DEFAULT NULL,
@@ -194,7 +194,7 @@ CREATE TABLE `tickets` (
 -- Table structure for table `ticket_replies`
 --
 
-CREATE TABLE `ticket_replies` (
+CREATE TABLE IF NOT EXISTS `ticket_replies` (
   `id` int(11) NOT NULL,
   `ticket_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -208,7 +208,7 @@ CREATE TABLE `ticket_replies` (
 -- Table structure for table `files`
 --
 
-CREATE TABLE `files` (
+CREATE TABLE IF NOT EXISTS `files` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `file_name` varchar(255) NOT NULL,
@@ -459,7 +459,7 @@ ALTER TABLE `files`
 -- Table structure for table `tasks`
 --
 
-CREATE TABLE `tasks` (
+CREATE TABLE IF NOT EXISTS `tasks` (
   `id` int(11) NOT NULL,
   `title` varchar(255) NOT NULL,
   `description` text,
@@ -477,7 +477,7 @@ CREATE TABLE `tasks` (
 -- Table structure for table `task_assignments`
 --
 
-CREATE TABLE `task_assignments` (
+CREATE TABLE IF NOT EXISTS `task_assignments` (
   `id` int(11) NOT NULL,
   `task_id` int(11) NOT NULL,
   `assigned_to_user_id` int(11) DEFAULT NULL,
@@ -490,7 +490,7 @@ CREATE TABLE `task_assignments` (
 -- Table structure for table `task_comments`
 --
 
-CREATE TABLE `task_comments` (
+CREATE TABLE IF NOT EXISTS `task_comments` (
   `id` int(11) NOT NULL,
   `task_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -504,7 +504,7 @@ CREATE TABLE `task_comments` (
 -- Table structure for table `task_history`
 --
 
-CREATE TABLE `task_history` (
+CREATE TABLE IF NOT EXISTS `task_history` (
   `id` int(11) NOT NULL,
   `task_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
