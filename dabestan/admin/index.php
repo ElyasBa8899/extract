@@ -1,9 +1,8 @@
 <?php
-<?php
-require_once dirname(__DIR__) . '/config_path.php';
 session_start();
-require_once PROJECT_ROOT . '/includes/db.php';
-require_once PROJECT_ROOT . '/includes/access_control.php';
+require_once "../includes/db_singleton.php";
+$link = get_db_connection(); // Get connection
+require_once "../includes/access_control.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
@@ -32,7 +31,7 @@ $recent_submissions = mysqli_fetch_assoc(mysqli_query($link, "SELECT COUNT(*) as
 $rented_items = mysqli_fetch_assoc(mysqli_query($link, "SELECT COUNT(*) as count FROM item_rentals WHERE return_date IS NULL"))['count'];
 
 
-require_once PROJECT_ROOT . '/includes/header.php';
+require_once "../includes/header.php";
 ?>
 
 <div class="page-content">
@@ -81,5 +80,5 @@ require_once PROJECT_ROOT . '/includes/header.php';
 </div>
 
 <?php
-require_once PROJECT_ROOT . '/includes/footer.php';
+require_once "../includes/footer.php";
 ?>

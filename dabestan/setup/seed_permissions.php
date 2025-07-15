@@ -1,6 +1,5 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php';
+require_once '../includes/db.php';
 
 echo "<h1>Seeding Permissions and Role-Permission Mappings</h1>";
 
@@ -141,5 +140,5 @@ try {
     echo "<p style='color:red;'>Transaction rolled back. Error: " . $e->getMessage() . "</p>";
 }
 
-// mysqli_close($link);
+mysqli_close($link);
 ?>

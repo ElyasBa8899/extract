@@ -1,7 +1,6 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once "../includes/db.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]) {
     header("location: ../index.php");
@@ -14,9 +13,9 @@ $sql = "SELECT id, username, first_name, last_name, is_admin FROM users ORDER BY
 if($result = mysqli_query($link, $sql)){
     $users = mysqli_fetch_all($result, MYSQLI_ASSOC);
 }
-// // mysqli_close($link); // Removed from here, will be closed in footer
+mysqli_close($link);
 
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
+require_once "../includes/header.php";
 ?>
 
 <div class="page-content">
@@ -50,4 +49,4 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
     </div>
 </div>
 
-<?php require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php"; ?>
+<?php require_once "../includes/footer.php"; ?>

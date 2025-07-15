@@ -1,8 +1,7 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/functions.php";
+require_once "../includes/db.php";
+require_once "../includes/functions.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
@@ -31,23 +30,9 @@ if($stmt_ticket = mysqli_prepare($link, $sql_ticket)){
     mysqli_stmt_close($stmt_ticket);
 }
 
-// Security Check: User can view if they are the creator, an admin, or in the assigned department/user
-$can_view = false;
-if ($ticket) {
-    if ($ticket['user_id'] == $user_id || !empty($_SESSION['is_admin'])) {
-        $can_view = true;
-    } elseif ($ticket['assigned_to_user_id'] == $user_id) {
-        $can_view = true;
-    } elseif ($ticket['assigned_to_department_id']) {
-        $dept_id = $ticket['assigned_to_department_id'];
-        $check_dept = mysqli_query($link, "SELECT 1 FROM user_departments WHERE user_id = $user_id AND department_id = $dept_id");
-        if (mysqli_num_rows($check_dept) > 0) {
-            $can_view = true;
-        }
-    }
-}
-
-if (!$can_view) {
+// Security Check: Only ticket owner or admin can view
+if (!$ticket || ($ticket['user_id'] != $user_id && !$_SESSION['is_admin'])) {
+    // In future, we'll also check for department membership
     echo "دسترسی غیرمجاز یا تیکت یافت نشد.";
     exit;
 }
@@ -115,7 +100,7 @@ if($stmt_replies = mysqli_prepare($link, $sql_replies)){
 }
 
 
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
+require_once "../includes/header.php";
 ?>
 <style>
 .ticket-message, .ticket-reply { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
@@ -128,16 +113,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
 </style>
 
 <div class="page-content">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="my_tickets.php" class="btn btn-secondary">&larr; بازگشت به لیست تیکت‌ها</a>
-        <div>
-            <span class="badge badge-info" style="font-size: 1em; padding: 0.5em 1em;"><?php echo get_status_badge($ticket['status']); ?></span>
-            <?php if($ticket['priority'] == 'urgent'): ?>
-                <span class="badge badge-danger" style="font-size: 1em; padding: 0.5em 1em;">فوری</span>
-            <?php endif; ?>
-        </div>
-    </div>
-
+    <a href="my_tickets.php" class="btn btn-secondary" style="margin-bottom: 20px;">&larr; بازگشت به لیست تیکت‌ها</a>
     <h2>موضوع: <?php echo htmlspecialchars($ticket['title']); ?></h2>
 
     <!-- Original Ticket Message -->
@@ -181,67 +157,9 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
             </div>
         </form>
     </div>
-
-    <?php if(!empty($_SESSION['is_admin'])): // Only show for admins for now ?>
-    <hr>
-    <div class="form-container">
-        <h3>ارجاع تیکت</h3>
-        <form action="reassign_ticket.php" method="post">
-            <input type="hidden" name="ticket_id" value="<?php echo $ticket_id; ?>">
-            <div class="form-group">
-                <label>نوع ارجاع</label>
-                <div class="radio-group">
-                    <input type="radio" name="assign_type" value="department" id="assign_type_dept_re" checked onchange="toggleReassignFields()"> <label for="assign_type_dept_re">ارجاع به بخش</label>
-                </div>
-                <div class="radio-group">
-                    <input type="radio" name="assign_type" value="user" id="assign_type_user_re" onchange="toggleReassignFields()"> <label for="assign_type_user_re">ارجاع به کاربر</label>
-                </div>
-            </div>
-            <div id="department_field_re" class="form-group">
-                <label for="department_id_re">انتخاب بخش</label>
-                <select name="department_id" id="department_id_re" class="form-control">
-                    <?php
-                    $departments = mysqli_query($link, "SELECT id, department_name FROM departments ORDER BY department_name ASC");
-                    while($dept = mysqli_fetch_assoc($departments)): ?>
-                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
-                    <?php endwhile; ?>
-                </select>
-            </div>
-            <div id="user_field_re" class="form-group" style="display: none;">
-                <label for="user_id_re">انتخاب کاربر</label>
-                <select name="user_id" id="user_id_re" class="form-control">
-                    <?php
-                     $users = mysqli_query($link, "SELECT id, username FROM users ORDER BY username ASC");
-                    while($user = mysqli_fetch_assoc($users)): ?>
-                        <option value="<?php echo $user['id']; ?>"><?php echo htmlspecialchars($user['username']); ?></option>
-                    <?php endwhile; ?>
-                </select>
-            </div>
-            <div class="form-group">
-                <button type="submit" class="btn btn-info">ارجاع</button>
-            </div>
-        </form>
-    </div>
-    <?php endif; ?>
 </div>
 
-<script>
-function toggleReassignFields() {
-    const assignType = document.querySelector('input[name="assign_type"]:checked').value;
-    const deptField = document.getElementById('department_field_re');
-    const userField = document.getElementById('user_field_re');
-
-    if (assignType === 'department') {
-        deptField.style.display = 'block';
-        userField.style.display = 'none';
-    } else {
-        deptField.style.display = 'none';
-        userField.style.display = 'block';
-    }
-}
-</script>
-
 <?php
-// mysqli_close($link);
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php";
+mysqli_close($link);
+require_once "../includes/footer.php";
 ?>

@@ -1,5 +1,4 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
 require_once "db.php";
 
@@ -17,5 +16,5 @@ if($stmt = mysqli_prepare($link, $sql)){
     mysqli_stmt_close($stmt);
 }
 
-// mysqli_close($link);
+mysqli_close($link);
 ?>

@@ -1,7 +1,6 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once "../includes/db.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]) {
     header("location: ../index.php");
@@ -50,9 +49,9 @@ if($stmt_data = mysqli_prepare($link, $sql_data)){
     mysqli_stmt_close($stmt_data);
 }
 
-// mysqli_close($link);
+mysqli_close($link);
 
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
+require_once "../includes/header.php";
 ?>
 
 <div class="page-content">
@@ -92,4 +91,4 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
     </div>
 </div>
 
-<?php require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php"; ?>
+<?php require_once "../includes/footer.php"; ?>

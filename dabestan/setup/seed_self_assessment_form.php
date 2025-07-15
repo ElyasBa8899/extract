@@ -1,6 +1,5 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once "../includes/db.php";
 
 echo "<h1>Seeding Self-Assessment Form...</h1>";
 
@@ -94,5 +93,5 @@ try {
     echo "An error occurred: " . $e->getMessage();
 }
 
-// mysqli_close($link);
+mysqli_close($link);
 ?>

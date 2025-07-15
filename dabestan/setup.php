@@ -1,7 +1,6 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 // This is a one-time setup file. Run it once, then delete it.
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once "includes/db.php";
 
 echo "<h1>Setup Script</h1>";
 
@@ -62,5 +61,5 @@ echo "<p>Admin user setup complete.</p>";
 echo "<hr><h1>Setup Complete!</h1>";
 echo "<p style='color:red; font-weight:bold;'>Please delete this file (setup.php) immediately for security reasons.</p>";
 
-// mysqli_close($link);
+mysqli_close($link);
 ?>

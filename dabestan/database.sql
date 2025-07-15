@@ -1,329 +1,436 @@
--- Create dabestan_db database
-CREATE DATABASE IF NOT EXISTS dabestan_db CHARACTER SET utf8mb4 COLLATE utf8mb4_persian_ci;
-USE dabestan_db;
+-- phpMyAdmin SQL Dump
+-- version 5.2.0
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Jul 24, 2023 at 10:00 AM
+-- Server version: 10.4.27-MariaDB
+-- PHP Version: 8.2.0
 
--- Users table
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `dabestan_db`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
 CREATE TABLE `users` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `first_name` VARCHAR(50) NOT NULL,
-  `last_name` VARCHAR(50) NOT NULL,
-  `username` VARCHAR(50) NOT NULL UNIQUE,
-  `password` VARCHAR(255) NOT NULL,
-  `is_admin` TINYINT(1) NOT NULL DEFAULT 0,
-  `telegram_chat_id` VARCHAR(50) DEFAULT NULL,
-  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `id` int(11) NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `is_admin` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
--- Roles table
-CREATE TABLE `roles` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `role_name` VARCHAR(50) NOT NULL UNIQUE,
-  `role_description` TEXT,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- --------------------------------------------------------
 
--- Permissions table
-CREATE TABLE `permissions` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `permission_name` VARCHAR(100) NOT NULL UNIQUE,
-  `permission_description` TEXT,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+--
+-- Table structure for table `departments`
+--
 
--- User-Roles mapping table
-CREATE TABLE `user_roles` (
-  `user_id` INT(11) NOT NULL,
-  `role_id` INT(11) NOT NULL,
-  PRIMARY KEY (`user_id`, `role_id`),
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Role-Permissions mapping table
-CREATE TABLE `role_permissions` (
-  `role_id` INT(11) NOT NULL,
-  `permission_id` INT(11) NOT NULL,
-  PRIMARY KEY (`role_id`, `permission_id`),
-  FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`permission_id`) REFERENCES `permissions`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Departments table
 CREATE TABLE `departments` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `department_name` VARCHAR(100) NOT NULL,
-  `department_description` TEXT,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
--- User-Departments mapping table
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_departments`
+--
+
 CREATE TABLE `user_departments` (
-  `user_id` INT(11) NOT NULL,
-  `department_id` INT(11) NOT NULL,
-  PRIMARY KEY (`user_id`, `department_id`),
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`department_id`) REFERENCES `departments`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `user_id` int(11) NOT NULL,
+  `department_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
--- Classes table
-CREATE TABLE `classes` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `class_name` VARCHAR(100) NOT NULL,
-  `description` TEXT,
-  `status` ENUM('active', 'inactive', 'archived') NOT NULL DEFAULT 'active',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- --------------------------------------------------------
 
--- Class-Teachers mapping table
-CREATE TABLE `class_teachers` (
-  `class_id` INT(11) NOT NULL,
-  `teacher_id` INT(11) NOT NULL,
-  PRIMARY KEY (`class_id`, `teacher_id`),
-  FOREIGN KEY (`class_id`) REFERENCES `classes`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`teacher_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+--
+-- Table structure for table `permissions`
+--
 
--- Dynamic Forms Structure --
+CREATE TABLE `permissions` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
--- Forms table
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_permissions`
+--
+
+CREATE TABLE `user_permissions` (
+  `user_id` int(11) NOT NULL,
+  `permission_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `department_permissions`
+--
+
+CREATE TABLE `department_permissions` (
+  `department_id` int(11) NOT NULL,
+  `permission_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `forms`
+--
+
 CREATE TABLE `forms` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `form_name` VARCHAR(255) NOT NULL,
-  `form_description` TEXT,
-  `created_by` INT(11) NOT NULL,
-  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
--- Notifications Module Table --
+-- --------------------------------------------------------
 
-CREATE TABLE `notifications` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `user_id` INT(11) NOT NULL, -- The user who receives the notification
-  `message` VARCHAR(255) NOT NULL,
-  `link` VARCHAR(255), -- Link to the relevant page (e.g., ticket)
-  `is_read` TINYINT(1) NOT NULL DEFAULT 0,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+--
+-- Table structure for table `form_fields`
+--
 
--- Form Fields table
 CREATE TABLE `form_fields` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `form_id` INT(11) NOT NULL,
-  `field_label` VARCHAR(255) NOT NULL,
-  `field_type` ENUM('text', 'textarea', 'select', 'checkbox', 'radio', 'number', 'date') NOT NULL,
-  `field_options` TEXT, -- For select, checkbox, radio (e.g., JSON format)
-  `is_required` TINYINT(1) NOT NULL DEFAULT 0,
-  `field_order` INT(11) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`form_id`) REFERENCES `forms`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `id` int(11) NOT NULL,
+  `form_id` int(11) NOT NULL,
+  `label` varchar(255) NOT NULL,
+  `field_type` enum('text','textarea','select','checkbox','radio') NOT NULL,
+  `options` text DEFAULT NULL,
+  `is_required` tinyint(1) NOT NULL DEFAULT 0,
+  `field_order` int(11) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
--- Form Submissions table
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `form_submissions`
+--
+
 CREATE TABLE `form_submissions` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `form_id` INT(11) NOT NULL,
-  `user_id` INT(11) NOT NULL,
-  `class_id` INT(11) DEFAULT NULL, -- Optional: link submission to a class
-  `related_to_id` INT(11) DEFAULT NULL, -- Optional: for linking to other items like meetings, etc.
-  `submitted_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`form_id`) REFERENCES `forms`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`class_id`) REFERENCES `classes`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `id` int(11) NOT NULL,
+  `form_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `submitted_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
--- Form Submission Data table
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `form_submission_data`
+--
+
 CREATE TABLE `form_submission_data` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `submission_id` INT(11) NOT NULL,
-  `field_id` INT(11) NOT NULL,
-  `field_value` TEXT NOT NULL,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`submission_id`) REFERENCES `form_submissions`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`field_id`) REFERENCES `form_fields`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `id` int(11) NOT NULL,
+  `submission_id` int(11) NOT NULL,
+  `field_id` int(11) NOT NULL,
+  `field_value` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
--- Recruitment Module Tables --
+-- --------------------------------------------------------
 
-CREATE TABLE `regions` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(100) NOT NULL,
-  `created_by` INT(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE `recruited_students` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `student_name` VARCHAR(100) NOT NULL,
-  `parent_name` VARCHAR(100),
-  `phone_number` VARCHAR(20),
-  `region_id` INT(11) NOT NULL,
-  `recruiter_name` VARCHAR(100),
-  `event_name` VARCHAR(100), -- e.g., "Ghadir", "Nime Shaban"
-  `recruited_at` DATE,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`region_id`) REFERENCES `regions`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Inventory/Rental Module Tables --
-
-CREATE TABLE `inventory_categories` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(100) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE `inventory_items` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL,
-  `description` TEXT,
-  `quantity` INT(11) NOT NULL DEFAULT 0,
-  `category_id` INT(11),
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`category_id`) REFERENCES `inventory_categories`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE `item_rentals` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `item_id` INT(11) NOT NULL,
-  `user_id` INT(11) NOT NULL,
-  `rent_date` DATETIME NOT NULL,
-  `return_date` DATETIME,
-  `notes` TEXT,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`item_id`) REFERENCES `inventory_items`(`id`),
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Ticketing System Tables --
+--
+-- Table structure for table `tickets`
+--
 
 CREATE TABLE `tickets` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `title` VARCHAR(255) NOT NULL,
-  `message` TEXT NOT NULL,
-  `user_id` INT(11) NOT NULL,
-  `assigned_to_department_id` INT(11),
-  `assigned_to_user_id` INT(11),
-  `status` ENUM('open', 'in_progress', 'closed', 'urgent') NOT NULL DEFAULT 'open',
-  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`),
-  FOREIGN KEY (`assigned_to_department_id`) REFERENCES `departments`(`id`),
-  FOREIGN KEY (`assigned_to_user_id`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `department_id` int(11) DEFAULT NULL,
+  `title` varchar(255) NOT NULL,
+  `message` text NOT NULL,
+  `status` enum('open','in_progress','closed','urgent') NOT NULL DEFAULT 'open',
+  `priority` enum('low','medium','high') NOT NULL DEFAULT 'medium',
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `ticket_replies`
+--
 
 CREATE TABLE `ticket_replies` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `ticket_id` INT(11) NOT NULL,
-  `user_id` INT(11) NOT NULL,
-  `reply_message` TEXT NOT NULL,
-  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`ticket_id`) REFERENCES `tickets`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `id` int(11) NOT NULL,
+  `ticket_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `message` text NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
--- In-Service Training (Zemn Khedmat) Module Tables --
+-- --------------------------------------------------------
 
-CREATE TABLE `service_meetings` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `title` VARCHAR(255) NOT NULL,
-  `meeting_date` DATETIME NOT NULL,
-  `speaker` VARCHAR(255),
-  `location` VARCHAR(255),
-  `notes` TEXT,
-  `created_by` INT(11) NOT NULL,
-  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+--
+-- Table structure for table `files`
+--
 
-CREATE TABLE `meeting_checklist_items` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `meeting_id` INT(11) NOT NULL,
-  `item_name` VARCHAR(255) NOT NULL, -- e.g., "Hماهنگی مکان", "دعوت تلگرامی"
-  `is_completed` TINYINT(1) NOT NULL DEFAULT 0,
-  `completed_by` INT(11),
-  `completed_at` DATETIME,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`meeting_id`) REFERENCES `service_meetings`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`completed_by`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `files` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `file_name` varchar(255) NOT NULL,
+  `file_path` varchar(255) NOT NULL,
+  `file_type` varchar(100) NOT NULL,
+  `file_size` int(11) NOT NULL,
+  `upload_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;
 
-CREATE TABLE `meeting_attendance` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `meeting_id` INT(11) NOT NULL,
-  `user_id` INT(11) NOT NULL,
-  `status` ENUM('present', 'absent', 'justified_absence') NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `meeting_user_unique` (`meeting_id`, `user_id`),
-  FOREIGN KEY (`meeting_id`) REFERENCES `service_meetings`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- --------------------------------------------------------
 
--- Financial Module (Booklets) Tables --
+--
+-- Indexes for dumped tables
+--
 
-CREATE TABLE `booklets` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL,
-  `price` DECIMAL(10, 2) NOT NULL,
-  `description` TEXT,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`);
 
-CREATE TABLE `booklet_transactions` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `user_id` INT(11) NOT NULL, -- The user (teacher) involved in the transaction
-  `booklet_id` INT(11) DEFAULT NULL, -- Nullable for payments
-  `quantity` INT(11), -- Number of booklets for debit transactions
-  `transaction_type` ENUM('debit', 'credit') NOT NULL, -- debit for receiving booklets, credit for payment
-  `amount` DECIMAL(10, 2) NOT NULL, -- Total transaction amount
-  `notes` TEXT,
-  `transaction_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` INT(11) NOT NULL, -- The user who registered the transaction
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`),
-  FOREIGN KEY (`booklet_id`) REFERENCES `booklets`(`id`),
-  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+--
+-- Indexes for table `departments`
+--
+ALTER TABLE `departments`
+  ADD PRIMARY KEY (`id`);
 
--- Parents (Oliya) Module Tables --
+--
+-- Indexes for table `user_departments`
+--
+ALTER TABLE `user_departments`
+  ADD PRIMARY KEY (`user_id`,`department_id`),
+  ADD KEY `department_id` (`department_id`);
 
-CREATE TABLE `parent_meetings` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `class_id` INT(11) NOT NULL,
-  `meeting_date` DATETIME NOT NULL,
-  `location` VARCHAR(255),
-  `speaker` VARCHAR(255),
-  `status` ENUM('scheduled', 'completed', 'cancelled') NOT NULL DEFAULT 'scheduled',
-  `teacher_report_submission_id` INT(11), -- Links to a submission in form_submissions
-  `observer_report_submission_id` INT(11), -- Links to a submission in form_submissions
-  `created_by` INT(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`class_id`) REFERENCES `classes`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`),
-  FOREIGN KEY (`teacher_report_submission_id`) REFERENCES `form_submissions`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`observer_report_submission_id`) REFERENCES `form_submissions`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+--
+-- Indexes for table `permissions`
+--
+ALTER TABLE `permissions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
 
--- General Events (Parvareshi) Module Tables --
+--
+-- Indexes for table `user_permissions`
+--
+ALTER TABLE `user_permissions`
+  ADD PRIMARY KEY (`user_id`,`permission_id`),
+  ADD KEY `permission_id` (`permission_id`);
 
-CREATE TABLE `general_events` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `event_name` VARCHAR(255) NOT NULL,
-  `event_year` INT(4),
-  `description` TEXT,
-  `proposal` TEXT, -- For the "Propozal" field
-  `required_workforce` TEXT, -- For "Niroo Ensani"
-  `required_budget` DECIMAL(12, 2),
-  `status` VARCHAR(50),
-  `created_by` INT(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+--
+-- Indexes for table `department_permissions`
+--
+ALTER TABLE `department_permissions`
+  ADD PRIMARY KEY (`department_id`,`permission_id`),
+  ADD KEY `permission_id` (`permission_id`);
+
+--
+-- Indexes for table `forms`
+--
+ALTER TABLE `forms`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `form_fields`
+--
+ALTER TABLE `form_fields`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `form_id` (`form_id`);
+
+--
+-- Indexes for table `form_submissions`
+--
+ALTER TABLE `form_submissions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `form_id` (`form_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `form_submission_data`
+--
+ALTER TABLE `form_submission_data`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `submission_id` (`submission_id`),
+  ADD KEY `field_id` (`field_id`);
+
+--
+-- Indexes for table `tickets`
+--
+ALTER TABLE `tickets`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `department_id` (`department_id`);
+
+--
+-- Indexes for table `ticket_replies`
+--
+ALTER TABLE `ticket_replies`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `ticket_id` (`ticket_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `files`
+--
+ALTER TABLE `files`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `departments`
+--
+ALTER TABLE `departments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `permissions`
+--
+ALTER TABLE `permissions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `forms`
+--
+ALTER TABLE `forms`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `form_fields`
+--
+ALTER TABLE `form_fields`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `form_submissions`
+--
+ALTER TABLE `form_submissions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `form_submission_data`
+--
+ALTER TABLE `form_submission_data`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `tickets`
+--
+ALTER TABLE `tickets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `ticket_replies`
+--
+ALTER TABLE `ticket_replies`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `files`
+--
+ALTER TABLE `files`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `user_departments`
+--
+ALTER TABLE `user_departments`
+  ADD CONSTRAINT `user_departments_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `user_departments_ibfk_2` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_permissions`
+--
+ALTER TABLE `user_permissions`
+  ADD CONSTRAINT `user_permissions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `user_permissions_ibfk_2` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `department_permissions`
+--
+ALTER TABLE `department_permissions`
+  ADD CONSTRAINT `department_permissions_ibfk_1` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `department_permissions_ibfk_2` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `forms`
+--
+ALTER TABLE `forms`
+  ADD CONSTRAINT `forms_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `form_fields`
+--
+ALTER TABLE `form_fields`
+  ADD CONSTRAINT `form_fields_ibfk_1` FOREIGN KEY (`form_id`) REFERENCES `forms` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `form_submissions`
+--
+ALTER TABLE `form_submissions`
+  ADD CONSTRAINT `form_submissions_ibfk_1` FOREIGN KEY (`form_id`) REFERENCES `forms` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `form_submissions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `form_submission_data`
+--
+ALTER TABLE `form_submission_data`
+  ADD CONSTRAINT `form_submission_data_ibfk_1` FOREIGN KEY (`submission_id`) REFERENCES `form_submissions` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `form_submission_data_ibfk_2` FOREIGN KEY (`field_id`) REFERENCES `form_fields` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `tickets`
+--
+ALTER TABLE `tickets`
+  ADD CONSTRAINT `tickets_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `tickets_ibfk_2` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `ticket_replies`
+--
+ALTER TABLE `ticket_replies`
+  ADD CONSTRAINT `ticket_replies_ibfk_1` FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `ticket_replies_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `files`
+--
+ALTER TABLE `files`
+  ADD CONSTRAINT `files_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

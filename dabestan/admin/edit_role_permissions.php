@@ -1,7 +1,6 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once "../includes/db.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]) {
     header("location: ../index.php");
@@ -79,7 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_permissions']))
     }
 }
 
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
+require_once "../includes/header.php";
 ?>
 
 <div class="page-content">
@@ -95,16 +94,18 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
     <div class="form-container">
         <form action="edit_role_permissions.php?role_id=<?php echo $role_id; ?>" method="post">
             <h3>لیست دسترسی‌ها</h3>
-            <?php foreach($all_permissions as $permission): ?>
-                <div class="checkbox-group">
-                    <input type="checkbox" name="permissions[]" value="<?php echo $permission['id']; ?>" id="perm_<?php echo $permission['id']; ?>"
-                        <?php if(in_array($permission['id'], $current_permissions)) echo 'checked'; ?>>
-                    <label for="perm_<?php echo $permission['id']; ?>">
-                        <strong><?php echo htmlspecialchars($permission['permission_name']); ?></strong> -
-                        <small><?php echo htmlspecialchars($permission['permission_description']); ?></small>
-                    </label>
-                </div>
-            <?php endforeach; ?>
+            <div class="checkbox-grid">
+                <?php foreach($all_permissions as $permission): ?>
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="permissions[]" value="<?php echo $permission['id']; ?>" id="perm_<?php echo $permission['id']; ?>"
+                            <?php if(in_array($permission['id'], $current_permissions)) echo 'checked'; ?>>
+                        <label for="perm_<?php echo $permission['id']; ?>">
+                            <strong><?php echo htmlspecialchars($permission['permission_description']); ?></strong>
+                            <small class="text-muted d-block">(<?php echo htmlspecialchars($permission['permission_name']); ?>)</small>
+                        </label>
+                    </div>
+                <?php endforeach; ?>
+            </div>
 
             <div class="form-group" style="margin-top: 20px;">
                 <input type="submit" name="update_permissions" class="btn btn-primary" value="ذخیره تغییرات">
@@ -114,6 +115,6 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
 </div>
 
 <?php
-// mysqli_close($link);
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php";
+mysqli_close($link);
+require_once "../includes/footer.php";
 ?>

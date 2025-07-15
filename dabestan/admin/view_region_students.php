@@ -1,7 +1,6 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once "../includes/db.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]) {
     header("location: ../index.php");
@@ -60,10 +59,13 @@ if($stmt_unregistered = mysqli_prepare($link, $sql_unregistered)){
 
 // Fetch registered students (moved to main students table or linked to a class)
 $registered_students = [];
-$sql_registered = "SELECT rs.student_name, c.class_name
+
+$sql_registered = "SELECT rs.student_name, c.class_name, c.id as class_id
                    FROM recruited_students rs
                    JOIN classes c ON rs.class_id = c.id
-                   WHERE rs.region_id = ? AND rs.class_id IS NOT NULL";
+                   WHERE rs.region_id = ? AND rs.class_id IS NOT NULL
+                   ORDER BY c.class_name, rs.student_name";
+
 if($stmt_registered = mysqli_prepare($link, $sql_registered)){
     mysqli_stmt_bind_param($stmt_registered, "i", $region_id);
     mysqli_stmt_execute($stmt_registered);
@@ -72,24 +74,8 @@ if($stmt_registered = mysqli_prepare($link, $sql_registered)){
     mysqli_stmt_close($stmt_registered);
 }
 
-// Fetch active classes in the region that have at least one student
-$active_classes_with_students = [];
-$sql_classes = "SELECT DISTINCT c.id, c.class_name, u.full_name as teacher_name
-                FROM classes c
-                JOIN users u ON c.teacher_id = u.id
-                JOIN recruited_students rs ON c.id = rs.class_id
-                WHERE c.region_id = ? AND c.status = 'active'";
 
-if ($stmt_classes = mysqli_prepare($link, $sql_classes)) {
-    mysqli_stmt_bind_param($stmt_classes, "i", $region_id);
-    mysqli_stmt_execute($stmt_classes);
-    $result_classes = mysqli_stmt_get_result($stmt_classes);
-    $active_classes_with_students = mysqli_fetch_all($result_classes, MYSQLI_ASSOC);
-    mysqli_stmt_close($stmt_classes);
-}
-
-
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
+require_once "../includes/header.php";
 ?>
 
 <div class="page-content">
@@ -153,58 +139,37 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
     </div>
 
     <div class="table-container">
-        <h3>کلاس‌های فعال در این منطقه</h3>
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>نام کلاس</th>
-                        <th>مدرس</th>
-                        <th>عملیات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($active_classes_with_students)): ?>
-                        <tr><td colspan="3">هیچ کلاس فعالی با متربی ثبت‌نام شده در این منطقه وجود ندارد.</td></tr>
-                    <?php else: ?>
-                        <?php foreach ($active_classes_with_students as $class): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($class['class_name']); ?></td>
-                                <td><?php echo htmlspecialchars($class['teacher_name']); ?></td>
-                                <td>
-                                    <a href="manage_class_students.php?class_id=<?php echo $class['id']; ?>" class="btn btn-sm btn-info">مدیریت متربیان</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    <div class="table-container" style="margin-top: 40px;">
-        <h3>دانش‌آموزان ثبت‌نام شده (نمایش کلی)</h3>
-         <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>نام دانش‌آموز</th>
-                        <th>کلاس</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($registered_students)): ?>
-                        <tr><td colspan="2">هیچ دانش‌آموز ثبت‌نام شده‌ای در این منطقه وجود ندارد.</td></tr>
-                    <?php else: ?>
-                        <?php foreach ($registered_students as $student): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($student['student_name']); ?></td>
-                                <td><?php echo htmlspecialchars($student['class_name']); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+        <h3>کلاس‌های فعال در این منطقه</h3>
+        <div class="accordion">
+            <?php
+            $classes_in_region = [];
+            foreach ($registered_students as $student) {
+                $classes_in_region[$student['class_id']]['class_name'] = $student['class_name'];
+                $classes_in_region[$student['class_id']]['students'][] = $student['student_name'];
+            }
+            ?>
+
+            <?php if (empty($classes_in_region)): ?>
+                <p>هیچ کلاس فعالی با متربی ثبت‌نام شده در این منطقه وجود ندارد.</p>
+            <?php else: ?>
+                <?php foreach ($classes_in_region as $class_id => $class_data): ?>
+                    <div class="accordion-item">
+                        <button class="accordion-header">
+                            <?php echo htmlspecialchars($class_data['class_name']); ?>
+                            <span class="badge"><?php echo count($class_data['students']); ?> متربی</span>
+                        </button>
+                        <div class="accordion-content">
+                            <ul>
+                                <?php foreach ($class_data['students'] as $student_name): ?>
+                                    <li><?php echo htmlspecialchars($student_name); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
         </div>
     </div>
 </div>
@@ -238,6 +203,16 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
     </div>
 </div>
 
+<style>
+.accordion-item { border-bottom: 1px solid #e0e0e0; }
+.accordion-header { background-color: #f7f7f7; border: none; width: 100%; text-align: right; padding: 15px; font-size: 16px; cursor: pointer; transition: background-color 0.3s; display: flex; justify-content: space-between; align-items: center; }
+.accordion-header:hover { background-color: #efefef; }
+.accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background-color: #fff; }
+.accordion-content ul { list-style-type: none; padding: 0 20px; margin: 0; }
+.accordion-content li { padding: 10px; border-bottom: 1px dashed #eee; }
+.accordion-content li:last-child { border-bottom: none; }
+.badge { background-color: var(--primary-color); color: white; padding: 5px 10px; border-radius: 12px; font-size: 12px; }
+</style>
 <script>
 function openEnrollModal(studentId, studentName) {
     document.getElementById('modalStudentId').value = studentId;
@@ -256,9 +231,22 @@ window.onclick = function(event) {
         modal.style.display = "none";
     }
 }
+
+document.querySelectorAll('.accordion-header').forEach(button => {
+    button.addEventListener('click', () => {
+        const accordionContent = button.nextElementSibling;
+        button.classList.toggle('active');
+
+        if (button.classList.contains('active')) {
+            accordionContent.style.maxHeight = accordionContent.scrollHeight + 'px';
+        } else {
+            accordionContent.style.maxHeight = 0;
+        }
+    });
+});
 </script>
 
 <?php
-// mysqli_close($link);
-require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php";
+mysqli_close($link);
+require_once "../includes/footer.php";
 ?>
