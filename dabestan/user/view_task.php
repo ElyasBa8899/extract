@@ -3,6 +3,7 @@ session_start();
 require_once "../includes/db_singleton.php";
 $link = get_db_connection();
 require_once "../includes/access_control.php";
+require_once "../includes/functions.php";
 require_once "../includes/header.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
@@ -18,74 +19,56 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $task_id = $_GET['id'];
 $user_id = $_SESSION['id'];
 
-// Fetch task details
-$sql = "SELECT t.*, u.username as creator_name FROM tasks t JOIN users u ON t.created_by = u.id WHERE t.id = ? AND EXISTS (SELECT 1 FROM task_assignments ta WHERE ta.task_id = t.id AND ta.assigned_to_user_id = ?)";
-if ($stmt = mysqli_prepare($link, $sql)) {
-    mysqli_stmt_bind_param($stmt, "ii", $task_id, $user_id);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $task = mysqli_fetch_assoc($result);
-    mysqli_stmt_close($stmt);
+// Handle Comment Submission
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_comment'])) {
+    $comment = trim($_POST['comment']);
+    if (!empty($comment)) {
+        $sql = "INSERT INTO task_comments (task_id, user_id, comment) VALUES (?, ?, ?)";
+        if ($stmt = mysqli_prepare($link, $sql)) {
+            mysqli_stmt_bind_param($stmt, "iis", $task_id, $user_id, $comment);
+            mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
+            header("location: view_task.php?id=" . $task_id);
+            exit;
+        }
+    }
 }
 
+// Fetch task details
+$sql_task = "SELECT t.*, u.username as creator_name FROM tasks t JOIN users u ON t.created_by = u.id WHERE t.id = ?";
+$stmt_task = mysqli_prepare($link, $sql_task);
+mysqli_stmt_bind_param($stmt_task, "i", $task_id);
+mysqli_stmt_execute($stmt_task);
+$result_task = mysqli_stmt_get_result($stmt_task);
+$task = mysqli_fetch_assoc($result_task);
+mysqli_stmt_close($stmt_task);
+
 if (!$task) {
-    echo "<div class='alert alert-danger'>وظیفه مورد نظر یافت نشد یا شما به آن دسترسی ندارید.</div>";
+    echo "<div class='alert alert-danger'>وظیفه مورد نظر یافت نشد.</div>";
     require_once "../includes/footer.php";
     exit;
 }
 
-// Handle status update
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
-    $new_status = $_POST['status'];
-    $sql_update = "UPDATE tasks SET status = ? WHERE id = ?";
-    if ($stmt_update = mysqli_prepare($link, $sql_update)) {
-        mysqli_stmt_bind_param($stmt_update, "si", $new_status, $task_id);
-        mysqli_stmt_execute($stmt_update);
-        mysqli_stmt_close($stmt_update);
-        // Refresh the page to show the new status
-        header("location: view_task.php?id=" . $task_id);
-        exit;
-    }
-}
+// Fetch comments
+$sql_comments = "SELECT tc.*, u.username FROM task_comments tc JOIN users u ON tc.user_id = u.id WHERE tc.task_id = ? ORDER BY tc.created_at ASC";
+$stmt_comments = mysqli_prepare($link, $sql_comments);
+mysqli_stmt_bind_param($stmt_comments, "i", $task_id);
+mysqli_stmt_execute($stmt_comments);
+$result_comments = mysqli_stmt_get_result($stmt_comments);
+$comments = mysqli_fetch_all($result_comments, MYSQLI_ASSOC);
+mysqli_stmt_close($stmt_comments);
 
-// Handle re-assignment
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['reassign_task'])) {
-    $assign_to_user = !empty($_POST['assign_to_user']) ? $_POST['assign_to_user'] : null;
-    $assign_to_dept = !empty($_POST['assign_to_dept']) ? $_POST['assign_to_dept'] : null;
+// Fetch history
+$sql_history = "SELECT th.*, u.username FROM task_history th JOIN users u ON th.user_id = u.id WHERE th.task_id = ? ORDER BY th.created_at ASC";
+$stmt_history = mysqli_prepare($link, $sql_history);
+mysqli_stmt_bind_param($stmt_history, "i", $task_id);
+mysqli_stmt_execute($stmt_history);
+$result_history = mysqli_stmt_get_result($stmt_history);
+$history = mysqli_fetch_all($result_history, MYSQLI_ASSOC);
+mysqli_stmt_close($stmt_history);
 
-    $sql_reassign = "UPDATE task_assignments SET assigned_to_user_id = ?, assigned_to_department_id = ? WHERE task_id = ?";
-    if($stmt_reassign = mysqli_prepare($link, $sql_reassign)){
-        mysqli_stmt_bind_param($stmt_reassign, "iii", $assign_to_user, $assign_to_dept, $task_id);
-        mysqli_stmt_execute($stmt_reassign);
-        mysqli_stmt_close($stmt_reassign);
 
-        // Add to history
-        $action_detail = "وظیفه به " . ($assign_to_user ? "کاربر " . $assign_to_user : "بخش " . $assign_to_dept) . " ارجاع داده شد.";
-        $sql_history = "INSERT INTO task_history (task_id, user_id, action, details) VALUES (?, ?, 'reassign', ?)";
-        if($stmt_history = mysqli_prepare($link, $sql_history)){
-            mysqli_stmt_bind_param($stmt_history, "iis", $task_id, $user_id, $action_detail);
-            mysqli_stmt_execute($stmt_history);
-            mysqli_stmt_close($stmt_history);
-        }
-
-        // Send notification to new assignee
-        if ($assign_to_user) {
-            $message = "وظیفه '" . htmlspecialchars($task['title']) . "' به شما ارجاع داده شد.";
-            $link_notif = "user/view_task.php?id=" . $task_id;
-            $sql_notif = "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)";
-            if($stmt_notif = mysqli_prepare($link, $sql_notif)){
-                mysqli_stmt_bind_param($stmt_notif, "iss", $assign_to_user, $message, $link_notif);
-                mysqli_stmt_execute($stmt_notif);
-                mysqli_stmt_close($stmt_notif);
-            }
-        }
-
-        header("location: view_task.php?id=" . $task_id);
-        exit;
-    }
-}
-
-function get_status_badge($status) {
+function get_status_badge_view($status) {
     switch ($status) {
         case 'pending': return '<span class="badge badge-warning">در انتظار</span>';
         case 'in_progress': return '<span class="badge badge-info">در حال انجام</span>';
@@ -95,10 +78,11 @@ function get_status_badge($status) {
     }
 }
 
-function get_priority_badge($priority) {
+function get_priority_badge_view($priority) {
     switch ($priority) {
-        case 'normal': return '<span class="badge badge-primary">عادی</span>';
-        case 'high': return '<span class="badge badge-danger">بالا</span>';
+        case 'low': return '<span class="badge badge-light">کم</span>';
+        case 'medium': return '<span class="badge badge-primary">متوسط</span>';
+        case 'high': return '<span class="badge badge-danger">زیاد</span>';
         case 'urgent': return '<span class="badge badge-danger" style="background-color: #dc3545; color: white;">فوری</span>';
         default: return '';
     }
@@ -108,98 +92,102 @@ function get_priority_badge($priority) {
 
 <div class="page-content">
     <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center">
-            <h2>جزئیات وظیفه: <?php echo htmlspecialchars($task['title']); ?></h2>
-            <a href="my_tasks.php" class="btn btn-secondary">بازگشت به لیست وظایف</a>
+        <div class="task-view-header">
+            <div class="task-title">
+                <h2><?php echo htmlspecialchars($task['title']); ?></h2>
+                <div class="task-meta">
+                    ایجاد شده توسط <?php echo htmlspecialchars($task['creator_name']); ?> در <?php echo to_persian_date($task['created_at']); ?>
+                </div>
+            </div>
+            <div class="task-actions">
+                <a href="my_tasks.php" class="btn btn-secondary">بازگشت به لیست</a>
+            </div>
         </div>
-        <hr>
 
-        <div class="card">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>عنوان:</strong> <?php echo htmlspecialchars($task['title']); ?></p>
-                        <p><strong>ایجاد کننده:</strong> <?php echo htmlspecialchars($task['creator_name']); ?></p>
-                        <p><strong>تاریخ ایجاد:</strong> <?php echo to_persian_date($task['created_at']); ?></p>
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        توضیحات وظیفه
+                    </div>
+                    <div class="card-body">
+                        <?php echo nl2br(htmlspecialchars($task['description'])); ?>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        نظرات
+                    </div>
+                    <div class="card-body">
+                        <div class="comments-section">
+                            <?php foreach ($comments as $comment): ?>
+                                <div class="comment">
+                                    <div class="comment-header">
+                                        <strong><?php echo htmlspecialchars($comment['username']); ?></strong>
+                                        <span class="text-muted"><?php echo time_ago($comment['created_at']); ?></span>
+                                    </div>
+                                    <div class="comment-body">
+                                        <?php echo nl2br(htmlspecialchars($comment['comment'])); ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <hr>
+                        <form action="" method="post">
+                            <div class="form-group">
+                                <label for="comment">افزودن نظر</label>
+                                <textarea name="comment" id="comment" class="form-control" rows="3"></textarea>
+                            </div>
+                            <button type="submit" name="add_comment" class="btn btn-primary">ارسال نظر</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        جزئیات وظیفه
+                    </div>
+                    <div class="card-body">
+                        <p><strong>وضعیت:</strong> <?php echo get_status_badge_view($task['status']); ?></p>
+                        <p><strong>اولویت:</strong> <?php echo get_priority_badge_view($task['priority']); ?></p>
                         <p><strong>مهلت انجام:</strong> <?php echo $task['deadline'] ? to_persian_date($task['deadline']) : 'ندارد'; ?></p>
                     </div>
-                    <div class="col-md-6">
-                        <p><strong>وضعیت:</strong> <?php echo get_status_badge($task['status']); ?></p>
-                        <p><strong>اولویت:</strong> <?php echo get_priority_badge($task['priority']); ?></p>
-                        <p><strong>تاریخ تکمیل:</strong> <?php echo $task['completed_at'] ? to_persian_date($task['completed_at']) : 'تکمیل نشده'; ?></p>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        تاریخچه
+                    </div>
+                    <div class="card-body">
+                        <ul class="history-list">
+                            <?php foreach ($history as $item): ?>
+                                <li>
+                                    <strong><?php echo htmlspecialchars($item['username']); ?></strong>
+                                    <?php echo htmlspecialchars($item['action']); ?>
+                                    <span class="text-muted"><?php echo time_ago($item['created_at']); ?></span>
+                                    <?php if (!empty($item['details'])): ?>
+                                        <div class="history-details"><?php echo htmlspecialchars($item['details']); ?></div>
+                                    <?php endif; ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
                     </div>
                 </div>
-                <hr>
-                <div>
-                    <strong>توضیحات:</strong>
-                    <p><?php echo nl2br(htmlspecialchars($task['description'])); ?></p>
-                </div>
             </div>
         </div>
-
-        <div class="card mt-4">
-            <div class="card-header">
-                تغییر وضعیت وظیفه
-            </div>
-            <div class="card-body">
-                <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>?id=<?php echo $task_id; ?>" method="post">
-                    <div class="form-group">
-                        <label for="status">تغییر وضعیت به:</label>
-                        <select name="status" id="status" class="form-control">
-                            <option value="pending" <?php echo $task['status'] == 'pending' ? 'selected' : ''; ?>>در انتظار</option>
-                            <option value="in_progress" <?php echo $task['status'] == 'in_progress' ? 'selected' : ''; ?>>در حال انجام</option>
-                            <option value="completed" <?php echo $task['status'] == 'completed' ? 'selected' : ''; ?>>تکمیل شده</option>
-                            <option value="cancelled" <?php echo $task['status'] == 'cancelled' ? 'selected' : ''; ?>>لغو شده</option>
-                        </select>
-                    </div>
-                    <button type="submit" name="update_status" class="btn btn-primary">بروزرسانی وضعیت</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="card mt-4">
-            <div class="card-header">
-                ارجاع وظیفه
-            </div>
-            <div class="card-body">
-                <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>?id=<?php echo $task_id; ?>" method="post">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="assign_to_user">ارجاع به کاربر</label>
-                                <select name="assign_to_user" id="assign_to_user" class="form-control">
-                                    <option value="">-- انتخاب کنید --</option>
-                                    <?php
-                                    $users_query = mysqli_query($link, "SELECT id, username FROM users ORDER BY username");
-                                    while ($user = mysqli_fetch_assoc($users_query)) {
-                                        echo "<option value='{$user['id']}'>" . htmlspecialchars($user['username']) . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="assign_to_dept">ارجاع به بخش</label>
-                                <select name="assign_to_dept" id="assign_to_dept" class="form-control">
-                                    <option value="">-- انتخاب کنید --</option>
-                                    <?php
-                                    $depts_query = mysqli_query($link, "SELECT id, department_name FROM departments ORDER BY department_name");
-                                    while ($dept = mysqli_fetch_assoc($depts_query)) {
-                                        echo "<option value='{$dept['id']}'>" . htmlspecialchars($dept['department_name']) . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="submit" name="reassign_task" class="btn btn-info">ارجاع</button>
-                </form>
-            </div>
-        </div>
-
     </div>
 </div>
+
+<style>
+.task-view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.comments-section .comment { margin-bottom: 15px; }
+.comment-header { margin-bottom: 5px; }
+.history-list { list-style-type: none; padding: 0; }
+.history-list li { margin-bottom: 10px; }
+.history-details { font-size: 0.9em; color: #6c757d; }
+</style>
 
 <?php
 require_once "../includes/footer.php";

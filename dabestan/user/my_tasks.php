@@ -3,6 +3,7 @@ session_start();
 require_once "../includes/db_singleton.php";
 $link = get_db_connection();
 require_once "../includes/access_control.php";
+require_once "../includes/functions.php";
 require_once "../includes/header.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {

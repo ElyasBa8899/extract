@@ -304,7 +304,7 @@ require_once "../includes/header.php";
                                     <td><?php echo htmlspecialchars($row['assignee_user'] ? $row['assignee_user'] : $row['assignee_dept']); ?></td>
                                     <td><?php echo $row['status']; ?></td>
                                     <td><?php echo $row['priority']; ?></td>
-                                    <td><?php echo $row['deadline'] ? to_persian_date($row['deadline'], 'Y/m/d H:i') : 'ندارد'; ?></td>
+                                    <td><?php echo (!empty($row['deadline']) && $row['deadline'] != '0000-00-00 00:00:00') ? to_persian_date($row['deadline'], 'Y/m/d H:i') : 'ندارد'; ?></td>
                                     <td><?php echo htmlspecialchars($row['creator']); ?></td>
                                     <td>
                                         <a href="manage_tasks.php?edit=<?php echo $row['id']; ?>" class="btn btn-sm btn-warning">ویرایش</a>
