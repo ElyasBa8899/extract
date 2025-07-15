@@ -1,6 +1,7 @@
 <?php
 session_start();
-require_once "includes/db.php";
+require_once "includes/db_singleton.php";
+$link = get_db_connection(); // Get connection
 
 $username = $password = "";
 $err = "";
@@ -61,8 +62,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             mysqli_stmt_close($stmt);
         }
     }
-    mysqli_close($link);
 }
+// mysqli_close($link); // Singleton handles connection closing
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">

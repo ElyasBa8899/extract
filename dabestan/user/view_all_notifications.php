@@ -68,7 +68,7 @@ require_once "../includes/header.php";
                         <tr class="<?php echo $notif['is_read'] ? 'notification-read' : 'notification-unread'; ?>">
                             <td>
                                 <?php if (!empty($notif['link'])): ?>
-                                    <a href="/dabestan/<?php echo htmlspecialchars($notif['link']); ?>">
+                                    <a href="/dabestan/user/<?php echo htmlspecialchars($notif['link']); ?>">
                                         <?php echo htmlspecialchars($notif['message']); ?>
                                     </a>
                                 <?php else: ?>
@@ -77,7 +77,11 @@ require_once "../includes/header.php";
                             </td>
                             <td><?php echo htmlspecialchars(time_ago($notif['created_at'])); ?></td>
                             <td>
-                                <a href="?mark_read=<?php echo $notif['id']; ?>" class="btn btn-success btn-sm">خوانده شد</a>
+                                <?php if (!$notif['is_read']): ?>
+                                    <a href="?mark_read=<?php echo $notif['id']; ?>" class="btn btn-primary btn-sm">خوانده شد</a>
+                                <?php else: ?>
+                                    <span class="btn btn-success btn-sm disabled">خوانده شده</span>
+                                <?php endif; ?>
                                 <a href="?delete_notif=<?php echo $notif['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('آیا از حذف این اعلان مطمئن هستید؟')">حذف</a>
                             </td>
                         </tr>
@@ -94,6 +98,6 @@ require_once "../includes/header.php";
 </style>
 
 <?php
-mysqli_close($link);
+// mysqli_close($link); // Singleton handles connection closing
 require_once "../includes/footer.php";
 ?>
