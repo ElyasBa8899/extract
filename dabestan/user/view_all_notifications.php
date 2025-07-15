@@ -68,7 +68,7 @@ require_once "../includes/header.php";
                         <tr class="<?php echo $notif['is_read'] ? 'notification-read' : 'notification-unread'; ?>">
                             <td>
                                 <?php if (!empty($notif['link'])): ?>
-                                    <a href="/dabestan/<?php echo htmlspecialchars($notif['link']); ?>">
+                                    <a href="/dabestan/<?php echo ltrim(htmlspecialchars($notif['link']), '/'); ?>">
                                         <?php echo htmlspecialchars($notif['message']); ?>
                                     </a>
                                 <?php else: ?>
