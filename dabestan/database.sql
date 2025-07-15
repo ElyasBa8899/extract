@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS `departments` (
 -- Dumping data for table `permissions`
 --
 
-INSERT INTO `permissions` (`id`, `permission_name`, `permission_description`) VALUES
+INSERT IGNORE INTO `permissions` (`id`, `permission_name`, `permission_description`) VALUES
 (1, 'submit_ticket', 'اجازه ثبت تیکت جدید'),
 (2, 'view_own_financials', 'مشاهده وضعیت مالی خود'),
 (3, 'fill_self_assessment', 'پر کردن فرم خوداظهاری'),
