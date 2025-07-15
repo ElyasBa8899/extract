@@ -1,7 +1,8 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once "../includes/db.php";
-require_once "../includes/telegram_bot.php"; // For notifications
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/telegram_bot.php"; // For notifications
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
@@ -81,7 +82,7 @@ $user_data_query = mysqli_query($link, "SELECT telegram_chat_id FROM users WHERE
 $user_data = mysqli_fetch_assoc($user_data_query);
 
 
-require_once "../includes/header.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
 ?>
 
 <div class="page-content">
@@ -143,5 +144,5 @@ require_once "../includes/header.php";
 <script src="../assets/js/password-strength.js"></script>
 <?php
 // // mysqli_close($link); // This is now handled in the footer
-require_once "../includes/footer.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php";
 ?>

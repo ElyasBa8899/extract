@@ -1,6 +1,7 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once "../includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     http_response_code(403);

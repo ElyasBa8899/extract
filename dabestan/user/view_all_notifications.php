@@ -1,7 +1,8 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once "../includes/db.php";
-require_once "../includes/functions.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/functions.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
@@ -60,7 +61,7 @@ mysqli_stmt_execute($stmt_all);
 $result_all = mysqli_stmt_get_result($stmt_all);
 $notifications = mysqli_fetch_all($result_all, MYSQLI_ASSOC);
 
-require_once "../includes/header.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
 ?>
 <style>
     .notification-list-item {
@@ -134,4 +135,4 @@ require_once "../includes/header.php";
     </div>
 </div>
 
-<?php require_once "../includes/footer.php"; ?>
+<?php require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php"; ?>

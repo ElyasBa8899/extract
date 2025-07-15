@@ -192,13 +192,17 @@ if (!function_exists('has_permission')) {
                 </ul>
             </li>
 
+            <?php if(has_permission('manage_tasks')): ?>
              <li class="has-submenu">
                 <a href="#"><i data-feather="check-square"></i><span>مدیریت وظایف</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
                 <ul class="submenu">
                     <li><a href="/dabestan/user/manage_tasks.php"><span>لیست وظایف</span></a></li>
-                    <li><a href="/dabestan/user/create_task.php"><span>ایجاد وظیفه جدید</span></a></li>
+                    <?php if(has_permission('create_task')): ?>
+                        <li><a href="/dabestan/user/create_task.php"><span>ایجاد وظیفه جدید</span></a></li>
+                    <?php endif; ?>
                 </ul>
             </li>
+            <?php endif; ?>
 
             <li class="nav-section-title"><span>ابزارها</span></li>
             <li><a href="/dabestan/user/my_classes.php"><i data-feather="book-open"></i><span>مدیریت کلاس‌های من</span></a></li>

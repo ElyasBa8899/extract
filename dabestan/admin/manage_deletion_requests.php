@@ -1,7 +1,8 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once "../includes/db.php";
-require_once "../includes/functions.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/functions.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]) {
     header("location: ../index.php");
@@ -92,7 +93,7 @@ $pending_requests_q = mysqli_query($link, "
 $pending_requests = mysqli_fetch_all($pending_requests_q, MYSQLI_ASSOC);
 
 
-require_once "../includes/header.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
 ?>
 
 <div class="page-content">
@@ -151,5 +152,5 @@ require_once "../includes/header.php";
 
 <?php
 // mysqli_close($link);
-require_once "../includes/footer.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php";
 ?>

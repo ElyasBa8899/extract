@@ -1,7 +1,8 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once "../includes/db.php";
-require_once "../includes/telegram_bot.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/telegram_bot.php";
 
 header('Content-Type: application/json');
 

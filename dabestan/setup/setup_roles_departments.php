@@ -1,5 +1,6 @@
 <?php
-require_once '../includes/db.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php';
 
 echo "Starting setup...\n";
 

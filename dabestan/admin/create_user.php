@@ -1,6 +1,7 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once "../includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
 
 // Check if the user is logged in and is an admin
 if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]){

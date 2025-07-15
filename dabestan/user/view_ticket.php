@@ -1,7 +1,8 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once "../includes/db.php";
-require_once "../includes/functions.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/functions.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
@@ -114,7 +115,7 @@ if($stmt_replies = mysqli_prepare($link, $sql_replies)){
 }
 
 
-require_once "../includes/header.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
 ?>
 <style>
 .ticket-message, .ticket-reply { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
@@ -242,5 +243,5 @@ function toggleReassignFields() {
 
 <?php
 // mysqli_close($link);
-require_once "../includes/footer.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php";
 ?>

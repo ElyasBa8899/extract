@@ -1,6 +1,7 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 // This is a one-time setup file. Run it once, then delete it.
-require_once "includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
 
 echo "<h1>Setup Script</h1>";
 

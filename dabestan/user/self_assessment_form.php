@@ -1,7 +1,8 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once "../includes/db.php";
-require_once "../includes/functions.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/functions.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
@@ -63,7 +64,7 @@ function render_field_by_label($label, $all_fields_map) {
 // ... (Handle Form Submission - to be added)
 
 
-require_once "../includes/header.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
 ?>
 <style>
     .form-stepper { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; padding: 10px; background-color: #fff; border-radius: var(--radius-lg); position: sticky; top: 70px; /* Height of header */ z-index: 998; box-shadow: var(--shadow-md); }
@@ -303,5 +304,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <?php
 // mysqli_close($link);
-require_once "../includes/footer.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php";
 ?>

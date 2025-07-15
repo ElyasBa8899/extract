@@ -1,12 +1,16 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once "../includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
     exit;
 }
-// require_permission('create_task');
+if (!has_permission('create_task')) {
+    echo "شما اجازه ایجاد وظیفه جدید را ندارید.";
+    exit;
+}
 
 $err = $success_msg = "";
 
@@ -79,7 +83,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_task'])) {
     }
 }
 
-require_once "../includes/header.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
 ?>
 
 <div class="page-content">
@@ -171,4 +175,4 @@ function toggleAssignFields() {
 </script>
 
 
-<?php require_once "../includes/footer.php"; ?>
+<?php require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php"; ?>

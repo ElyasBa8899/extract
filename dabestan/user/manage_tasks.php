@@ -1,20 +1,23 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 session_start();
-require_once "../includes/db.php";
-require_once "../includes/functions.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/functions.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
     exit;
 }
-// We will create this permission later
-// require_permission('manage_tasks');
+if (!has_permission('manage_tasks')) {
+    echo "شما اجازه دسترسی به این صفحه را ندارید.";
+    exit;
+}
 
 $user_id = $_SESSION['id'];
 
 // TODO: Implement logic to fetch tasks assigned to the user or their departments
 
-require_once "../includes/header.php";
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/header.php";
 ?>
 
 <div class="page-content">
@@ -43,4 +46,4 @@ require_once "../includes/header.php";
     </div>
 </div>
 
-<?php require_once "../includes/footer.php"; ?>
+<?php require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/footer.php"; ?>

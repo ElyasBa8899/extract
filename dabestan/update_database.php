@@ -1,9 +1,10 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/config_path.php';
 // This script applies database migrations.
 // It's safe to run this multiple times. Already applied migrations will be skipped.
 
 session_start();
-require_once "includes/db.php"; // Connect to the database
+require_once $_SERVER['DOCUMENT_ROOT'] . '/dabestan/includes/db.php"; // Connect to the database
 
 // --- Basic Security: Only allow admins to run this ---
 // This check is temporarily removed as requested by the user for local testing.
