@@ -57,8 +57,7 @@ require_once "../includes/header.php";
     <h2>داشبورد</h2>
     <p>سلام <b><?php echo htmlspecialchars($_SESSION["username"]); ?></b>، به سامانه خوش آمدید. در اینجا خلاصه‌ای از فعالیت‌های خود را مشاهده می‌کنید.</p>
 
-    <div class="dashboard-grid" style="margin-top: 20px;">
-
+    <div class="dashboard-grid">
         <!-- Tickets Widget -->
         <div class="widget">
             <div class="widget-header">
@@ -96,7 +95,35 @@ require_once "../includes/header.php";
             </div>
         </div>
 
-        <!-- More widgets can be added here -->
+        <!-- Tasks Widget -->
+        <div class="widget">
+            <div class="widget-header">
+                <h3>خلاصه وظایف</h3>
+                <a href="my_tasks.php">مشاهده همه</a>
+            </div>
+            <div class="widget-body">
+                <ul>
+                    <?php
+                    $sql_tasks_widget = "SELECT id, title, status FROM tasks WHERE id IN (SELECT task_id FROM task_assignments WHERE assigned_to_user_id = ?) ORDER BY created_at DESC LIMIT 5";
+                    if($stmt_tasks_widget = mysqli_prepare($link, $sql_tasks_widget)){
+                        mysqli_stmt_bind_param($stmt_tasks_widget, "i", $user_id);
+                        mysqli_stmt_execute($stmt_tasks_widget);
+                        $result_tasks_widget = mysqli_stmt_get_result($stmt_tasks_widget);
+                        $tasks_widget = mysqli_fetch_all($result_tasks_widget, MYSQLI_ASSOC);
+                        mysqli_stmt_close($stmt_tasks_widget);
+
+                        if(empty($tasks_widget)){
+                            echo "<li>در حال حاضر وظیفه‌ای برای شما ثبت نشده است.</li>";
+                        } else {
+                            foreach($tasks_widget as $task_widget){
+                                echo "<li><a href='view_task.php?id={$task_widget['id']}'>" . htmlspecialchars($task_widget['title']) . "</a> " . get_status_badge_dash($task_widget['status']) . "</li>";
+                            }
+                        }
+                    }
+                    ?>
+                </ul>
+            </div>
+        </div>
 
         <!-- Self-Assessment Analysis Widget -->
         <div class="widget">
@@ -109,7 +136,6 @@ require_once "../includes/header.php";
                 <a href="self_assessment_form.php" class="btn btn-primary" style="margin-top: 10px;">پر کردن فرم جدید</a>
             </div>
         </div>
-
     </div>
 </div>
 

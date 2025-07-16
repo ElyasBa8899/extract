@@ -96,7 +96,7 @@ function get_priority_badge_task($priority) {
                                 <td><?php echo htmlspecialchars($task['title']); ?></td>
                                 <td><?php echo get_priority_badge_task($task['priority']); ?></td>
                                 <td><?php echo get_status_badge_task($task['status']); ?></td>
-                                <td><?php echo $task['deadline'] ? to_persian_date($task['deadline'], 'Y/m/d H:i') : 'ندارد'; ?></td>
+                                <td><?php echo (!empty($task['deadline']) && $task['deadline'] != '0000-00-00 00:00:00') ? to_persian_date($task['deadline'], 'Y/m/d H:i') : 'ندارد'; ?></td>
                                 <td><?php echo htmlspecialchars($task['creator']); ?></td>
                                 <td>
                                     <a href="view_task.php?id=<?php echo $task['id']; ?>" class="btn btn-sm btn-info">مشاهده جزئیات</a>
