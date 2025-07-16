@@ -42,7 +42,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
         mysqli_stmt_bind_param($stmt, "si", $new_status, $task_id);
         mysqli_stmt_execute($stmt);
         // Add to history
-        $action = "تغییر وضعیت به " . htmlspecialchars($new_status);
+        $status_translation = ['pending' => 'در انتظار', 'in_progress' => 'در حال انجام', 'completed' => 'تکمیل شده', 'cancelled' => 'لغو شده'];
+        $action = "وضعیت وظیفه را به '" . ($status_translation[$new_status] ?? htmlspecialchars($new_status)) . "' تغییر داد.";
         $history_sql = "INSERT INTO task_history (task_id, user_id, action) VALUES (?, ?, ?)";
         $stmt_history = mysqli_prepare($link, $history_sql);
         mysqli_stmt_bind_param($stmt_history, "iis", $task_id, $user_id, $action);
@@ -76,7 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['reassign_task'])) {
 
         // Add to history
         $new_user_info = get_user_info($new_user_id);
-        $action = "محول کردن وظیفه به " . htmlspecialchars($new_user_info['username']);
+        $action = "وظیفه را به " . htmlspecialchars($new_user_info['username']) . " محول کرد.";
         $history_sql = "INSERT INTO task_history (task_id, user_id, action) VALUES (?, ?, ?)";
         $stmt_history = mysqli_prepare($link, $history_sql);
         mysqli_stmt_bind_param($stmt_history, "iis", $task_id, $user_id, $action);
@@ -365,6 +366,14 @@ function get_priority_badge_view($priority) {
     padding: 0.5rem;
     border-radius: var(--radius-md);
     margin-top: 0.5rem;
+}
+.widget-footer {
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 1rem;
+    align-items: center;
 }
 </style>
 
