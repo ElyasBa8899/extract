@@ -116,6 +116,6 @@ require_once "../includes/header.php";
 </div>
 
 <?php
-mysqli_close($link);
+// mysqli_close($link); // Singleton handles connection closing
 require_once "../includes/footer.php";
 ?>

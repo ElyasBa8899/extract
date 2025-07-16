@@ -152,7 +152,7 @@ function get_priority_badge_view($priority) {
                     <div class="card-body">
                         <p><strong>وضعیت:</strong> <?php echo get_status_badge_view($task['status']); ?></p>
                         <p><strong>اولویت:</strong> <?php echo get_priority_badge_view($task['priority']); ?></p>
-                        <p><strong>مهلت انجام:</strong> <?php echo $task['deadline'] ? to_persian_date($task['deadline']) : 'ندارد'; ?></p>
+                        <p><strong>مهلت انجام:</strong> <?php echo (!empty($task['deadline']) && $task['deadline'] != '0000-00-00 00:00:00') ? to_persian_date($task['deadline']) : 'ندارد'; ?></p>
                     </div>
                 </div>
 
