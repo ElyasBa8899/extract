@@ -60,12 +60,25 @@ if (!constraintExists($link, 'task_history', 'task_history_ibfk_2')) {
 }
 
 
+echo <<<HTML
+<style>
+    body { font-family: sans-serif; line-height: 1.6; padding: 20px; }
+    .success { color: green; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
+    pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; }
+</style>
+HTML;
+
 foreach ($queries as $query) {
     if (mysqli_query($link, $query)) {
-        echo "Query executed successfully: " . htmlspecialchars($query) . "<br>";
+        echo "<p class='success'>Query executed successfully:</p>";
+        echo "<pre>" . htmlspecialchars($query) . "</pre>";
     } else {
-        echo "Error executing query: " . mysqli_error($link) . "<br>";
+        echo "<p class='error'>Error executing query:</p>";
+        echo "<pre>" . htmlspecialchars($query) . "</pre>";
+        echo "<p class='error'><strong>MySQL Error:</strong> " . mysqli_error($link) . "</p>";
     }
+    echo "<hr>";
 }
 
 ?>
