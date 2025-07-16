@@ -54,6 +54,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
     }
 }
 
+// Fetch task details first
+$sql_task = "SELECT t.*, u.username as creator_name FROM tasks t JOIN users u ON t.created_by = u.id WHERE t.id = ?";
+$stmt_task = mysqli_prepare($link, $sql_task);
+mysqli_stmt_bind_param($stmt_task, "i", $task_id);
+mysqli_stmt_execute($stmt_task);
+$result_task = mysqli_stmt_get_result($stmt_task);
+$task = mysqli_fetch_assoc($result_task);
+mysqli_stmt_close($stmt_task);
+
+if (!$task) {
+    header("location: my_tasks.php"); // Or show an error message
+    exit;
+}
+
 // Handle Reassignment Request
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['request_reassignment'])) {
     $new_user_id = $_POST['reassign_user_id'];
@@ -133,21 +147,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['reassign_action']) && is
     }
 }
 
-// Fetch task details
-$sql_task = "SELECT t.*, u.username as creator_name FROM tasks t JOIN users u ON t.created_by = u.id WHERE t.id = ?";
 require_once "../includes/header.php";
-$stmt_task = mysqli_prepare($link, $sql_task);
-mysqli_stmt_bind_param($stmt_task, "i", $task_id);
-mysqli_stmt_execute($stmt_task);
-$result_task = mysqli_stmt_get_result($stmt_task);
-$task = mysqli_fetch_assoc($result_task);
-mysqli_stmt_close($stmt_task);
-
-if (!$task) {
-    echo "<div class='alert alert-danger'>وظیفه مورد نظر یافت نشد.</div>";
-    require_once "../includes/footer.php";
-    exit;
-}
 
 // Fetch comments
 $sql_comments = "SELECT tc.*, u.username FROM task_comments tc JOIN users u ON tc.user_id = u.id WHERE tc.task_id = ? ORDER BY tc.created_at ASC";
@@ -192,6 +192,13 @@ function get_priority_badge_view($priority) {
 
 <div class="page-content">
     <div class="container-fluid">
+
+        <?php
+        if (isset($_GET['reassign_req']) && $_GET['reassign_req'] == 'sent') {
+            echo "<div class='alert-message success'>درخواست شما برای محول کردن وظیفه با موفقیت ارسال شد.</div>";
+        }
+        ?>
+
         <div class="task-view-header">
             <div class="task-title">
                 <h2><?php echo htmlspecialchars($task['title']); ?></h2>

@@ -368,6 +368,30 @@ body.login-page {
 .task-priority-low {
     background-color: #f8f9fa !important; /* Light grey */
 }
+
+/* Alert Messages */
+.alert-message {
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    font-weight: 500;
+}
+.alert-message.success {
+    background-color: #d1fae5;
+    border-color: #a7f3d0;
+    color: #065f46;
+}
+.alert-message.error {
+    background-color: #fee2e2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+.alert-message.info {
+    background-color: #dbeafe;
+    border-color: #bfdbfe;
+    color: #1e40af;
+}
 .task-priority-medium {
     background-color: #e9ecef !important; /* Light blue */
 }
