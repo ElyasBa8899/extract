@@ -156,4 +156,5 @@ if (!function_exists('has_permission')) {
             </div>
         </header>
         <main>
+            <?php display_alert(); ?>
             <!-- Page content will be loaded here -->

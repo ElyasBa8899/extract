@@ -143,4 +143,16 @@ function send_notification($user_id, $type, $related_id, $message) {
     }
     return false;
 }
+
+function set_alert($type, $message) {
+    $_SESSION['alert'] = ['type' => $type, 'message' => $message];
+}
+
+function display_alert() {
+    if (isset($_SESSION['alert'])) {
+        $alert = $_SESSION['alert'];
+        echo "<div class='alert-message " . htmlspecialchars($alert['type']) . "'>" . htmlspecialchars($alert['message']) . "</div>";
+        unset($_SESSION['alert']);
+    }
+}
 ?>

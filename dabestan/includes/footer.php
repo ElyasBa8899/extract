@@ -16,6 +16,6 @@
     <script src="https://unpkg.com/feather-icons"></script>
 
     <!-- Custom Scripts -->
-    <script src="../assets/js/script.js"></script>
+    <script src="/dabestan/assets/js/script.js"></script>
 </body>
 </html>

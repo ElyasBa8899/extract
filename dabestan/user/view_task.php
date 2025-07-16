@@ -199,7 +199,9 @@ function get_priority_badge_view($priority) {
 
         <?php
         if (isset($_GET['reassign_req']) && $_GET['reassign_req'] == 'sent') {
-            echo "<div class='alert-message success'>درخواست شما برای محول کردن وظیفه با موفقیت ارسال شد.</div>";
+            set_alert('success', 'درخواست شما برای محول کردن وظیفه با موفقیت ارسال شد.');
+            header("Location: view_task.php?id=" . $task_id);
+            exit;
         }
         ?>
 
