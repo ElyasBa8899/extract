@@ -54,36 +54,80 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
     }
 }
 
-// Handle Reassignment
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['reassign_task'])) {
+// Handle Reassignment Request
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['request_reassignment'])) {
     $new_user_id = $_POST['reassign_user_id'];
     $reassign_comment = trim($_POST['reassign_comment']);
+    $creator_id = $task['created_by'];
 
-    // Update task assignment
-    $sql = "UPDATE task_assignments SET assigned_to_user_id = ? WHERE task_id = ?";
+    $sql = "INSERT INTO task_reassignment_requests (task_id, requested_by_id, requested_to_id, new_user_id, comment) VALUES (?, ?, ?, ?, ?)";
     if ($stmt = mysqli_prepare($link, $sql)) {
-        mysqli_stmt_bind_param($stmt, "ii", $new_user_id, $task_id);
+        mysqli_stmt_bind_param($stmt, "iiiss", $task_id, $user_id, $creator_id, $new_user_id, $reassign_comment);
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
 
-        // Add a comment
-        if (!empty($reassign_comment)) {
-            $comment_sql = "INSERT INTO task_comments (task_id, user_id, comment) VALUES (?, ?, ?)";
-            $stmt_comment = mysqli_prepare($link, $comment_sql);
-            mysqli_stmt_bind_param($stmt_comment, "iis", $task_id, $user_id, $reassign_comment);
-            mysqli_stmt_execute($stmt_comment);
-            mysqli_stmt_close($stmt_comment);
+        // Notify the creator
+        $message = "کاربر " . htmlspecialchars($_SESSION['username']) . " درخواست محول کردن وظیفه '" . htmlspecialchars($task['title']) . "' را دارد.";
+        send_notification($creator_id, 'reassignment_request', $task_id, $message);
+
+        header("location: view_task.php?id=" . $task_id . "&reassign_req=sent");
+        exit;
+    }
+}
+
+// Handle Reassignment Approval/Rejection
+if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['reassign_action']) && isset($_GET['req_id'])) {
+    $request_id = $_GET['req_id'];
+    $action = $_GET['reassign_action']; // 'approve' or 'reject'
+
+    // Fetch request details
+    $sql_req = "SELECT * FROM task_reassignment_requests WHERE id = ? AND requested_to_id = ?";
+    $stmt_req = mysqli_prepare($link, $sql_req);
+    mysqli_stmt_bind_param($stmt_req, "ii", $request_id, $user_id);
+    mysqli_stmt_execute($stmt_req);
+    $request = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_req));
+    mysqli_stmt_close($stmt_req);
+
+    if ($request && $request['status'] == 'pending') {
+        if ($action == 'approve') {
+            // 1. Update task assignment
+            $sql_update = "UPDATE task_assignments SET assigned_to_user_id = ? WHERE task_id = ?";
+            $stmt_update = mysqli_prepare($link, $sql_update);
+            mysqli_stmt_bind_param($stmt_update, "ii", $request['new_user_id'], $request['task_id']);
+            mysqli_stmt_execute($stmt_update);
+            mysqli_stmt_close($stmt_update);
+
+            // 2. Update request status
+            $sql_status = "UPDATE task_reassignment_requests SET status = 'approved' WHERE id = ?";
+            $stmt_status = mysqli_prepare($link, $sql_status);
+            mysqli_stmt_bind_param($stmt_status, "i", $request_id);
+            mysqli_stmt_execute($stmt_status);
+            mysqli_stmt_close($stmt_status);
+
+            // 3. Add to history
+            $new_user_info = get_user_info($request['new_user_id']);
+            $history_action = "وظیفه را به " . htmlspecialchars($new_user_info['username']) . " محول کرد.";
+            $history_sql = "INSERT INTO task_history (task_id, user_id, action) VALUES (?, ?, ?)";
+            $stmt_history = mysqli_prepare($link, $history_sql);
+            mysqli_stmt_bind_param($stmt_history, "iis", $request['task_id'], $user_id, $history_action);
+            mysqli_stmt_execute($stmt_history);
+
+            // 4. Notify original requester
+            $message = "درخواست شما برای محول کردن وظیفه '" . htmlspecialchars($task['title']) . "' تایید شد.";
+            send_notification($request['requested_by_id'], 'reassignment_approved', $request['task_id'], $message);
+
+        } else { // Reject
+            // 1. Update request status
+            $sql_status = "UPDATE task_reassignment_requests SET status = 'rejected' WHERE id = ?";
+            $stmt_status = mysqli_prepare($link, $sql_status);
+            mysqli_stmt_bind_param($stmt_status, "i", $request_id);
+            mysqli_stmt_execute($stmt_status);
+            mysqli_stmt_close($stmt_status);
+
+            // 2. Notify original requester
+            $message = "درخواست شما برای محول کردن وظیفه '" . htmlspecialchars($task['title']) . "' رد شد.";
+            send_notification($request['requested_by_id'], 'reassignment_rejected', $request['task_id'], $message);
         }
-
-        // Add to history
-        $new_user_info = get_user_info($new_user_id);
-        $action = "وظیفه را به " . htmlspecialchars($new_user_info['username']) . " محول کرد.";
-        $history_sql = "INSERT INTO task_history (task_id, user_id, action) VALUES (?, ?, ?)";
-        $stmt_history = mysqli_prepare($link, $history_sql);
-        mysqli_stmt_bind_param($stmt_history, "iis", $task_id, $user_id, $action);
-        mysqli_stmt_execute($stmt_history);
-        mysqli_stmt_close($stmt_history);
-
         header("location: view_task.php?id=" . $task_id);
         exit;
     }
@@ -237,8 +281,8 @@ function get_priority_badge_view($priority) {
                             </select>
                             <button type="submit" name="update_status" class="btn btn-sm btn-success">تغییر وضعیت</button>
                         </form>
-                        <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#reassignModal">
-                            محول کردن
+                        <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#reassignRequestModal">
+                            درخواست محول کردن
                         </button>
                     </div>
                 </div>
@@ -377,20 +421,21 @@ function get_priority_badge_view($priority) {
 }
 </style>
 
-<!-- Reassign Modal -->
-<div class="modal fade" id="reassignModal" tabindex="-1" role="dialog" aria-labelledby="reassignModalLabel" aria-hidden="true">
+<!-- Reassign Request Modal -->
+<div class="modal fade" id="reassignRequestModal" tabindex="-1" role="dialog" aria-labelledby="reassignRequestModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <form action="" method="post">
         <div class="modal-header">
-          <h5 class="modal-title" id="reassignModalLabel">محول کردن وظیفه</h5>
+          <h5 class="modal-title" id="reassignRequestModalLabel">درخواست محول کردن وظیفه</h5>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
         <div class="modal-body">
+            <p>شما در حال ارسال یک درخواست به سازنده وظیفه (<?php echo htmlspecialchars($task['creator_name']); ?>) برای محول کردن این وظیفه هستید.</p>
             <div class="form-group">
-                <label for="reassign_user_id">کاربر جدید</label>
+                <label for="reassign_user_id">کاربر پیشنهادی</label>
                 <select name="reassign_user_id" id="reassign_user_id" class="form-control" required>
                     <?php
                     $users_sql = "SELECT id, username FROM users WHERE id != ?";
@@ -407,13 +452,13 @@ function get_priority_badge_view($priority) {
                 </select>
             </div>
             <div class="form-group">
-                <label for="reassign_comment">کامنت (اختیاری)</label>
-                <textarea name="reassign_comment" id="reassign_comment" class="form-control" rows="3"></textarea>
+                <label for="reassign_comment">دلیل و توضیحات</label>
+                <textarea name="reassign_comment" id="reassign_comment" class="form-control" rows="3" required></textarea>
             </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">انصراف</button>
-          <button type="submit" name="reassign_task" class="btn btn-primary">محول کردن</button>
+          <button type="submit" name="request_reassignment" class="btn btn-primary">ارسال درخواست</button>
         </div>
       </form>
     </div>
