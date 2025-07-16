@@ -59,6 +59,24 @@ if (!constraintExists($link, 'task_history', 'task_history_ibfk_2')) {
     $queries[] = "ALTER TABLE `task_history` ADD CONSTRAINT `task_history_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;";
 }
 
+$queries[] = "
+CREATE TABLE IF NOT EXISTS `task_reassignment_requests` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `task_id` int(11) NOT NULL,
+  `requested_by_id` int(11) NOT NULL,
+  `requested_to_id` int(11) NOT NULL,
+  `new_user_id` int(11) NOT NULL,
+  `comment` text,
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `task_id` (`task_id`),
+  KEY `requested_by_id` (`requested_by_id`),
+  KEY `new_user_id` (`new_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+";
+
 
 echo <<<HTML
 <style>
