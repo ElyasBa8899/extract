@@ -59,6 +59,10 @@ if (!constraintExists($link, 'task_history', 'task_history_ibfk_2')) {
     $queries[] = "ALTER TABLE `task_history` ADD CONSTRAINT `task_history_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;";
 }
 
+if (!columnExists($link, 'notifications', 'type')) {
+    $queries[] = "ALTER TABLE `notifications` ADD `type` VARCHAR(50) NOT NULL AFTER `user_id`, ADD `related_id` INT(11) NULL DEFAULT NULL AFTER `type`;";
+}
+
 $queries[] = "
 CREATE TABLE IF NOT EXISTS `task_reassignment_requests` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
