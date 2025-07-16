@@ -82,7 +82,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['request_reassignment']
 
         // Notify the creator
         $message = "کاربر " . htmlspecialchars($_SESSION['username']) . " درخواست محول کردن وظیفه '" . htmlspecialchars($task['title']) . "' را دارد.";
-        send_notification($creator_id, 'reassignment_request', $task_id, $message);
+        send_notification($creator_id, 'reassignment_request', $task_id, $message, "user/view_task.php?id=" . $task_id);
 
         header("location: view_task.php?id=" . $task_id . "&reassign_req=sent");
         exit;

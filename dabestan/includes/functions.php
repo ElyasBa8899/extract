@@ -132,11 +132,11 @@ function get_users_by_role($role_name) {
     return $users;
 }
 
-function send_notification($user_id, $type, $related_id, $message) {
+function send_notification($user_id, $type, $related_id, $message, $link_url = null) {
     $link = get_db_connection();
-    $sql = "INSERT INTO notifications (user_id, type, related_id, message) VALUES (?, ?, ?, ?)";
+    $sql = "INSERT INTO notifications (user_id, type, related_id, message, link) VALUES (?, ?, ?, ?, ?)";
     if($stmt = mysqli_prepare($link, $sql)){
-        mysqli_stmt_bind_param($stmt, "isis", $user_id, $type, $related_id, $message);
+        mysqli_stmt_bind_param($stmt, "isiss", $user_id, $type, $related_id, $message, $link_url);
         $success = mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         return $success;

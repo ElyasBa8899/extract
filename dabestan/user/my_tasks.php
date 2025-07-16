@@ -34,7 +34,7 @@ $tasks_query = "SELECT t.*, u_creator.username as creator
                 JOIN task_assignments ta ON t.id = ta.task_id
                 WHERE ta.assigned_to_user_id = ?
                 OR (ta.assigned_to_department_id IS NOT NULL AND ta.assigned_to_department_id = ?)
-                ORDER BY t.deadline ASC, t.priority DESC";
+                ORDER BY t.created_at DESC";
 
 if($stmt_tasks = mysqli_prepare($link, $tasks_query)){
     mysqli_stmt_bind_param($stmt_tasks, "ii", $user_id, $user_dept_id);

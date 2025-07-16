@@ -60,7 +60,7 @@ if (!constraintExists($link, 'task_history', 'task_history_ibfk_2')) {
 }
 
 if (!columnExists($link, 'notifications', 'type')) {
-    $queries[] = "ALTER TABLE `notifications` ADD `type` VARCHAR(50) NOT NULL AFTER `user_id`, ADD `related_id` INT(11) NULL DEFAULT NULL AFTER `type`;";
+    $queries[] = "ALTER TABLE `notifications` ADD `type` VARCHAR(50) NOT NULL AFTER `user_id`, ADD `related_id` INT(11) NULL DEFAULT NULL AFTER `type`, ADD `link` VARCHAR(255) NULL DEFAULT NULL AFTER `message`;";
 }
 
 $queries[] = "
