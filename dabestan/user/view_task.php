@@ -4,7 +4,6 @@ require_once "../includes/db_singleton.php";
 $link = get_db_connection();
 require_once "../includes/access_control.php";
 require_once "../includes/functions.php";
-require_once "../includes/header.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
@@ -34,8 +33,64 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_comment'])) {
     }
 }
 
+// Handle Status Update
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
+    $new_status = $_POST['new_status'];
+    // Add validation for status
+    $sql = "UPDATE tasks SET status = ? WHERE id = ?";
+    if ($stmt = mysqli_prepare($link, $sql)) {
+        mysqli_stmt_bind_param($stmt, "si", $new_status, $task_id);
+        mysqli_stmt_execute($stmt);
+        // Add to history
+        $action = "تغییر وضعیت به " . htmlspecialchars($new_status);
+        $history_sql = "INSERT INTO task_history (task_id, user_id, action) VALUES (?, ?, ?)";
+        $stmt_history = mysqli_prepare($link, $history_sql);
+        mysqli_stmt_bind_param($stmt_history, "iis", $task_id, $user_id, $action);
+        mysqli_stmt_execute($stmt_history);
+        mysqli_stmt_close($stmt_history);
+        header("location: view_task.php?id=" . $task_id);
+        exit;
+    }
+}
+
+// Handle Reassignment
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['reassign_task'])) {
+    $new_user_id = $_POST['reassign_user_id'];
+    $reassign_comment = trim($_POST['reassign_comment']);
+
+    // Update task assignment
+    $sql = "UPDATE task_assignments SET assigned_to_user_id = ? WHERE task_id = ?";
+    if ($stmt = mysqli_prepare($link, $sql)) {
+        mysqli_stmt_bind_param($stmt, "ii", $new_user_id, $task_id);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+
+        // Add a comment
+        if (!empty($reassign_comment)) {
+            $comment_sql = "INSERT INTO task_comments (task_id, user_id, comment) VALUES (?, ?, ?)";
+            $stmt_comment = mysqli_prepare($link, $comment_sql);
+            mysqli_stmt_bind_param($stmt_comment, "iis", $task_id, $user_id, $reassign_comment);
+            mysqli_stmt_execute($stmt_comment);
+            mysqli_stmt_close($stmt_comment);
+        }
+
+        // Add to history
+        $new_user_info = get_user_info($new_user_id);
+        $action = "محول کردن وظیفه به " . htmlspecialchars($new_user_info['username']);
+        $history_sql = "INSERT INTO task_history (task_id, user_id, action) VALUES (?, ?, ?)";
+        $stmt_history = mysqli_prepare($link, $history_sql);
+        mysqli_stmt_bind_param($stmt_history, "iis", $task_id, $user_id, $action);
+        mysqli_stmt_execute($stmt_history);
+        mysqli_stmt_close($stmt_history);
+
+        header("location: view_task.php?id=" . $task_id);
+        exit;
+    }
+}
+
 // Fetch task details
 $sql_task = "SELECT t.*, u.username as creator_name FROM tasks t JOIN users u ON t.created_by = u.id WHERE t.id = ?";
+require_once "../includes/header.php";
 $stmt_task = mysqli_prepare($link, $sql_task);
 mysqli_stmt_bind_param($stmt_task, "i", $task_id);
 mysqli_stmt_execute($stmt_task);
@@ -106,72 +161,109 @@ function get_priority_badge_view($priority) {
 
         <div class="row">
             <div class="col-lg-8">
-                <div class="card">
-                    <div class="card-header">
-                        توضیحات وظیفه
+                <div class="widget">
+                    <div class="widget-header">
+                        <h5><i data-feather="file-text"></i>توضیحات وظیفه</h5>
                     </div>
-                    <div class="card-body">
-                        <?php echo nl2br(htmlspecialchars($task['description'])); ?>
+                    <div class="widget-body">
+                        <p><?php echo nl2br(htmlspecialchars($task['description'])); ?></p>
                     </div>
                 </div>
 
-                <div class="card mt-4">
-                    <div class="card-header">
-                        نظرات
+                <div class="widget mt-4">
+                    <div class="widget-header">
+                        <h5><i data-feather="message-square"></i>نظرات</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="widget-body">
                         <div class="comments-section">
-                            <?php foreach ($comments as $comment): ?>
-                                <div class="comment">
-                                    <div class="comment-header">
-                                        <strong><?php echo htmlspecialchars($comment['username']); ?></strong>
-                                        <span class="text-muted"><?php echo time_ago($comment['created_at']); ?></span>
+                            <?php if (empty($comments)): ?>
+                                <p class="text-muted text-center">هنوز نظری ثبت نشده است.</p>
+                            <?php else: ?>
+                                <?php foreach ($comments as $comment): ?>
+                                    <div class="comment">
+                                        <div class="comment-avatar">
+                                            <i data-feather="user"></i>
+                                        </div>
+                                        <div class="comment-content">
+                                            <div class="comment-header">
+                                                <strong><?php echo htmlspecialchars($comment['username']); ?></strong>
+                                                <span class="text-muted"><?php echo time_ago($comment['created_at']); ?></span>
+                                            </div>
+                                            <div class="comment-body">
+                                                <?php echo nl2br(htmlspecialchars($comment['comment'])); ?>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="comment-body">
-                                        <?php echo nl2br(htmlspecialchars($comment['comment'])); ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
                         <hr>
-                        <form action="" method="post">
+                        <form action="" method="post" class="comment-form">
                             <div class="form-group">
-                                <label for="comment">افزودن نظر</label>
-                                <textarea name="comment" id="comment" class="form-control" rows="3"></textarea>
+                                <textarea name="comment" id="comment" class="form-control" rows="3" placeholder="نظر خود را بنویسید..."></textarea>
                             </div>
-                            <button type="submit" name="add_comment" class="btn btn-primary">ارسال نظر</button>
+                            <button type="submit" name="add_comment" class="btn btn-primary"><i data-feather="send"></i> ارسال نظر</button>
                         </form>
                     </div>
                 </div>
             </div>
             <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-header">
-                        جزئیات وظیفه
+                <div class="widget">
+                    <div class="widget-header">
+                        <h5><i data-feather="info"></i>جزئیات وظیفه</h5>
                     </div>
-                    <div class="card-body">
-                        <p><strong>وضعیت:</strong> <?php echo get_status_badge_view($task['status']); ?></p>
-                        <p><strong>اولویت:</strong> <?php echo get_priority_badge_view($task['priority']); ?></p>
-                        <p><strong>مهلت انجام:</strong> <?php echo (!empty($task['deadline']) && $task['deadline'] != '0000-00-00 00:00:00') ? to_persian_date($task['deadline']) : 'ندارد'; ?></p>
+                    <div class="widget-body">
+                        <ul class="task-details-list">
+                            <li>
+                                <span>وضعیت:</span>
+                                <?php echo get_status_badge_view($task['status']); ?>
+                            </li>
+                            <li>
+                                <span>اولویت:</span>
+                                <?php echo get_priority_badge_view($task['priority']); ?>
+                            </li>
+                            <li>
+                                <span>مهلت انجام:</span>
+                                <strong><?php echo (!empty($task['deadline']) && $task['deadline'] != '0000-00-00 00:00:00') ? to_persian_date($task['deadline']) : 'ندارد'; ?></strong>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="widget-footer">
+                        <form action="" method="post" id="update-status-form" class="d-inline">
+                            <select name="new_status" class="form-control-sm">
+                                <option value="in_progress" <?php if($task['status'] == 'in_progress') echo 'selected'; ?>>در حال انجام</option>
+                                <option value="completed" <?php if($task['status'] == 'completed') echo 'selected'; ?>>تکمیل شده</option>
+                            </select>
+                            <button type="submit" name="update_status" class="btn btn-sm btn-success">تغییر وضعیت</button>
+                        </form>
+                        <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#reassignModal">
+                            محول کردن
+                        </button>
                     </div>
                 </div>
 
-                <div class="card mt-4">
-                    <div class="card-header">
-                        تاریخچه
+                <div class="widget mt-4">
+                    <div class="widget-header">
+                        <h5><i data-feather="activity"></i>تاریخچه</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="widget-body">
                         <ul class="history-list">
-                            <?php foreach ($history as $item): ?>
-                                <li>
-                                    <strong><?php echo htmlspecialchars($item['username']); ?></strong>
-                                    <?php echo htmlspecialchars($item['action']); ?>
-                                    <span class="text-muted"><?php echo time_ago($item['created_at']); ?></span>
-                                    <?php if (!empty($item['details'])): ?>
-                                        <div class="history-details"><?php echo htmlspecialchars($item['details']); ?></div>
-                                    <?php endif; ?>
-                                </li>
-                            <?php endforeach; ?>
+                             <?php if (empty($history)): ?>
+                                <p class="text-muted text-center">تاریخچه‌ای برای نمایش وجود ندارد.</p>
+                            <?php else: ?>
+                                <?php foreach ($history as $item): ?>
+                                    <li>
+                                        <div class="history-icon"><i data-feather="git-commit"></i></div>
+                                        <div class="history-content">
+                                            <span><strong><?php echo htmlspecialchars($item['username']); ?></strong> <?php echo htmlspecialchars($item['action']); ?></span>
+                                            <span class="text-muted"><?php echo time_ago($item['created_at']); ?></span>
+                                             <?php if (!empty($item['details'])): ?>
+                                                <div class="history-details"><?php echo htmlspecialchars($item['details']); ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </ul>
                     </div>
                 </div>
@@ -181,13 +273,143 @@ function get_priority_badge_view($priority) {
 </div>
 
 <style>
-.task-view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.comments-section .comment { margin-bottom: 15px; }
-.comment-header { margin-bottom: 5px; }
-.history-list { list-style-type: none; padding: 0; }
-.history-list li { margin-bottom: 10px; }
-.history-details { font-size: 0.9em; color: #6c757d; }
+.task-view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.task-title h2 { margin-bottom: 0.25rem; }
+.task-meta { color: var(--text-muted); font-size: 0.9em; }
+
+.widget {
+    background: var(--widget-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.5rem;
+}
+.widget-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+}
+.widget-header h5 { margin: 0; font-size: 1.1em; }
+.widget-body { padding: 1.5rem; }
+
+.comments-section { max-height: 400px; overflow-y: auto; padding: 0.5rem; }
+.comment { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+.comment-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--background-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.comment-content { flex: 1; }
+.comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
+.comment-header strong { font-weight: 600; }
+.comment-header .text-muted { font-size: 0.8em; }
+.comment-body {
+    background: #f8f9fa;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+}
+.comment-form .form-group { margin-bottom: 1rem; }
+.comment-form button { display: flex; align-items: center; gap: 0.5rem; }
+
+.task-details-list { list-style: none; padding: 0; margin: 0; }
+.task-details-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.task-details-list li:last-child { border-bottom: none; }
+.task-details-list li span:first-child { color: var(--text-muted); }
+
+.history-list { list-style: none; padding: 0; margin: 0; }
+.history-list li {
+    display: flex;
+    gap: 1rem;
+    position: relative;
+    padding-bottom: 1.5rem;
+}
+.history-list li:last-child { padding-bottom: 0; }
+.history-list li:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 2px;
+    height: calc(100% - 18px);
+    background: var(--border-color);
+}
+.history-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--background-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+.history-content { flex: 1; }
+.history-content span { display: block; }
+.history-content .text-muted { font-size: 0.8em; margin-top: 0.25rem; }
+.history-details {
+    font-size: 0.85em;
+    color: #6c757d;
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    margin-top: 0.5rem;
+}
 </style>
+
+<!-- Reassign Modal -->
+<div class="modal fade" id="reassignModal" tabindex="-1" role="dialog" aria-labelledby="reassignModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form action="" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title" id="reassignModalLabel">محول کردن وظیفه</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="reassign_user_id">کاربر جدید</label>
+                <select name="reassign_user_id" id="reassign_user_id" class="form-control" required>
+                    <?php
+                    $users_sql = "SELECT id, username FROM users WHERE id != ?";
+                    if($stmt_users = mysqli_prepare($link, $users_sql)){
+                        mysqli_stmt_bind_param($stmt_users, "i", $user_id);
+                        mysqli_stmt_execute($stmt_users);
+                        $users_result = mysqli_stmt_get_result($stmt_users);
+                        while($user = mysqli_fetch_assoc($users_result)){
+                            echo "<option value='{$user['id']}'>".htmlspecialchars($user['username'])."</option>";
+                        }
+                        mysqli_stmt_close($stmt_users);
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="reassign_comment">کامنت (اختیاری)</label>
+                <textarea name="reassign_comment" id="reassign_comment" class="form-control" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">انصراف</button>
+          <button type="submit" name="reassign_task" class="btn btn-primary">محول کردن</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <?php
 require_once "../includes/footer.php";
