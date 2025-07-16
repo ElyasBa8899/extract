@@ -68,5 +68,4 @@ foreach ($queries as $query) {
     }
 }
 
-mysqli_close($link);
 ?>
