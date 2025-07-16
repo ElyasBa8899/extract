@@ -127,8 +127,12 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['reassign_action']) && is
             mysqli_stmt_execute($stmt_history);
 
             // 4. Notify original requester
-            $message = "درخواست شما برای محول کردن وظیفه '" . htmlspecialchars($task['title']) . "' تایید شد.";
-            send_notification($request['requested_by_id'], 'reassignment_approved', $request['task_id'], $message);
+            $message_requester = "درخواست شما برای محول کردن وظیفه '" . htmlspecialchars($task['title']) . "' تایید شد.";
+            send_notification($request['requested_by_id'], 'reassignment_approved', $request['task_id'], $message_requester);
+
+            // 5. Notify new user
+            $message_new_user = "وظیفه جدیدی با عنوان '" . htmlspecialchars($task['title']) . "' به شما محول شد.";
+            send_notification($request['new_user_id'], 'new_task_assigned', $request['task_id'], $message_new_user);
 
         } else { // Reject
             // 1. Update request status
@@ -280,6 +284,7 @@ function get_priority_badge_view($priority) {
                             </li>
                         </ul>
                     </div>
+                    <?php if (can_edit_task($task_id, $user_id)): ?>
                     <div class="widget-footer">
                         <form action="" method="post" id="update-status-form" class="d-inline">
                             <select name="new_status" class="form-control-sm">
@@ -292,6 +297,7 @@ function get_priority_badge_view($priority) {
                             درخواست محول کردن
                         </button>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="widget mt-4">

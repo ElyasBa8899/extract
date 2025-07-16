@@ -47,4 +47,20 @@ function require_permission($permission_name) {
         die("خطای دسترسی: شما اجازه مشاهده این صفحه را ندارید.");
     }
 }
+
+function can_edit_task($task_id, $user_id) {
+    $link = get_db_connection();
+    $sql = "SELECT COUNT(*) as count
+            FROM task_assignments
+            WHERE task_id = ? AND assigned_to_user_id = ?";
+    if ($stmt = mysqli_prepare($link, $sql)) {
+        mysqli_stmt_bind_param($stmt, "ii", $task_id, $user_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $row = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+        return $row['count'] > 0;
+    }
+    return false;
+}
 ?>
