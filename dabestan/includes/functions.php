@@ -99,4 +99,48 @@ function time_ago($datetime, $full = false) {
     if (!$full) $string = array_slice($string, 0, 1);
     return $string ? implode(', ', $string) . ' پیش' : 'همین الان';
 }
+
+function get_user_info($user_id) {
+    $link = get_db_connection();
+    $sql = "SELECT username, first_name, last_name FROM users WHERE id = ?";
+    if($stmt = mysqli_prepare($link, $sql)){
+        mysqli_stmt_bind_param($stmt, "i", $user_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $user = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+        return $user;
+    }
+    return null;
+}
+
+function get_users_by_role($role_name) {
+    $link = get_db_connection();
+    $users = [];
+    $sql = "SELECT u.id, u.username
+            FROM users u
+            JOIN user_roles ur ON u.id = ur.user_id
+            JOIN roles r ON ur.role_id = r.id
+            WHERE r.role_name = ?";
+    if($stmt = mysqli_prepare($link, $sql)){
+        mysqli_stmt_bind_param($stmt, "s", $role_name);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $users = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        mysqli_stmt_close($stmt);
+    }
+    return $users;
+}
+
+function send_notification($user_id, $type, $related_id, $message) {
+    $link = get_db_connection();
+    $sql = "INSERT INTO notifications (user_id, type, related_id, message) VALUES (?, ?, ?, ?)";
+    if($stmt = mysqli_prepare($link, $sql)){
+        mysqli_stmt_bind_param($stmt, "isis", $user_id, $type, $related_id, $message);
+        $success = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return $success;
+    }
+    return false;
+}
 ?>

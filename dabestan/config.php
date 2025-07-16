@@ -18,4 +18,12 @@ if($link === false){
 
 // Set charset to utf8mb4
 mysqli_set_charset($link, "utf8mb4");
+
+// --- Task Notification Settings ---
+
+// How many days before a deadline to send a reminder to the assigned user.
+define('TASK_REMINDER_DAYS_BEFORE', 1);
+
+// The name of the role to notify when a task becomes overdue.
+define('OVERDUE_TASK_NOTIFY_ROLE', 'Admin');
 ?>
