@@ -4,8 +4,18 @@ $link = get_db_connection();
 
 function columnExists($link, $tableName, $columnName) {
     $result = mysqli_query($link, "SHOW COLUMNS FROM `$tableName` LIKE '$columnName'");
-    return mysqli_num_rows($result) > 0;
+    $exists = (mysqli_num_rows($result)) ? TRUE : FALSE;
+    return $exists;
 }
+
+function constraintExists($link, $tableName, $constraintName) {
+    $dbName = 'dabestan_db';
+    $query = "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = '$dbName' AND TABLE_NAME = '$tableName' AND CONSTRAINT_NAME = '$constraintName'";
+    $result = mysqli_query($link, $query);
+    $exists = (mysqli_num_rows($result)) ? TRUE : FALSE;
+    return $exists;
+}
+
 
 $queries = [
     "CREATE TABLE IF NOT EXISTS `task_comments` (
@@ -29,19 +39,24 @@ $queries = [
       PRIMARY KEY (`id`),
       KEY `task_id` (`task_id`),
       KEY `user_id` (`user_id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;",
-
-    "ALTER TABLE `task_comments`
-      ADD CONSTRAINT `task_comments_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
-      ADD CONSTRAINT `task_comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;",
-
-    "ALTER TABLE `task_history`
-      ADD CONSTRAINT `task_history_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
-      ADD CONSTRAINT `task_history_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;"
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;"
 ];
 
 if (!columnExists($link, 'classes', 'region_id')) {
     $queries[] = "ALTER TABLE `classes` ADD `region_id` INT(11) NULL DEFAULT NULL AFTER `status`, ADD INDEX `region_id` (`region_id`);";
+}
+
+if (!constraintExists($link, 'task_comments', 'task_comments_ibfk_1')) {
+    $queries[] = "ALTER TABLE `task_comments` ADD CONSTRAINT `task_comments_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE;";
+}
+if (!constraintExists($link, 'task_comments', 'task_comments_ibfk_2')) {
+    $queries[] = "ALTER TABLE `task_comments` ADD CONSTRAINT `task_comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;";
+}
+if (!constraintExists($link, 'task_history', 'task_history_ibfk_1')) {
+    $queries[] = "ALTER TABLE `task_history` ADD CONSTRAINT `task_history_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE;";
+}
+if (!constraintExists($link, 'task_history', 'task_history_ibfk_2')) {
+    $queries[] = "ALTER TABLE `task_history` ADD CONSTRAINT `task_history_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;";
 }
 
 
