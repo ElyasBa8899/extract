@@ -92,7 +92,7 @@ function get_priority_badge_task($priority) {
                         </tr>
                     <?php else: ?>
                         <?php foreach ($tasks as $task): ?>
-                            <tr>
+                            <tr class="task-priority-<?php echo htmlspecialchars($task['priority']); ?>">
                                 <td><?php echo htmlspecialchars($task['title']); ?></td>
                                 <td><?php echo get_priority_badge_task($task['priority']); ?></td>
                                 <td><?php echo get_status_badge_task($task['status']); ?></td>

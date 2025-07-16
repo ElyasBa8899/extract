@@ -363,3 +363,18 @@ body.login-page {
 .notification-footer a {
     font-size: 13px;
 }
+
+/* Task priority styling */
+.task-priority-low {
+    background-color: #f8f9fa !important; /* Light grey */
+}
+.task-priority-medium {
+    background-color: #e9ecef !important; /* Light blue */
+}
+.task-priority-high {
+    background-color: #ffe8e8 !important; /* Light red */
+}
+.task-priority-urgent {
+    background-color: #f5c6cb !important; /* Red */
+    font-weight: bold;
+}
