@@ -155,4 +155,24 @@ function display_alert() {
         unset($_SESSION['alert']);
     }
 }
+
+function get_status_badge_view($status) {
+    switch ($status) {
+        case 'pending': return '<span class="badge badge-warning">در انتظار</span>';
+        case 'in_progress': return '<span class="badge badge-info">در حال انجام</span>';
+        case 'completed': return '<span class="badge badge-success">تکمیل شده</span>';
+        case 'cancelled': return '<span class="badge badge-secondary">لغو شده</span>';
+        default: return '';
+    }
+}
+
+function get_priority_badge_view($priority) {
+    switch ($priority) {
+        case 'low': return '<span class="badge badge-light">کم</span>';
+        case 'medium': return '<span class="badge badge-primary">متوسط</span>';
+        case 'high': return '<span class="badge badge-danger">زیاد</span>';
+        case 'urgent': return '<span class="badge badge-danger" style="background-color: #dc3545; color: white;">فوری</span>';
+        default: return '';
+    }
+}
 ?>

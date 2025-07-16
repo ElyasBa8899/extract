@@ -308,10 +308,12 @@ require_once "../includes/header.php";
                                     <td><?php echo htmlspecialchars($row['creator']); ?></td>
                                     <td>
                                         <a href="manage_tasks.php?edit=<?php echo $row['id']; ?>" class="btn btn-sm btn-warning">ویرایش</a>
+                                        <?php if ($row['status'] == 'completed' || $row['status'] == 'cancelled'): ?>
                                         <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post" style="display: inline-block;">
                                             <input type="hidden" name="task_id" value="<?php echo $row['id']; ?>">
                                             <button type="submit" name="delete_task" class="btn btn-sm btn-danger" onclick="return confirm('آیا از حذف این وظیفه اطمینان دارید؟');">حذف</button>
                                         </form>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>

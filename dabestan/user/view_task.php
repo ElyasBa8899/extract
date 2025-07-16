@@ -151,10 +151,11 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['reassign_action']) && is
     }
 }
 
-require_once "../includes/header.php";
+
 
 // Fetch comments
 $sql_comments = "SELECT tc.*, u.username FROM task_comments tc JOIN users u ON tc.user_id = u.id WHERE tc.task_id = ? ORDER BY tc.created_at ASC";
+require_once "../includes/header.php";
 $stmt_comments = mysqli_prepare($link, $sql_comments);
 mysqli_stmt_bind_param($stmt_comments, "i", $task_id);
 mysqli_stmt_execute($stmt_comments);
@@ -172,25 +173,6 @@ $history = mysqli_fetch_all($result_history, MYSQLI_ASSOC);
 mysqli_stmt_close($stmt_history);
 
 
-function get_status_badge_view($status) {
-    switch ($status) {
-        case 'pending': return '<span class="badge badge-warning">در انتظار</span>';
-        case 'in_progress': return '<span class="badge badge-info">در حال انجام</span>';
-        case 'completed': return '<span class="badge badge-success">تکمیل شده</span>';
-        case 'cancelled': return '<span class="badge badge-secondary">لغو شده</span>';
-        default: return '';
-    }
-}
-
-function get_priority_badge_view($priority) {
-    switch ($priority) {
-        case 'low': return '<span class="badge badge-light">کم</span>';
-        case 'medium': return '<span class="badge badge-primary">متوسط</span>';
-        case 'high': return '<span class="badge badge-danger">زیاد</span>';
-        case 'urgent': return '<span class="badge badge-danger" style="background-color: #dc3545; color: white;">فوری</span>';
-        default: return '';
-    }
-}
 
 ?>
 
