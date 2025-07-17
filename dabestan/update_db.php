@@ -1,107 +1,124 @@
 <?php
-require_once "includes/db_singleton.php";
-$link = get_db_connection();
+session_start();
+require_once "includes/db.php"; // Ensure you have your DB connection details here
 
-function columnExists($link, $tableName, $columnName) {
-    $result = mysqli_query($link, "SHOW COLUMNS FROM `$tableName` LIKE '$columnName'");
-    $exists = (mysqli_num_rows($result)) ? TRUE : FALSE;
-    return $exists;
+// --- Security Check: Only Admins can run this ---
+if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]) {
+    header("location: index.php");
+    exit;
 }
 
-function constraintExists($link, $tableName, $constraintName) {
-    $dbName = 'dabestan_db';
-    $query = "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = '$dbName' AND TABLE_NAME = '$tableName' AND CONSTRAINT_NAME = '$constraintName'";
-    $result = mysqli_query($link, $query);
-    $exists = (mysqli_num_rows($result)) ? TRUE : FALSE;
-    return $exists;
-}
+$page_title = "به‌روزرسانی پایگاه داده";
+require_once "includes/header.php";
 
-
-$queries = [
-    "CREATE TABLE IF NOT EXISTS `task_comments` (
-      `id` int(11) NOT NULL AUTO_INCREMENT,
-      `task_id` int(11) NOT NULL,
-      `user_id` int(11) NOT NULL,
-      `comment` text NOT NULL,
-      `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (`id`),
-      KEY `task_id` (`task_id`),
-      KEY `user_id` (`user_id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;",
-
-    "CREATE TABLE IF NOT EXISTS `task_history` (
-      `id` int(11) NOT NULL AUTO_INCREMENT,
-      `task_id` int(11) NOT NULL,
-      `user_id` int(11) NOT NULL,
-      `action` varchar(255) NOT NULL,
-      `details` text,
-      `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (`id`),
-      KEY `task_id` (`task_id`),
-      KEY `user_id` (`user_id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_persian_ci;"
+// Array of update files in the correct order
+$update_files = [
+    'database_update.sql',
+    'database_update_v2.sql',
+    'database_update_v3.sql',
+    'database_update_v4.sql',
+    'database_update_v5.sql'
+    // Add new update files here in the future
 ];
 
-if (!columnExists($link, 'classes', 'region_id')) {
-    $queries[] = "ALTER TABLE `classes` ADD `region_id` INT(11) NULL DEFAULT NULL AFTER `status`, ADD INDEX `region_id` (`region_id`);";
-}
+$success_messages = [];
+$error_messages = [];
 
-if (!constraintExists($link, 'task_comments', 'task_comments_ibfk_1')) {
-    $queries[] = "ALTER TABLE `task_comments` ADD CONSTRAINT `task_comments_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE;";
-}
-if (!constraintExists($link, 'task_comments', 'task_comments_ibfk_2')) {
-    $queries[] = "ALTER TABLE `task_comments` ADD CONSTRAINT `task_comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;";
-}
-if (!constraintExists($link, 'task_history', 'task_history_ibfk_1')) {
-    $queries[] = "ALTER TABLE `task_history` ADD CONSTRAINT `task_history_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE;";
-}
-if (!constraintExists($link, 'task_history', 'task_history_ibfk_2')) {
-    $queries[] = "ALTER TABLE `task_history` ADD CONSTRAINT `task_history_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;";
-}
-
-if (!columnExists($link, 'notifications', 'type')) {
-    $queries[] = "ALTER TABLE `notifications` ADD `type` VARCHAR(50) NOT NULL AFTER `user_id`, ADD `related_id` INT(11) NULL DEFAULT NULL AFTER `type`, ADD `link` VARCHAR(255) NULL DEFAULT NULL AFTER `message`;";
-}
-
-$queries[] = "
-CREATE TABLE IF NOT EXISTS `task_reassignment_requests` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `task_id` int(11) NOT NULL,
-  `requested_by_id` int(11) NOT NULL,
-  `requested_to_id` int(11) NOT NULL,
-  `new_user_id` int(11) DEFAULT NULL,
-  `new_department_id` int(11) DEFAULT NULL,
-  `comment` text,
-  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `task_id` (`task_id`),
-  KEY `requested_by_id` (`requested_by_id`),
-  KEY `new_user_id` (`new_user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-";
-
-
-echo <<<HTML
-<style>
-    body { font-family: sans-serif; line-height: 1.6; padding: 20px; }
-    .success { color: green; font-weight: bold; }
-    .error { color: red; font-weight: bold; }
-    pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; }
-</style>
-HTML;
-
-foreach ($queries as $query) {
-    if (mysqli_query($link, $query)) {
-        echo "<p class='success'>Query executed successfully:</p>";
-        echo "<pre>" . htmlspecialchars($query) . "</pre>";
+// --- Check and create schema_migrations table if it doesn't exist ---
+$check_table_sql = "SHOW TABLES LIKE 'schema_migrations'";
+$table_exists_result = mysqli_query($link, $check_table_sql);
+if (mysqli_num_rows($table_exists_result) == 0) {
+    $create_table_sql = "
+        CREATE TABLE `schema_migrations` (
+          `version` varchar(255) NOT NULL,
+          `applied_at` timestamp NOT NULL DEFAULT current_timestamp(),
+          PRIMARY KEY (`version`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;";
+    if (mysqli_query($link, $create_table_sql)) {
+        $success_messages[] = "جدول `schema_migrations` با موفقیت ایجاد شد.";
     } else {
-        echo "<p class='error'>Error executing query:</p>";
-        echo "<pre>" . htmlspecialchars($query) . "</pre>";
-        echo "<p class='error'><strong>MySQL Error:</strong> " . mysqli_error($link) . "</p>";
+        $error_messages[] = "خطا در ایجاد جدول `schema_migrations`: " . mysqli_error($link);
     }
-    echo "<hr>";
 }
 
+// --- Process each update file ---
+foreach ($update_files as $file) {
+    // Check if this version has already been applied
+    $version = mysqli_real_escape_string($link, $file);
+    $check_version_sql = "SELECT version FROM schema_migrations WHERE version = '$version'";
+    $version_result = mysqli_query($link, $check_version_sql);
+
+    if (mysqli_num_rows($version_result) > 0) {
+        $success_messages[] = "به‌روزرسانی '{$file}' قبلاً اعمال شده است. (نادیده گرفته شد)";
+        continue; // Skip to the next file
+    }
+
+    if (file_exists($file)) {
+        $sql_content = file_get_contents($file);
+        // Split SQL file into individual queries
+        $queries = preg_split('/;(\r\n|\n|\r)/', $sql_content, -1, PREG_SPLIT_NO_EMPTY);
+
+        $all_queries_successful = true;
+        foreach ($queries as $query) {
+            $query = trim($query);
+            if (!empty($query)) {
+                if (mysqli_query($link, $query)) {
+                    // Query was successful
+                } else {
+                    // If one query fails, stop processing this file
+                    $error_messages[] = "خطا در اجرای بخشی از '{$file}': " . mysqli_error($link) . "<br><pre>{$query}</pre>";
+                    $all_queries_successful = false;
+                    break;
+                }
+            }
+        }
+
+        // If all queries in the file were successful, record the version
+        if ($all_queries_successful) {
+            $success_messages[] = "فایل '{$file}' با موفقیت اجرا شد.";
+            $record_version_sql = "INSERT INTO schema_migrations (version) VALUES ('$version')";
+            mysqli_query($link, $record_version_sql);
+        }
+
+    } else {
+        $error_messages[] = "فایل به‌روزرسانی '{$file}' یافت نشد.";
+    }
+}
+
+?>
+
+<div class="page-content">
+    <h2><i class="fas fa-database"></i> نتیجه به‌روزرسانی پایگاه داده</h2>
+
+    <?php if (!empty($success_messages)): ?>
+        <div class="alert alert-success">
+            <h4><i class="fas fa-check-circle"></i> موفقیت‌آمیز</h4>
+            <ul>
+                <?php foreach ($success_messages as $msg): ?>
+                    <li><?php echo $msg; ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($error_messages)): ?>
+        <div class="alert alert-danger">
+            <h4><i class="fas fa-times-circle"></i> خطاها</h4>
+            <ul>
+                <?php foreach ($error_messages as $msg): ?>
+                    <li><?php echo $msg; ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php else: ?>
+         <div class="alert alert-info">
+            <p>تمام به‌روزرسانی‌های لازم با موفقیت بررسی و اعمال شدند. پایگاه داده شما به‌روز است.</p>
+        </div>
+    <?php endif; ?>
+
+    <a href="admin/index.php" class="btn btn-primary">بازگشت به پنل مدیریت</a>
+</div>
+
+<?php
+require_once "includes/footer.php";
 ?>
