@@ -175,6 +175,24 @@ $result_history = mysqli_stmt_get_result($stmt_history);
 $history = mysqli_fetch_all($result_history, MYSQLI_ASSOC);
 mysqli_stmt_close($stmt_history);
 
+// Fetch pending reassignment requests for this task if the current user is the creator
+$reassignment_requests = [];
+if ($user_id == $task['created_by']) {
+    $sql_reqs = "SELECT trr.*, u_requester.username as requester_name, u_new.username as new_user_name, d_new.department_name as new_department_name
+                 FROM task_reassignment_requests trr
+                 JOIN users u_requester ON trr.requested_by_id = u_requester.id
+                 LEFT JOIN users u_new ON trr.new_user_id = u_new.id
+                 LEFT JOIN departments d_new ON trr.new_department_id = d_new.id
+                 WHERE trr.task_id = ? AND trr.status = 'pending'";
+    if ($stmt_reqs = mysqli_prepare($link, $sql_reqs)) {
+        mysqli_stmt_bind_param($stmt_reqs, "i", $task_id);
+        mysqli_stmt_execute($stmt_reqs);
+        $result_reqs = mysqli_stmt_get_result($stmt_reqs);
+        $reassignment_requests = mysqli_fetch_all($result_reqs, MYSQLI_ASSOC);
+        mysqli_stmt_close($stmt_reqs);
+    }
+}
+
 
 
 ?>
@@ -204,6 +222,30 @@ mysqli_stmt_close($stmt_history);
 
         <div class="row">
             <div class="col-lg-8">
+                <?php if (!empty($reassignment_requests)): ?>
+                <div class="widget widget-warning">
+                    <div class="widget-header">
+                        <h5><i data-feather="alert-triangle"></i>درخواست‌های محول کردن در انتظار</h5>
+                    </div>
+                    <div class="widget-body">
+                        <?php foreach ($reassignment_requests as $req): ?>
+                            <div class="reassignment-request">
+                                <p>
+                                    کاربر <strong><?php echo htmlspecialchars($req['requester_name']); ?></strong> درخواست دارد این وظیفه به
+                                    <strong><?php echo $req['new_user_name'] ? htmlspecialchars($req['new_user_name']) : 'بخش ' . htmlspecialchars($req['new_department_name']); ?></strong>
+                                    محول شود.
+                                </p>
+                                <p><strong>دلیل:</strong> <?php echo nl2br(htmlspecialchars($req['comment'])); ?></p>
+                                <div class="request-actions">
+                                    <a href="?id=<?php echo $task_id; ?>&reassign_action=approve&req_id=<?php echo $req['id']; ?>" class="btn btn-sm btn-success">تایید</a>
+                                    <a href="?id=<?php echo $task_id; ?>&reassign_action=reject&req_id=<?php echo $req['id']; ?>" class="btn btn-sm btn-danger">رد</a>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <div class="widget">
                     <div class="widget-header">
                         <h5><i data-feather="file-text"></i>توضیحات وظیفه</h5>
