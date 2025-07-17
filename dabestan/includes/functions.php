@@ -18,6 +18,43 @@ function to_persian_date($datetime_str, $format = 'Y/m/d H:i') {
     return jdf($format, $timestamp);
 }
 
+function get_task_status_badge($status) {
+    $map = [
+        'pending' => ['class' => 'secondary', 'name' => 'در انتظار'],
+        'in_progress' => ['class' => 'warning', 'name' => 'در حال انجام'],
+        'completed' => ['class' => 'success', 'name' => 'تکمیل شده'],
+        'cancelled' => ['class' => 'danger', 'name' => 'لغو شده'],
+    ];
+    $s = $map[$status] ?? ['class' => 'light', 'name' => 'نامشخص'];
+    return "<span class='badge bg-{$s['class']}'>" . htmlspecialchars($s['name']) . "</span>";
+}
+
+function get_task_priority_badge($priority) {
+    $map = [
+        'normal' => ['class' => 'info', 'name' => 'عادی'],
+        'high' => ['class' => 'warning', 'name' => 'بالا'],
+        'urgent' => ['class' => 'danger', 'name' => 'فوری'],
+    ];
+    $p = $map[$priority] ?? ['class' => 'light', 'name' => 'نامشخص'];
+    return "<span class='badge bg-{$p['class']}'>" . htmlspecialchars($p['name']) . "</span>";
+}
+
+function display_alert($message, $type = 'info') {
+    $type_class = '';
+    switch ($type) {
+        case 'success':
+            $type_class = 'alert-success';
+            break;
+        case 'error':
+            $type_class = 'alert-danger';
+            break;
+        default:
+            $type_class = 'alert-info';
+            break;
+    }
+    echo "<div class='alert {$type_class}'>{$message}</div>";
+}
+
 /**
  * Sends a message to a specific Telegram user.
  *
