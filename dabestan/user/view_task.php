@@ -54,6 +54,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
     }
 }
 
+require_once "../includes/header.php";
+
 // Fetch task details first
 $sql_task = "SELECT t.*, u.username as creator_name FROM tasks t JOIN users u ON t.created_by = u.id WHERE t.id = ?";
 $stmt_task = mysqli_prepare($link, $sql_task);
@@ -70,13 +72,15 @@ if (!$task) {
 
 // Handle Reassignment Request
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['request_reassignment'])) {
-    $new_user_id = $_POST['reassign_user_id'];
+    $reassign_type = $_POST['reassign_type'];
+    $new_user_id = ($reassign_type == 'user') ? $_POST['reassign_user_id'] : null;
+    $new_department_id = ($reassign_type == 'department') ? $_POST['reassign_department_id'] : null;
     $reassign_comment = trim($_POST['reassign_comment']);
     $creator_id = $task['created_by'];
 
-    $sql = "INSERT INTO task_reassignment_requests (task_id, requested_by_id, requested_to_id, new_user_id, comment) VALUES (?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO task_reassignment_requests (task_id, requested_by_id, requested_to_id, new_user_id, new_department_id, comment) VALUES (?, ?, ?, ?, ?, ?)";
     if ($stmt = mysqli_prepare($link, $sql)) {
-        mysqli_stmt_bind_param($stmt, "iiiss", $task_id, $user_id, $creator_id, $new_user_id, $reassign_comment);
+        mysqli_stmt_bind_param($stmt, "iiisss", $task_id, $user_id, $creator_id, $new_user_id, $new_department_id, $reassign_comment);
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
 
@@ -155,7 +159,6 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['reassign_action']) && is
 
 // Fetch comments
 $sql_comments = "SELECT tc.*, u.username FROM task_comments tc JOIN users u ON tc.user_id = u.id WHERE tc.task_id = ? ORDER BY tc.created_at ASC";
-require_once "../includes/header.php";
 $stmt_comments = mysqli_prepare($link, $sql_comments);
 mysqli_stmt_bind_param($stmt_comments, "i", $task_id);
 mysqli_stmt_execute($stmt_comments);
@@ -432,8 +435,15 @@ mysqli_stmt_close($stmt_history);
         <div class="modal-body">
             <p>شما در حال ارسال یک درخواست به سازنده وظیفه (<?php echo htmlspecialchars($task['creator_name']); ?>) برای محول کردن این وظیفه هستید.</p>
             <div class="form-group">
+                <label for="reassign_type">محول به:</label>
+                <select name="reassign_type" id="reassign_type" class="form-control">
+                    <option value="user">کاربر</option>
+                    <option value="department">بخش</option>
+                </select>
+            </div>
+            <div class="form-group" id="user_reassign_group">
                 <label for="reassign_user_id">کاربر پیشنهادی</label>
-                <select name="reassign_user_id" id="reassign_user_id" class="form-control" required>
+                <select name="reassign_user_id" id="reassign_user_id" class="form-control">
                     <?php
                     $users_sql = "SELECT id, username FROM users WHERE id != ?";
                     if($stmt_users = mysqli_prepare($link, $users_sql)){
@@ -444,6 +454,18 @@ mysqli_stmt_close($stmt_history);
                             echo "<option value='{$user['id']}'>".htmlspecialchars($user['username'])."</option>";
                         }
                         mysqli_stmt_close($stmt_users);
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="form-group" id="department_reassign_group" style="display: none;">
+                <label for="reassign_department_id">بخش پیشنهادی</label>
+                <select name="reassign_department_id" id="reassign_department_id" class="form-control">
+                    <?php
+                    $depts_sql = "SELECT id, department_name FROM departments";
+                    $depts_result = mysqli_query($link, $depts_sql);
+                    while($dept = mysqli_fetch_assoc($depts_result)){
+                        echo "<option value='{$dept['id']}'>".htmlspecialchars($dept['department_name'])."</option>";
                     }
                     ?>
                 </select>
