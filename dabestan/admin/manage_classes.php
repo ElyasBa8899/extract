@@ -7,7 +7,7 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
     exit;
 }
-require_permission('manage_users'); // Assuming only users who can manage users can manage classes
+require_permission('manage_classes');
 
 $err = $success_msg = "";
 

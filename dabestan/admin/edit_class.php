@@ -7,7 +7,7 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
     exit;
 }
-require_permission('manage_users');
+require_permission('manage_classes');
 
 if (!isset($_GET['class_id']) || empty($_GET['class_id'])) {
     header("location: manage_classes.php");

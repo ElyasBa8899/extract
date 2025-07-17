@@ -6,12 +6,12 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSIO
     header("location: ../index.php");
     exit;
 }
-if (!isset($_GET['user_id']) || empty($_GET['user_id'])) {
+if (!isset($_GET['id']) || empty($_GET['id'])) {
     header("location: manage_users.php");
     exit;
 }
 
-$user_id_to_edit = $_GET['user_id'];
+$user_id_to_edit = $_GET['id'];
 $err = $success_msg = "";
 
 // Fetch user details
@@ -99,6 +99,14 @@ require_once "../includes/header.php";
             <div class="form-group">
                 <label>نام خانوادگی</label>
                 <input type="text" name="last_name" class="form-control" value="<?php echo htmlspecialchars($user['last_name']); ?>">
+            </div>
+        </div>
+
+        <div class="form-container" style="margin-bottom: 30px;">
+            <h4>تغییر رمز عبور</h4>
+            <div class="form-group">
+                <label>رمز عبور جدید (برای عدم تغییر، خالی بگذارید)</label>
+                <input type="password" name="password" class="form-control" autocomplete="new-password">
             </div>
         </div>
 

@@ -97,7 +97,9 @@ require_once "../includes/header.php";
 
     <?php if(!empty($success_msg)): ?>
         <div class="alert alert-success"><?php echo $success_msg; ?></div>
-    <?php else: ?>
+    <?php endif; ?>
+
+    <?php if(empty($success_msg)): // Hide form if submission was successful ?>
         <div class="form-container">
             <?php if(!empty($err)){ echo '<div class="alert alert-danger">' . $err . '</div>'; } ?>
             <form action="fill_form.php?form_id=<?php echo $form_id; ?>" method="post">

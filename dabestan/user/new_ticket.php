@@ -20,15 +20,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_ticket'])) {
     $title = trim($_POST['title']);
     $message = trim($_POST['message']);
     $status = trim($_POST['priority']); // urgent or open
-    $assign_type = $_POST['assign_type'];
+    $department_id = $_POST['department_id'];
+    $assigned_user_id = null; // This feature is simplified for now.
 
-    $department_id = null;
-    $assigned_user_id = null;
-
-    if($assign_type == 'department'){
-        $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
-    } else {
-        $assigned_user_id = !empty($_POST['user_id']) ? $_POST['user_id'] : null;
+    if ($department_id == "0") { // "0" is the value for "ادمین کل"
+        $department_id = null;
+        // Logic to assign to a general admin pool if necessary, e.g., assign to user_id 1
+        $assigned_user_id = 1; // Assign to user with ID 1, assuming it's the main admin
     }
 
     if (empty($title) || empty($message)) {

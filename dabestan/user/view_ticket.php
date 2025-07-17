@@ -70,7 +70,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_reply'])) {
                     if($owner_telegram_query && mysqli_num_rows($owner_telegram_query) > 0){
                         $owner_chat_id = mysqli_fetch_assoc($owner_telegram_query)['telegram_chat_id'];
                         if(!empty($owner_chat_id)){
-                            send_telegram_message($owner_chat_id, $notif_message);
+                            require_once '../includes/telegram_bot.php';
+                            sendTelegramMessage($owner_chat_id, $notif_message);
                         }
                     }
                 }

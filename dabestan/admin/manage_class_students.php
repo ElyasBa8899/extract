@@ -29,18 +29,46 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_students'])) {
     $students_to_add = $_POST['student_ids'] ?? [];
 
     if (!empty($students_to_add)) {
-        // Here you would typically move students from 'recruited_students' to a 'class_students' table
-        // or update their status. For now, we'll just simulate this by deleting them from the recruited list.
-        $sql = "DELETE FROM recruited_students WHERE id = ?";
-        $stmt = mysqli_prepare($link, $sql);
+        mysqli_begin_transaction($link);
+        try {
+            $sql_get_student = "SELECT * FROM recruited_students WHERE id = ?";
+            $stmt_get_student = mysqli_prepare($link, $sql_get_student);
 
-        foreach ($students_to_add as $student_id) {
-            // You would also have an INSERT statement here to add them to the class roster.
-            mysqli_stmt_bind_param($stmt, "i", $student_id);
-            mysqli_stmt_execute($stmt);
+            $sql_add_to_class = "INSERT INTO class_students (class_id, student_name, added_by_user_id) VALUES (?, ?, ?)";
+            $stmt_add_to_class = mysqli_prepare($link, $sql_add_to_class);
+
+            $sql_update_recruited = "UPDATE recruited_students SET class_id = ? WHERE id = ?";
+            $stmt_update_recruited = mysqli_prepare($link, $sql_update_recruited);
+
+            $admin_id = $_SESSION['id'];
+
+            foreach ($students_to_add as $student_id) {
+                // Get student name
+                mysqli_stmt_bind_param($stmt_get_student, "i", $student_id);
+                mysqli_stmt_execute($stmt_get_student);
+                $result = mysqli_stmt_get_result($stmt_get_student);
+                $student = mysqli_fetch_assoc($result);
+                $student_name = $student['student_name'];
+
+                // Add to class_students
+                mysqli_stmt_bind_param($stmt_add_to_class, "isi", $class_id, $student_name, $admin_id);
+                mysqli_stmt_execute($stmt_add_to_class);
+
+                // Update recruited_students to link them to the class
+                mysqli_stmt_bind_param($stmt_update_recruited, "ii", $class_id, $student_id);
+                mysqli_stmt_execute($stmt_update_recruited);
+            }
+
+            mysqli_stmt_close($stmt_get_student);
+            mysqli_stmt_close($stmt_add_to_class);
+            mysqli_stmt_close($stmt_update_recruited);
+
+            mysqli_commit($link);
+            $success_msg = count($students_to_add) . " دانش‌آموز با موفقیت به کلاس اضافه شدند و از لیست جذب به‌روزرسانی شدند.";
+        } catch (Exception $e) {
+            mysqli_rollback($link);
+            $err = "خطا در اضافه کردن دانش‌آموزان: " . $e->getMessage();
         }
-        mysqli_stmt_close($stmt);
-        $success_msg = count($students_to_add) . " دانش‌آموز با موفقیت به کلاس اضافه شدند.";
     }
 }
 

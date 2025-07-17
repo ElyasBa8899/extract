@@ -1,9 +1,8 @@
 <?php
 session_start();
-require_once "../includes/db_singleton.php";
-$link = get_db_connection();
-require_once "../includes/access_control.php";
+require_once "../includes/db.php";
 require_once "../includes/functions.php";
+require_once "../includes/access_control.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
@@ -18,355 +17,200 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $task_id = $_GET['id'];
 $user_id = $_SESSION['id'];
 
-// Handle Comment Submission
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_comment'])) {
-    $comment = trim($_POST['comment']);
-    if (!empty($comment)) {
+// --- Security Check: Ensure the user is assigned to this task ---
+$is_assigned = is_user_assigned_to_task($link, $user_id, $task_id);
+if (!$is_assigned && !has_permission('manage_tasks')) {
+    echo "دسترسی غیرمجاز. شما به این وظیفه تخصیص داده نشده‌اید.";
+    exit;
+}
+// --- End Security Check ---
+
+
+// Handle POST Actions (Add Comment, Update Status)
+$err = $success_msg = "";
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Action: Add Comment
+    if (isset($_POST['add_comment']) && !empty(trim($_POST['comment']))) {
+        $comment = trim($_POST['comment']);
         $sql = "INSERT INTO task_comments (task_id, user_id, comment) VALUES (?, ?, ?)";
         if ($stmt = mysqli_prepare($link, $sql)) {
             mysqli_stmt_bind_param($stmt, "iis", $task_id, $user_id, $comment);
             mysqli_stmt_execute($stmt);
             mysqli_stmt_close($stmt);
-            header("location: view_task.php?id=" . $task_id);
-            exit;
+            record_task_history($link, $task_id, $user_id, "افزودن نظر", $comment);
+            $success_msg = "نظر شما ثبت شد.";
+        } else {
+            $err = "خطا در ثبت نظر.";
+        }
+    }
+
+    // Action: Update Status
+    if (isset($_POST['update_status']) && !empty($_POST['new_status'])) {
+        $new_status = $_POST['new_status'];
+        $sql = "UPDATE tasks SET status = ? WHERE id = ?";
+        if ($stmt = mysqli_prepare($link, $sql)) {
+            mysqli_stmt_bind_param($stmt, "si", $new_status, $task_id);
+            mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
+            record_task_history($link, $task_id, $user_id, "تغییر وضعیت به " . get_task_status_name($new_status));
+            $success_msg = "وضعیت وظیفه به‌روزرسانی شد.";
+        } else {
+            $err = "خطا در به‌روزرسانی وضعیت.";
         }
     }
 }
 
-// Handle Status Update
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
-    $new_status = $_POST['new_status'];
-    // Add validation for status
-    $sql = "UPDATE tasks SET status = ? WHERE id = ?";
-    if ($stmt = mysqli_prepare($link, $sql)) {
-        mysqli_stmt_bind_param($stmt, "si", $new_status, $task_id);
-        mysqli_stmt_execute($stmt);
-        // Add to history
-        $status_translation = ['pending' => 'در انتظار', 'in_progress' => 'در حال انجام', 'completed' => 'تکمیل شده', 'cancelled' => 'لغو شده'];
-        $action = "وضعیت وظیفه را به '" . ($status_translation[$new_status] ?? htmlspecialchars($new_status)) . "' تغییر داد.";
-        $history_sql = "INSERT INTO task_history (task_id, user_id, action) VALUES (?, ?, ?)";
-        $stmt_history = mysqli_prepare($link, $history_sql);
-        mysqli_stmt_bind_param($stmt_history, "iis", $task_id, $user_id, $action);
-        mysqli_stmt_execute($stmt_history);
-        mysqli_stmt_close($stmt_history);
-        header("location: view_task.php?id=" . $task_id);
-        exit;
-    }
-}
 
-require_once "../includes/header.php";
-
-// Fetch task details first
-$sql_task = "SELECT t.*, u.username as creator_name FROM tasks t JOIN users u ON t.created_by = u.id WHERE t.id = ?";
-$stmt_task = mysqli_prepare($link, $sql_task);
-mysqli_stmt_bind_param($stmt_task, "i", $task_id);
-mysqli_stmt_execute($stmt_task);
-$result_task = mysqli_stmt_get_result($stmt_task);
-$task = mysqli_fetch_assoc($result_task);
-mysqli_stmt_close($stmt_task);
+// Fetch task details
+$task_sql = "
+    SELECT t.*, u.username as creator_name
+    FROM tasks t
+    JOIN users u ON t.created_by = u.id
+    WHERE t.id = ?
+";
+$stmt = mysqli_prepare($link, $task_sql);
+mysqli_stmt_bind_param($stmt, "i", $task_id);
+mysqli_stmt_execute($stmt);
+$task_result = mysqli_stmt_get_result($stmt);
+$task = mysqli_fetch_assoc($task_result);
+mysqli_stmt_close($stmt);
 
 if (!$task) {
-    header("location: my_tasks.php"); // Or show an error message
+    echo "وظیفه یافت نشد.";
     exit;
 }
 
-// Handle Reassignment Request
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['request_reassignment'])) {
-    $reassign_type = $_POST['reassign_type'];
-    $new_user_id = ($reassign_type == 'user') ? $_POST['reassign_user_id'] : null;
-    $new_department_id = ($reassign_type == 'department') ? $_POST['reassign_department_id'] : null;
-    $reassign_comment = trim($_POST['reassign_comment']);
-    $creator_id = $task['created_by'];
-
-    $sql = "INSERT INTO task_reassignment_requests (task_id, requested_by_id, requested_to_id, new_user_id, new_department_id, comment) VALUES (?, ?, ?, ?, ?, ?)";
-    if ($stmt = mysqli_prepare($link, $sql)) {
-        mysqli_stmt_bind_param($stmt, "iiisss", $task_id, $user_id, $creator_id, $new_user_id, $new_department_id, $reassign_comment);
-        mysqli_stmt_execute($stmt);
-        mysqli_stmt_close($stmt);
-
-        // Notify the creator
-        $message = "کاربر " . htmlspecialchars($_SESSION['username']) . " درخواست محول کردن وظیفه '" . htmlspecialchars($task['title']) . "' را دارد.";
-        send_notification($creator_id, 'reassignment_request', $task_id, $message, "user/view_task.php?id=" . $task_id);
-
-        header("location: view_task.php?id=" . $task_id . "&reassign_req=sent");
-        exit;
-    }
-}
-
-// Handle Reassignment Approval/Rejection
-if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['reassign_action']) && isset($_GET['req_id'])) {
-    $request_id = $_GET['req_id'];
-    $action = $_GET['reassign_action']; // 'approve' or 'reject'
-
-    // Fetch request details
-    $sql_req = "SELECT * FROM task_reassignment_requests WHERE id = ? AND requested_to_id = ?";
-    $stmt_req = mysqli_prepare($link, $sql_req);
-    mysqli_stmt_bind_param($stmt_req, "ii", $request_id, $user_id);
-    mysqli_stmt_execute($stmt_req);
-    $request = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_req));
-    mysqli_stmt_close($stmt_req);
-
-    if ($request && $request['status'] == 'pending') {
-        if ($action == 'approve') {
-            // 1. Update task assignment
-            $sql_update = "UPDATE task_assignments SET assigned_to_user_id = ? WHERE task_id = ?";
-            $stmt_update = mysqli_prepare($link, $sql_update);
-            mysqli_stmt_bind_param($stmt_update, "ii", $request['new_user_id'], $request['task_id']);
-            mysqli_stmt_execute($stmt_update);
-            mysqli_stmt_close($stmt_update);
-
-            // 2. Update request status
-            $sql_status = "UPDATE task_reassignment_requests SET status = 'approved' WHERE id = ?";
-            $stmt_status = mysqli_prepare($link, $sql_status);
-            mysqli_stmt_bind_param($stmt_status, "i", $request_id);
-            mysqli_stmt_execute($stmt_status);
-            mysqli_stmt_close($stmt_status);
-
-            // 3. Add to history
-            $new_user_info = get_user_info($request['new_user_id']);
-            $history_action = "وظیفه را به " . htmlspecialchars($new_user_info['username']) . " محول کرد.";
-            $history_sql = "INSERT INTO task_history (task_id, user_id, action) VALUES (?, ?, ?)";
-            $stmt_history = mysqli_prepare($link, $history_sql);
-            mysqli_stmt_bind_param($stmt_history, "iis", $request['task_id'], $user_id, $history_action);
-            mysqli_stmt_execute($stmt_history);
-
-            // 4. Notify original requester
-            $message_requester = "درخواست شما برای محول کردن وظیفه '" . htmlspecialchars($task['title']) . "' تایید شد.";
-            send_notification($request['requested_by_id'], 'reassignment_approved', $request['task_id'], $message_requester);
-
-            // 5. Notify new user
-            $message_new_user = "وظیفه جدیدی با عنوان '" . htmlspecialchars($task['title']) . "' به شما محول شد.";
-            send_notification($request['new_user_id'], 'new_task_assigned', $request['task_id'], $message_new_user);
-
-        } else { // Reject
-            // 1. Update request status
-            $sql_status = "UPDATE task_reassignment_requests SET status = 'rejected' WHERE id = ?";
-            $stmt_status = mysqli_prepare($link, $sql_status);
-            mysqli_stmt_bind_param($stmt_status, "i", $request_id);
-            mysqli_stmt_execute($stmt_status);
-            mysqli_stmt_close($stmt_status);
-
-            // 2. Notify original requester
-            $message = "درخواست شما برای محول کردن وظیفه '" . htmlspecialchars($task['title']) . "' رد شد.";
-            send_notification($request['requested_by_id'], 'reassignment_rejected', $request['task_id'], $message);
-        }
-        header("location: view_task.php?id=" . $task_id);
-        exit;
-    }
-}
-
+// Fetch assignees
+$assignees_sql = "
+    SELECT u.username, d.department_name
+    FROM task_assignments ta
+    LEFT JOIN users u ON ta.assigned_to_user_id = u.id
+    LEFT JOIN departments d ON ta.assigned_to_department_id = d.id
+    WHERE ta.task_id = ?
+";
+$stmt_a = mysqli_prepare($link, $assignees_sql);
+mysqli_stmt_bind_param($stmt_a, "i", $task_id);
+mysqli_stmt_execute($stmt_a);
+$assignees_result = mysqli_stmt_get_result($stmt_a);
+$assignees = mysqli_fetch_all($assignees_result, MYSQLI_ASSOC);
+mysqli_stmt_close($stmt_a);
 
 
 // Fetch comments
-$sql_comments = "SELECT tc.*, u.username FROM task_comments tc JOIN users u ON tc.user_id = u.id WHERE tc.task_id = ? ORDER BY tc.created_at ASC";
-$stmt_comments = mysqli_prepare($link, $sql_comments);
-mysqli_stmt_bind_param($stmt_comments, "i", $task_id);
-mysqli_stmt_execute($stmt_comments);
-$result_comments = mysqli_stmt_get_result($stmt_comments);
-$comments = mysqli_fetch_all($result_comments, MYSQLI_ASSOC);
-mysqli_stmt_close($stmt_comments);
+$comments_sql = "SELECT tc.*, u.username FROM task_comments tc JOIN users u ON tc.user_id = u.id WHERE tc.task_id = ? ORDER BY tc.created_at ASC";
+$stmt_c = mysqli_prepare($link, $comments_sql);
+mysqli_stmt_bind_param($stmt_c, "i", $task_id);
+mysqli_stmt_execute($stmt_c);
+$comments_result = mysqli_stmt_get_result($stmt_c);
+$comments = mysqli_fetch_all($comments_result, MYSQLI_ASSOC);
+mysqli_stmt_close($stmt_c);
 
 // Fetch history
-$sql_history = "SELECT th.*, u.username FROM task_history th JOIN users u ON th.user_id = u.id WHERE th.task_id = ? ORDER BY th.created_at ASC";
-$stmt_history = mysqli_prepare($link, $sql_history);
-mysqli_stmt_bind_param($stmt_history, "i", $task_id);
-mysqli_stmt_execute($stmt_history);
-$result_history = mysqli_stmt_get_result($stmt_history);
-$history = mysqli_fetch_all($result_history, MYSQLI_ASSOC);
-mysqli_stmt_close($stmt_history);
-
-// Fetch pending reassignment requests for this task if the current user is the creator
-$reassignment_requests = [];
-if ($user_id == $task['created_by']) {
-    $sql_reqs = "
-        SELECT
-            trr.id,
-            trr.comment,
-            trr.status,
-            trr.created_at,
-            requester.username AS requested_by_username,
-            approver.username AS requested_to_username,
-            new_assignee.username AS new_assignee_username
-        FROM
-            task_reassignment_requests AS trr
-        JOIN
-            users AS requester ON trr.requested_by_id = requester.id
-        JOIN
-            users AS approver ON trr.requested_to_id = approver.id
-        JOIN
-            users AS new_assignee ON trr.new_user_id = new_assignee.id
-        WHERE
-            trr.task_id = ? AND trr.status = 'pending'
-    ";
-    if ($stmt_reqs = mysqli_prepare($link, $sql_reqs)) {
-        mysqli_stmt_bind_param($stmt_reqs, "i", $task_id);
-        mysqli_stmt_execute($stmt_reqs);
-        $result_reqs = mysqli_stmt_get_result($stmt_reqs);
-        $reassignment_requests = mysqli_fetch_all($result_reqs, MYSQLI_ASSOC);
-        mysqli_stmt_close($stmt_reqs);
-    }
-}
+$history_sql = "SELECT th.*, u.username FROM task_history th JOIN users u ON th.user_id = u.id WHERE th.task_id = ? ORDER BY th.created_at DESC";
+$stmt_h = mysqli_prepare($link, $history_sql);
+mysqli_stmt_bind_param($stmt_h, "i", $task_id);
+mysqli_stmt_execute($stmt_h);
+$history_result = mysqli_stmt_get_result($stmt_h);
+$history = mysqli_fetch_all($history_result, MYSQLI_ASSOC);
+mysqli_stmt_close($stmt_h);
 
 
-
+require_once "../includes/header.php";
 ?>
 
 <div class="page-content">
-    <div class="container-fluid">
+    <a href="my_tasks.php" class="btn btn-secondary mb-3"><i class="fas fa-arrow-left"></i> بازگشت به لیست وظایف</a>
 
-        <?php
-        if (isset($_GET['reassign_req']) && $_GET['reassign_req'] == 'sent') {
-            set_alert('success', 'درخواست شما برای محول کردن وظیفه با موفقیت ارسال شد.');
-            header("Location: view_task.php?id=" . $task_id);
-            exit;
-        }
-        ?>
+    <?php
+    if(!empty($err)){ echo '<div class="alert alert-danger">' . $err . '</div>'; }
+    if(!empty($success_msg)){ echo '<div class="alert alert-success">' . $success_msg . '</div>'; }
+    ?>
 
-        <div class="task-view-header">
-            <div class="task-title">
-                <h2><?php echo htmlspecialchars($task['title']); ?></h2>
-                <div class="task-meta">
-                    ایجاد شده توسط <?php echo htmlspecialchars($task['creator_name']); ?> در <?php echo to_persian_date($task['created_at']); ?>
+    <div class="row">
+        <!-- Main Task Info -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><?php echo htmlspecialchars($task['title']); ?></h4>
                 </div>
-            </div>
-            <div class="task-actions">
-                <a href="my_tasks.php" class="btn btn-secondary">بازگشت به لیست</a>
+                <div class="card-body">
+                    <p><strong>توضیحات:</strong></p>
+                    <p><?php echo nl2br(htmlspecialchars($task['description'])); ?></p>
+                    <hr>
+                    <!-- Comments Section -->
+                    <h5><i class="fas fa-comments"></i> نظرات</h5>
+                    <div class="comments-section mb-4">
+                        <?php foreach($comments as $comment): ?>
+                        <div class="comment">
+                            <strong><?php echo htmlspecialchars($comment['username']); ?></strong>
+                            <span class="text-muted text-sm"><?php echo to_persian_date($comment['created_at']); ?></span>
+                            <p><?php echo nl2br(htmlspecialchars($comment['comment'])); ?></p>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <!-- Add Comment Form -->
+                    <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>?id=<?php echo $task_id; ?>" method="post">
+                        <div class="form-group">
+                            <label for="comment">افزودن نظر</label>
+                            <textarea name="comment" id="comment" rows="3" class="form-control"></textarea>
+                        </div>
+                        <button type="submit" name="add_comment" class="btn btn-primary">ثبت نظر</button>
+                    </form>
+                </div>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-lg-8">
-                <?php if (!empty($reassignment_requests)): ?>
-                <div class="widget widget-warning">
-                    <div class="widget-header">
-                        <h5><i data-feather="alert-triangle"></i>درخواست‌های محول کردن در انتظار</h5>
-                    </div>
-                    <div class="widget-body">
-                        <?php foreach ($reassignment_requests as $req): ?>
-                            <div class="reassignment-request">
-                                <p>
-                                    کاربر <strong><?php echo htmlspecialchars($req['requested_by_username']); ?></strong> درخواست دارد این وظیفه به
-                                    <strong><?php echo $req['new_assignee_username'] ? htmlspecialchars($req['new_assignee_username']) : 'بخش ' . htmlspecialchars($req['new_department_name']); ?></strong>
-                                    محول شود.
-                                </p>
-                                <p><strong>دلیل:</strong> <?php echo nl2br(htmlspecialchars($req['comment'])); ?></p>
-                                <div class="request-actions">
-                                    <a href="?id=<?php echo $task_id; ?>&reassign_action=approve&req_id=<?php echo $req['id']; ?>" class="btn btn-sm btn-success">تایید</a>
-                                    <a href="?id=<?php echo $task_id; ?>&reassign_action=reject&req_id=<?php echo $req['id']; ?>" class="btn btn-sm btn-danger">رد</a>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
+        <!-- Sidebar Info -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">جزئیات وظیفه</h5>
+                    <p><strong>ایجاد کننده:</strong> <?php echo htmlspecialchars($task['creator_name']); ?></p>
+                    <p><strong>تاریخ ایجاد:</strong> <?php echo to_persian_date($task['created_at']); ?></p>
+                    <p><strong>مهلت انجام:</strong> <?php echo $task['deadline'] ? to_persian_date($task['deadline']) : 'ندارد'; ?></p>
+                    <p><strong>اولویت:</strong> <?php echo get_task_priority_badge($task['priority']); ?></p>
+                    <p><strong>وضعیت فعلی:</strong> <?php echo get_task_status_badge($task['status']); ?></p>
 
-                <div class="widget">
-                    <div class="widget-header">
-                        <h5><i data-feather="file-text"></i>توضیحات وظیفه</h5>
-                    </div>
-                    <div class="widget-body">
-                        <p><?php echo nl2br(htmlspecialchars($task['description'])); ?></p>
-                    </div>
-                </div>
-
-                <div class="widget mt-4">
-                    <div class="widget-header">
-                        <h5><i data-feather="message-square"></i>نظرات</h5>
-                    </div>
-                    <div class="widget-body">
-                        <div class="comments-section">
-                            <?php if (empty($comments)): ?>
-                                <p class="text-muted text-center">هنوز نظری ثبت نشده است.</p>
-                            <?php else: ?>
-                                <?php foreach ($comments as $comment): ?>
-                                    <div class="comment">
-                                        <div class="comment-avatar">
-                                            <i data-feather="user"></i>
-                                        </div>
-                                        <div class="comment-content">
-                                            <div class="comment-header">
-                                                <strong><?php echo htmlspecialchars($comment['username']); ?></strong>
-                                                <span class="text-muted"><?php echo time_ago($comment['created_at']); ?></span>
-                                            </div>
-                                            <div class="comment-body">
-                                                <?php echo nl2br(htmlspecialchars($comment['comment'])); ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
-                        <hr>
-                        <form action="" method="post" class="comment-form">
-                            <div class="form-group">
-                                <textarea name="comment" id="comment" class="form-control" rows="3" placeholder="نظر خود را بنویسید..."></textarea>
-                            </div>
-                            <button type="submit" name="add_comment" class="btn btn-primary"><i data-feather="send"></i> ارسال نظر</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="widget">
-                    <div class="widget-header">
-                        <h5><i data-feather="info"></i>جزئیات وظیفه</h5>
-                    </div>
-                    <div class="widget-body">
-                        <ul class="task-details-list">
-                            <li>
-                                <span>وضعیت:</span>
-                                <?php echo get_status_badge_view($task['status']); ?>
-                            </li>
-                            <li>
-                                <span>اولویت:</span>
-                                <?php echo get_priority_badge_view($task['priority']); ?>
-                            </li>
-                            <li>
-                                <span>مهلت انجام:</span>
-                                <strong><?php echo (!empty($task['deadline']) && $task['deadline'] != '0000-00-00 00:00:00') ? to_persian_date($task['deadline']) : 'ندارد'; ?></strong>
-                            </li>
-                        </ul>
-                    </div>
-                    <?php if (can_edit_task($task_id, $user_id)): ?>
-                    <div class="widget-footer">
-                        <form action="" method="post" id="update-status-form" class="d-inline">
-                            <select name="new_status" class="form-control-sm">
+                    <!-- Update Status Form -->
+                    <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>?id=<?php echo $task_id; ?>" method="post" class="mt-3">
+                        <div class="form-group">
+                            <label for="new_status">تغییر وضعیت</label>
+                            <select name="new_status" id="new_status" class="form-control">
+                                <option value="pending" <?php if($task['status'] == 'pending') echo 'selected'; ?>>در انتظار</option>
                                 <option value="in_progress" <?php if($task['status'] == 'in_progress') echo 'selected'; ?>>در حال انجام</option>
                                 <option value="completed" <?php if($task['status'] == 'completed') echo 'selected'; ?>>تکمیل شده</option>
+                                <option value="cancelled" <?php if($task['status'] == 'cancelled') echo 'selected'; ?>>لغو شده</option>
                             </select>
-                            <button type="submit" name="update_status" class="btn btn-sm btn-success">تغییر وضعیت</button>
-                        </form>
-                        <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#reassignRequestModal">
-                            درخواست محول کردن
-                        </button>
-                    </div>
-                    <?php endif; ?>
+                        </div>
+                        <button type="submit" name="update_status" class="btn btn-success">بروزرسانی وضعیت</button>
+                    </form>
+                    <hr>
+                    <p><strong>تخصیص یافته به:</strong></p>
+                    <ul>
+                        <?php foreach($assignees as $assignee): ?>
+                            <li>
+                                <?php
+                                echo !empty($assignee['username']) ? 'کاربر: ' . htmlspecialchars($assignee['username']) : '';
+                                echo !empty($assignee['department_name']) ? 'بخش: ' . htmlspecialchars($assignee['department_name']) : '';
+                                ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
+            </div>
 
-                <div class="widget mt-4">
-                    <div class="widget-header">
-                        <h5><i data-feather="activity"></i>تاریخچه</h5>
-                    </div>
-                    <div class="widget-body">
-                        <ul class="history-list">
-                             <?php if (empty($history)): ?>
-                                <p class="text-muted text-center">تاریخچه‌ای برای نمایش وجود ندارد.</p>
-                            <?php else: ?>
-                                <?php foreach ($history as $item): ?>
-                                    <li>
-                                        <div class="history-icon"><i data-feather="git-commit"></i></div>
-                                        <div class="history-content">
-                                            <span><strong><?php echo htmlspecialchars($item['username']); ?></strong> <?php echo htmlspecialchars($item['action']); ?></span>
-                                            <span class="text-muted"><?php echo time_ago($item['created_at']); ?></span>
-                                             <?php if (!empty($item['details'])): ?>
-                                                <div class="history-details"><?php echo htmlspecialchars($item['details']); ?></div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </li>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </ul>
-                    </div>
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-history"></i> تاریخچه تغییرات</h5>
+                    <ul class="history-list">
+                        <?php foreach($history as $item): ?>
+                        <li>
+                            <strong><?php echo htmlspecialchars($item['username']); ?></strong>
+                            <?php echo htmlspecialchars($item['action']); ?>
+                            <span class="text-muted text-sm d-block"><?php echo to_persian_date($item['created_at']); ?></span>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -374,171 +218,11 @@ if ($user_id == $task['created_by']) {
 </div>
 
 <style>
-.task-view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-.task-title h2 { margin-bottom: 0.25rem; }
-.task-meta { color: var(--text-muted); font-size: 0.9em; }
-
-.widget {
-    background: var(--widget-bg);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
-    margin-bottom: 1.5rem;
-}
-.widget-header {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-weight: 600;
-}
-.widget-header h5 { margin: 0; font-size: 1.1em; }
-.widget-body { padding: 1.5rem; }
-
-.comments-section { max-height: 400px; overflow-y: auto; padding: 0.5rem; }
-.comment { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
-.comment-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--background-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.comment-content { flex: 1; }
-.comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
-.comment-header strong { font-weight: 600; }
-.comment-header .text-muted { font-size: 0.8em; }
-.comment-body {
-    background: #f8f9fa;
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius-md);
-}
-.comment-form .form-group { margin-bottom: 1rem; }
-.comment-form button { display: flex; align-items: center; gap: 0.5rem; }
-
-.task-details-list { list-style: none; padding: 0; margin: 0; }
-.task-details-list li {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
-.task-details-list li:last-child { border-bottom: none; }
-.task-details-list li span:first-child { color: var(--text-muted); }
-
-.history-list { list-style: none; padding: 0; margin: 0; }
-.history-list li {
-    display: flex;
-    gap: 1rem;
-    position: relative;
-    padding-bottom: 1.5rem;
-}
-.history-list li:last-child { padding-bottom: 0; }
-.history-list li:not(:last-child)::before {
-    content: '';
-    position: absolute;
-    top: 18px;
-    right: 18px;
-    width: 2px;
-    height: calc(100% - 18px);
-    background: var(--border-color);
-}
-.history-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: var(--background-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1;
-}
-.history-content { flex: 1; }
-.history-content span { display: block; }
-.history-content .text-muted { font-size: 0.8em; margin-top: 0.25rem; }
-.history-details {
-    font-size: 0.85em;
-    color: #6c757d;
-    background: #f8f9fa;
-    padding: 0.5rem;
-    border-radius: var(--radius-md);
-    margin-top: 0.5rem;
-}
-.widget-footer {
-    padding: 1rem 1.5rem;
-    background-color: #f8f9fa;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
+.comment { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+.comment:last-child { border-bottom: none; }
+.history-list { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+.history-list li { background-color: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 5px; }
 </style>
-
-<!-- Reassign Request Modal -->
-<div class="modal fade" id="reassignRequestModal" tabindex="-1" role="dialog" aria-labelledby="reassignRequestModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <form action="" method="post">
-        <div class="modal-header">
-          <h5 class="modal-title" id="reassignRequestModalLabel">درخواست محول کردن وظیفه</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-            <p>شما در حال ارسال یک درخواست به سازنده وظیفه (<?php echo htmlspecialchars($task['creator_name']); ?>) برای محول کردن این وظیفه هستید.</p>
-            <div class="form-group">
-                <label for="reassign_type">محول به:</label>
-                <select name="reassign_type" id="reassign_type" class="form-control">
-                    <option value="user">کاربر</option>
-                    <option value="department">بخش</option>
-                </select>
-            </div>
-            <div class="form-group" id="user_reassign_group">
-                <label for="reassign_user_id">کاربر پیشنهادی</label>
-                <select name="reassign_user_id" id="reassign_user_id" class="form-control">
-                    <?php
-                    $users_sql = "SELECT id, username FROM users WHERE id != ?";
-                    if($stmt_users = mysqli_prepare($link, $users_sql)){
-                        mysqli_stmt_bind_param($stmt_users, "i", $user_id);
-                        mysqli_stmt_execute($stmt_users);
-                        $users_result = mysqli_stmt_get_result($stmt_users);
-                        while($user = mysqli_fetch_assoc($users_result)){
-                            echo "<option value='{$user['id']}'>".htmlspecialchars($user['username'])."</option>";
-                        }
-                        mysqli_stmt_close($stmt_users);
-                    }
-                    ?>
-                </select>
-            </div>
-            <div class="form-group" id="department_reassign_group" style="display: none;">
-                <label for="reassign_department_id">بخش پیشنهادی</label>
-                <select name="reassign_department_id" id="reassign_department_id" class="form-control">
-                    <?php
-                    $depts_sql = "SELECT id, department_name FROM departments";
-                    $depts_result = mysqli_query($link, $depts_sql);
-                    while($dept = mysqli_fetch_assoc($depts_result)){
-                        echo "<option value='{$dept['id']}'>".htmlspecialchars($dept['department_name'])."</option>";
-                    }
-                    ?>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="reassign_comment">دلیل و توضیحات</label>
-                <textarea name="reassign_comment" id="reassign_comment" class="form-control" rows="3" required></textarea>
-            </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">انصراف</button>
-          <button type="submit" name="request_reassignment" class="btn btn-primary">ارسال درخواست</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 
 <?php
 require_once "../includes/footer.php";

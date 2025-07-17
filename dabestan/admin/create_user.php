@@ -20,8 +20,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $username = trim($_POST["username"]);
         $password = trim($_POST["password"]);
         $first_name = trim($_POST["first_name"]);
-        $last_name = trim($_POST["last_name"]); // Last name is optional
-        $is_admin = 0; // is_admin is always 0 for new users
+        $last_name = trim($_POST["last_name"]);
+        $is_admin = isset($_POST['is_admin']) ? 1 : 0;
     }
 
     // Check if username is already taken

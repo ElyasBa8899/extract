@@ -13,14 +13,15 @@ $user_id = $_SESSION['id'];
 // Fetch tickets created by the user.
 // Fetch tickets created by the user OR assigned to the user.
 $tickets = [];
-$sql = "SELECT t.id, t.title, t.status, t.created_at, d.department_name
+$sql = "SELECT t.id, t.title, t.status, t.priority, t.created_at, d.department_name, u_assigned.username as assigned_username
         FROM tickets t
         LEFT JOIN departments d ON t.assigned_to_department_id = d.id
-        WHERE t.user_id = ?
+        LEFT JOIN users u_assigned ON t.assigned_to_user_id = u_assigned.id
+        WHERE t.user_id = ? OR t.assigned_to_user_id = ?
         ORDER BY t.created_at DESC";
 
 if($stmt = mysqli_prepare($link, $sql)){
-    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_bind_param($stmt, "ii", $user_id, $user_id);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     $tickets = mysqli_fetch_all($result, MYSQLI_ASSOC);
