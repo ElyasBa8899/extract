@@ -245,8 +245,8 @@ if ($user_id == $task['created_by']) {
                         <?php foreach ($reassignment_requests as $req): ?>
                             <div class="reassignment-request">
                                 <p>
-                                    کاربر <strong><?php echo htmlspecialchars($req['requester_name']); ?></strong> درخواست دارد این وظیفه به
-                                    <strong><?php echo $req['new_user_name'] ? htmlspecialchars($req['new_user_name']) : 'بخش ' . htmlspecialchars($req['new_department_name']); ?></strong>
+                                    کاربر <strong><?php echo htmlspecialchars($req['requested_by_username']); ?></strong> درخواست دارد این وظیفه به
+                                    <strong><?php echo $req['new_assignee_username'] ? htmlspecialchars($req['new_assignee_username']) : 'بخش ' . htmlspecialchars($req['new_department_name']); ?></strong>
                                     محول شود.
                                 </p>
                                 <p><strong>دلیل:</strong> <?php echo nl2br(htmlspecialchars($req['comment'])); ?></p>
