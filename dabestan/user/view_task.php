@@ -178,12 +178,26 @@ mysqli_stmt_close($stmt_history);
 // Fetch pending reassignment requests for this task if the current user is the creator
 $reassignment_requests = [];
 if ($user_id == $task['created_by']) {
-    $sql_reqs = "SELECT trr.*, u_requester.username as requester_name, u_new.username as new_user_name, d_new.department_name as new_department_name
-                 FROM task_reassignment_requests trr
-                 JOIN users u_requester ON trr.requested_by_id = u_requester.id
-                 LEFT JOIN users u_new ON trr.new_user_id = u_new.id
-                 LEFT JOIN departments d_new ON trr.new_department_id = d_new.id
-                 WHERE trr.task_id = ? AND trr.status = 'pending'";
+    $sql_reqs = "
+        SELECT
+            trr.id,
+            trr.comment,
+            trr.status,
+            trr.created_at,
+            requester.username AS requested_by_username,
+            approver.username AS requested_to_username,
+            new_assignee.username AS new_assignee_username
+        FROM
+            task_reassignment_requests AS trr
+        JOIN
+            users AS requester ON trr.requested_by_id = requester.id
+        JOIN
+            users AS approver ON trr.requested_to_id = approver.id
+        JOIN
+            users AS new_assignee ON trr.new_user_id = new_assignee.id
+        WHERE
+            trr.task_id = ? AND trr.status = 'pending'
+    ";
     if ($stmt_reqs = mysqli_prepare($link, $sql_reqs)) {
         mysqli_stmt_bind_param($stmt_reqs, "i", $task_id);
         mysqli_stmt_execute($stmt_reqs);
