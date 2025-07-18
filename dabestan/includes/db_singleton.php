@@ -6,26 +6,31 @@ function get_db_connection() {
 
     if ($pdo === null) {
         try {
-            // Check if the pdo_sqlite extension is loaded
-            if (!extension_loaded('pdo_sqlite')) {
-                throw new Exception("PDO SQLite extension is not loaded. Please enable it in your php.ini file.");
+            if (DB_TYPE === 'sqlite') {
+                if (!extension_loaded('pdo_sqlite')) {
+                    throw new Exception("PDO SQLite extension is not loaded. Please enable it in your php.ini file.");
+                }
+                $pdo = new PDO('sqlite:' . DB_PATH);
+                $pdo->exec('PRAGMA foreign_keys = ON;');
+            } elseif (DB_TYPE === 'mysql') {
+                if (!extension_loaded('pdo_mysql')) {
+                    throw new Exception("PDO MySQL extension is not loaded. Please enable it in your php.ini file.");
+                }
+                $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4';
+                $options = [
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES   => false,
+                ];
+                $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+            } else {
+                throw new Exception("Unsupported database type defined in config.php");
             }
 
-            $db_path = DB_PATH;
-            $pdo = new PDO(DB_TYPE . ':' . $db_path);
-
-            // Set error mode to exception
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-            // Set default fetch mode to associative array
             $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-            // Enable foreign key constraints for SQLite
-            $pdo->exec('PRAGMA foreign_keys = ON;');
-
         } catch (PDOException $e) {
-            // It's better to log this error than to display it directly
-            // For now, we'll die with a generic message
             error_log("Database Connection Error: " . $e->getMessage());
             die("ERROR: Could not connect to the database. Please check the server logs.");
         } catch (Exception $e) {

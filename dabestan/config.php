@@ -3,9 +3,11 @@
 define('TELEGRAM_BOT_TOKEN', '7726563483:AAF8TeGuly0SgloqO6CGVfUj5cBNyMXC8sk');
 
 // -- Database Configuration --
-// Using SQLite for simplicity and to avoid server installation issues.
-define('DB_TYPE', 'sqlite');
-define('DB_PATH', __DIR__ . '/dabestan_db.sqlite'); // Database file will be created in the same directory
+define('DB_TYPE', 'mysql');
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'dabestan_db');
+define('DB_USER', 'root');
+define('DB_PASS', '');
 
 // --- Task Notification Settings ---
 // How many days before a deadline to send a reminder to the assigned user.
