@@ -1,163 +1,142 @@
 <?php
 session_start();
-require_once "../includes/db.php";
-require_once "../includes/access_control.php";
+require_once "../includes/db_singleton.php";
 require_once "../includes/functions.php";
-
-require_permission('manage_inventory');
-
-$err = $success_msg = "";
-
-// Handle Add/Edit Item
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_item'])) {
-    $item_id = $_POST['item_id'];
-    $name = trim($_POST['name']);
-    $description = trim($_POST['description']);
-    $quantity = (int)$_POST['quantity'];
-    $category_id = $_POST['category_id'] ? (int)$_POST['category_id'] : null;
-
-    if (empty($name) || $quantity < 0) {
-        $err = "نام کالا و تعداد (عدد مثبت) الزامی است.";
-    } else {
-        if (empty($item_id)) { // Add new item
-            $sql = "INSERT INTO inventory_items (name, description, quantity, category_id) VALUES (?, ?, ?, ?)";
-            $stmt = mysqli_prepare($link, $sql);
-            mysqli_stmt_bind_param($stmt, "ssii", $name, $description, $quantity, $category_id);
-            $success_msg = "کالای جدید با موفقیت افزوده شد.";
-        } else { // Update existing item
-            $sql = "UPDATE inventory_items SET name = ?, description = ?, quantity = ?, category_id = ? WHERE id = ?";
-            $stmt = mysqli_prepare($link, $sql);
-            mysqli_stmt_bind_param($stmt, "ssiii", $name, $description, $quantity, $category_id, $item_id);
-            $success_msg = "کالا با موفقیت ویرایش شد.";
-        }
-
-        if (mysqli_stmt_execute($stmt)) {
-            // Success
-        } else {
-            $err = "خطا در ذخیره‌سازی کالا.";
-            $success_msg = "";
-        }
-        mysqli_stmt_close($stmt);
-    }
-}
-
-// Handle Delete Item
-if (isset($_GET['delete_id'])) {
-    $item_id_to_delete = $_GET['delete_id'];
-    // Optional: Check for dependencies (e.g., active rentals) before deleting
-    $sql = "DELETE FROM inventory_items WHERE id = ?";
-    $stmt = mysqli_prepare($link, $sql);
-    mysqli_stmt_bind_param($stmt, "i", $item_id_to_delete);
-    if (mysqli_stmt_execute($stmt)) {
-        $success_msg = "کالا با موفقیت حذف شد.";
-    } else {
-        $err = "خطا در حذف کالا.";
-    }
-    mysqli_stmt_close($stmt);
-}
-
-
-// Fetch items and categories
-$items_sql = "SELECT i.*, c.name as category_name FROM inventory_items i LEFT JOIN inventory_categories c ON i.category_id = c.id ORDER BY i.name ASC";
-$items_result = mysqli_query($link, $items_sql);
-
-$categories_sql = "SELECT * FROM inventory_categories ORDER BY name ASC";
-$categories_result = mysqli_query($link, $categories_sql);
-
 require_once "../includes/header.php";
+
+if (!is_admin()) { // permission: manage_inventory
+    header("Location: ../user/index.php");
+    exit();
+}
+
+$pdo = get_db_connection();
+$message = '';
+$error = '';
+
+// --- Category Actions ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
+    $category_name = trim($_POST['category_name']);
+    if (!empty($category_name)) {
+        $stmt = $pdo->prepare("INSERT INTO inventory_categories (name) VALUES (?)");
+        $stmt->execute([$category_name]);
+        $message = "دسته‌بندی جدید اضافه شد.";
+    }
+}
+
+// --- Item Actions ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_item'])) {
+    $item_name = trim($_POST['item_name']);
+    $category_id = $_POST['category_id'] ?: null;
+    $quantity = filter_var($_POST['quantity'], FILTER_VALIDATE_INT);
+
+    if (!empty($item_name) && $quantity !== false) {
+        $stmt = $pdo->prepare("INSERT INTO inventory_items (name, category_id, quantity) VALUES (?, ?, ?)");
+        $stmt->execute([$item_name, $category_id, $quantity]);
+        $message = "آیتم جدید به انبار اضافه شد.";
+    } else {
+        $error = "نام کالا و تعداد صحیح الزامی است.";
+    }
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_quantity'])) {
+    $item_id = $_POST['item_id'];
+    $new_quantity = filter_var($_POST['new_quantity'], FILTER_VALIDATE_INT);
+    if ($new_quantity !== false) {
+        $stmt = $pdo->prepare("UPDATE inventory_items SET quantity = ? WHERE id = ?");
+        $stmt->execute([$new_quantity, $item_id]);
+        $message = "موجودی کالا به‌روزرسانی شد.";
+    }
+}
+
+
+// --- Fetch Data ---
+$categories = $pdo->query("SELECT * FROM inventory_categories ORDER BY name")->fetchAll();
+$items = $pdo->query("
+    SELECT i.*, c.name as category_name
+    FROM inventory_items i
+    LEFT JOIN inventory_categories c ON i.category_id = c.id
+    ORDER BY c.name, i.name
+")->fetchAll();
+
 ?>
-
 <div class="page-content">
-    <h2><i class="fas fa-warehouse"></i> مدیریت انبار</h2>
+    <div class="container-fluid">
+        <h2>مدیریت انبار</h2>
+        <p>موجودی اقلام و دسته‌بندی‌های انبار را مدیریت کنید.</p>
 
-    <?php
-    if(!empty($err)){ echo '<div class="alert alert-danger">' . $err . '</div>'; }
-    if(!empty($success_msg)){ echo '<div class="alert alert-success">' . $success_msg . '</div>'; }
-    ?>
+        <?php if ($message): ?><div class="alert alert-success"><?php echo $message; ?></div><?php endif; ?>
+        <?php if ($error): ?><div class="alert alert-danger"><?php echo $error; ?></div><?php endif; ?>
 
-    <!-- Add/Edit Item Form -->
-    <div class="form-container" style="margin-bottom: 30px;">
-        <h3>افزودن/ویرایش کالا</h3>
-        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
-            <input type="hidden" name="item_id" id="item_id" value="">
-            <div class="form-group">
-                <label for="name">نام کالا</label>
-                <input type="text" name="name" id="name" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label for="description">توضیحات</label>
-                <textarea name="description" id="description" class="form-control" rows="2"></textarea>
-            </div>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="quantity">تعداد موجود</label>
-                        <input type="number" name="quantity" id="quantity" class="form-control" required min="0">
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="category_id">دسته‌بندی</label>
-                        <select name="category_id" id="category_id" class="form-control">
-                            <option value="">بدون دسته‌بندی</option>
-                            <?php while($cat = mysqli_fetch_assoc($categories_result)): ?>
-                                <option value="<?php echo $cat['id']; ?>"><?php echo htmlspecialchars($cat['name']); ?></option>
-                            <?php endwhile; ?>
-                        </select>
+        <div class="row">
+            <!-- Categories Management -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header"><h5>دسته‌بندی‌ها</h5></div>
+                    <div class="card-body">
+                        <form action="manage_inventory.php" method="post" class="input-group mb-3">
+                            <input type="text" name="category_name" class="form-control" placeholder="نام دسته‌بندی جدید" required>
+                            <div class="input-group-append">
+                                <button type="submit" name="add_category" class="btn btn-secondary">افزودن</button>
+                            </div>
+                        </form>
+                        <ul class="list-group">
+                            <?php foreach($categories as $category): ?>
+                                <li class="list-group-item"><?php echo htmlspecialchars($category['name']); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
                     </div>
                 </div>
             </div>
-            <div class="form-group">
-                <button type="submit" name="save_item" class="btn btn-primary">ذخیره</button>
-                <a href="manage_categories.php" class="btn btn-info">مدیریت دسته‌بندی‌ها</a>
-            </div>
-        </form>
-    </div>
 
-    <!-- List of Items -->
-    <div class="table-container">
-        <h3>لیست کالاهای موجود در انبار</h3>
-        <div class="table-responsive">
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>نام کالا</th>
-                        <th>دسته‌بندی</th>
-                        <th>تعداد</th>
-                        <th>توضیحات</th>
-                        <th>عملیات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php while($item = mysqli_fetch_assoc($items_result)): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($item['name']); ?></td>
-                        <td><?php echo htmlspecialchars($item['category_name'] ?? '---'); ?></td>
-                        <td><?php echo $item['quantity']; ?></td>
-                        <td><?php echo htmlspecialchars($item['description']); ?></td>
-                        <td>
-                            <button class="btn btn-sm btn-warning" onclick="editItem(<?php echo htmlspecialchars(json_encode($item)); ?>)">ویرایش</button>
-                            <a href="manage_inventory.php?delete_id=<?php echo $item['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('آیا مطمئن هستید؟')">حذف</a>
-                        </td>
-                    </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
+            <!-- Items Management -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header"><h5>افزودن کالای جدید</h5></div>
+                    <div class="card-body">
+                        <form action="manage_inventory.php" method="post">
+                            <div class="row">
+                                <div class="col-md-5 form-group"><input type="text" name="item_name" class="form-control" placeholder="نام کالا" required></div>
+                                <div class="col-md-4 form-group">
+                                    <select name="category_id" class="form-control">
+                                        <option value="">بدون دسته‌بندی</option>
+                                        <?php foreach($categories as $category): ?>
+                                            <option value="<?php echo $category['id']; ?>"><?php echo htmlspecialchars($category['name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 form-group"><input type="number" name="quantity" class="form-control" placeholder="تعداد اولیه" required></div>
+                            </div>
+                            <button type="submit" name="add_item" class="btn btn-primary">افزودن به انبار</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card mt-3">
+                    <div class="card-header"><h5>لیست موجودی انبار</h5></div>
+                    <div class="card-body">
+                         <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead><tr><th>کالا</th><th>دسته‌بندی</th><th>موجودی فعلی</th><th>به‌روزرسانی موجودی</th></tr></thead>
+                                <tbody>
+                                    <?php foreach($items as $item): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($item['name']); ?></td>
+                                        <td><?php echo htmlspecialchars($item['category_name'] ?? '---'); ?></td>
+                                        <td><strong><?php echo $item['quantity']; ?></strong></td>
+                                        <td>
+                                            <form action="manage_inventory.php" method="post" class="form-inline">
+                                                <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
+                                                <input type="number" name="new_quantity" class="form-control form-control-sm" style="width: 80px;" value="<?php echo $item['quantity']; ?>">
+                                                <button type="submit" name="update_quantity" class="btn btn-sm btn-info">ثبت</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-
-<script>
-function editItem(item) {
-    document.getElementById('item_id').value = item.id;
-    document.getElementById('name').value = item.name;
-    document.getElementById('description').value = item.description;
-    document.getElementById('quantity').value = item.quantity;
-    document.getElementById('category_id').value = item.category_id || '';
-    window.scrollTo(0, 0); // Scroll to top to see the form
-}
-</script>
-
-<?php
-require_once "../includes/footer.php";
-?>
+<?php require_once "../includes/footer.php"; ?>

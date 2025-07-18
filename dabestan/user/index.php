@@ -1,73 +1,58 @@
 <?php
 session_start();
 require_once "../includes/db_singleton.php";
-$link = get_db_connection();
 require_once "../includes/functions.php";
-require_once "../includes/header.php";
 
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: ../index.php");
     exit;
 }
+if ($_SESSION['is_admin']) {
+    header("location: ../admin/index.php");
+    exit;
+}
 
+$pdo = get_db_connection();
 $user_id = $_SESSION['id'];
 
 // Fetch data for dashboard widgets
-// 1. Open Tickets Count
-$open_tickets_count_query = "SELECT COUNT(*) as count FROM tickets WHERE (user_id = ? OR assigned_to_user_id = ?) AND status != 'closed'";
-$stmt_tickets = mysqli_prepare($link, $open_tickets_count_query);
-mysqli_stmt_bind_param($stmt_tickets, "ii", $user_id, $user_id);
-mysqli_stmt_execute($stmt_tickets);
-$open_tickets_count = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_tickets))['count'];
-mysqli_stmt_close($stmt_tickets);
+$stmt_tickets = $pdo->prepare("SELECT COUNT(*) FROM tickets WHERE (user_id = ? OR assigned_to_user_id = ?) AND status != 'closed'");
+$stmt_tickets->execute([$user_id, $user_id]);
+$open_tickets_count = $stmt_tickets->fetchColumn();
 
+$stmt_tasks = $pdo->prepare("SELECT COUNT(*) FROM tasks t JOIN task_assignments ta ON t.id = ta.task_id WHERE ta.assigned_to_user_id = ? AND t.status IN ('pending', 'in_progress')");
+$stmt_tasks->execute([$user_id]);
+$pending_tasks_count = $stmt_tasks->fetchColumn();
 
-// 2. Pending Tasks Count
-$pending_tasks_count_query = "SELECT COUNT(*) as count FROM tasks t JOIN task_assignments ta ON t.id = ta.task_id WHERE ta.assigned_to_user_id = ? AND t.status IN ('pending', 'in_progress')";
-$stmt_tasks = mysqli_prepare($link, $pending_tasks_count_query);
-mysqli_stmt_bind_param($stmt_tasks, "i", $user_id);
-mysqli_stmt_execute($stmt_tasks);
-$pending_tasks_count = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_tasks))['count'];
-mysqli_stmt_close($stmt_tasks);
+$stmt_finance = $pdo->prepare("
+    SELECT
+        (SELECT COALESCE(SUM(amount), 0) FROM booklet_transactions WHERE user_id = :user_id AND transaction_type = 'credit') -
+        (SELECT COALESCE(SUM(amount), 0) FROM booklet_transactions WHERE user_id = :user_id AND transaction_type = 'debit')
+    AS balance
+");
+$stmt_finance->execute([':user_id' => $user_id]);
+$balance = $stmt_finance->fetchColumn();
 
+$stmt_recent_tasks = $pdo->prepare("
+    SELECT t.id, t.title, t.priority, t.status, t.deadline
+    FROM tasks t
+    JOIN task_assignments ta ON t.id = ta.task_id
+    WHERE ta.assigned_to_user_id = ?
+    ORDER BY t.created_at DESC
+    LIMIT 5
+");
+$stmt_recent_tasks->execute([$user_id]);
+$recent_tasks = $stmt_recent_tasks->fetchAll();
 
-// 3. Financial Balance
-$balance = 0;
-$sql_finance = "SELECT (SELECT COALESCE(SUM(amount), 0) FROM booklet_transactions WHERE user_id = ? AND transaction_type = 'credit') - (SELECT COALESCE(SUM(amount), 0) FROM booklet_transactions WHERE user_id = ? AND transaction_type = 'debit') AS balance";
-if($stmt_finance = mysqli_prepare($link, $sql_finance)){
-    mysqli_stmt_bind_param($stmt_finance, "ii", $user_id, $user_id);
-    mysqli_stmt_execute($stmt_finance);
-    $result_finance = mysqli_stmt_get_result($stmt_finance);
-    $balance_row = mysqli_fetch_assoc($result_finance);
-    $balance = $balance_row['balance'];
-    mysqli_stmt_close($stmt_finance);
-}
-
-// 4. Fetch Recent Tasks
-$recent_tasks_query = "SELECT t.id, t.title, t.priority, t.status, t.deadline
-                       FROM tasks t
-                       JOIN task_assignments ta ON t.id = ta.task_id
-                       WHERE ta.assigned_to_user_id = ?
-                       ORDER BY t.created_at DESC
-                       LIMIT 5";
-$stmt_recent_tasks = mysqli_prepare($link, $recent_tasks_query);
-mysqli_stmt_bind_param($stmt_recent_tasks, "i", $user_id);
-mysqli_stmt_execute($stmt_recent_tasks);
-$recent_tasks_result = mysqli_stmt_get_result($stmt_recent_tasks);
-$recent_tasks = mysqli_fetch_all($recent_tasks_result, MYSQLI_ASSOC);
-mysqli_stmt_close($stmt_recent_tasks);
-
-
-// 5. Quick Links
 $quick_links = [
     ['url' => 'new_ticket.php', 'icon' => 'plus-circle', 'label' => 'تیکت جدید'],
     ['url' => 'my_tasks.php', 'icon' => 'briefcase', 'label' => 'وظایف من'],
-    ['url' => 'self_assessment_form.php', 'icon' => 'edit-3', 'label' => 'فرم خوداظهاری'],
+    ['url' => 'fill_form.php', 'icon' => 'edit-3', 'label' => 'تکمیل فرم'],
     ['url' => 'my_financial_status.php', 'icon' => 'dollar-sign', 'label' => 'وضعیت مالی']
 ];
 
+require_once "../includes/header.php";
 ?>
-
 <div class="page-content">
     <div class="container-fluid">
         <div class="dashboard-header">
@@ -107,13 +92,7 @@ $quick_links = [
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
-                                    <tr>
-                                        <th>عنوان</th>
-                                        <th>اولویت</th>
-                                        <th>وضعیت</th>
-                                        <th>مهلت</th>
-                                        <th></th>
-                                    </tr>
+                                    <tr><th>عنوان</th><th>اولویت</th><th>وضعیت</th><th>مهلت</th><th></th></tr>
                                 </thead>
                                 <tbody>
                                     <?php if (empty($recent_tasks)): ?>
@@ -124,7 +103,7 @@ $quick_links = [
                                                 <td><?php echo htmlspecialchars($task['title']); ?></td>
                                                 <td><?php echo get_priority_badge_view($task['priority']); ?></td>
                                                 <td><?php echo get_status_badge_view($task['status']); ?></td>
-                                                <td><?php echo (!empty($task['deadline']) && $task['deadline'] != '0000-00-00 00:00:00') ? to_persian_date($task['deadline'], 'Y/m/d') : 'ندارد'; ?></td>
+                                                <td><?php echo to_persian_date($task['deadline']); ?></td>
                                                 <td><a href="view_task.php?id=<?php echo $task['id']; ?>" class="btn btn-sm btn-light">مشاهده</a></td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -137,9 +116,7 @@ $quick_links = [
             </div>
             <div class="col-lg-4">
                  <div class="widget">
-                    <div class="widget-header">
-                        <h5><i data-feather="link"></i> دسترسی سریع</h5>
-                    </div>
+                    <div class="widget-header"><h5><i data-feather="link"></i> دسترسی سریع</h5></div>
                     <div class="widget-body">
                         <div class="quick-links-grid">
                              <?php foreach ($quick_links as $link_item): ?>
@@ -155,7 +132,6 @@ $quick_links = [
         </div>
     </div>
 </div>
-
 <style>
 .dashboard-header { margin-bottom: 2rem; }
 .dashboard-header h1 { font-weight: 700; }
@@ -168,9 +144,7 @@ $quick_links = [
 .quick-link-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); color: var(--primary-color); }
 .quick-link-card i { width: 24px; height: 24px; margin-bottom: 0.5rem; }
 .quick-link-card span { font-weight: 500; font-size: 0.9em; }
-.table-hover tbody tr:hover { background-color: #f8f9fa; }
 </style>
-
 <?php
 require_once "../includes/footer.php";
 ?>

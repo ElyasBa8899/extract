@@ -1,124 +1,151 @@
 <?php
 session_start();
-require_once "../includes/db.php";
+require_once "../includes/db_singleton.php";
+require_once "../includes/functions.php";
+require_once "../includes/header.php";
 
-if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]) {
-    header("location: ../index.php");
-    exit;
+if (!is_admin()) {
+    header("Location: ../user/index.php");
+    exit();
 }
 
-$err = $success_msg = "";
+$pdo = get_db_connection();
+$message = '';
+$error = '';
 
-// Handle Add Region POST Request
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_region'])) {
+// Handle form submission for adding/editing a region
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['region_name'])) {
     $region_name = trim($_POST['region_name']);
+    $description = trim($_POST['description']);
+    $region_id = isset($_POST['region_id']) ? $_POST['region_id'] : null;
 
     if (empty($region_name)) {
-        $err = "نام منطقه نمی‌تواند خالی باشد.";
+        $error = "نام منطقه نمی‌تواند خالی باشد.";
     } else {
-        $sql = "INSERT INTO regions (name, created_by) VALUES (?, ?)";
-        if ($stmt = mysqli_prepare($link, $sql)) {
-            mysqli_stmt_bind_param($stmt, "si", $region_name, $_SESSION['id']);
-            if (mysqli_stmt_execute($stmt)) {
-                $success_msg = "منطقه جدید با موفقیت اضافه شد.";
+        try {
+            if ($region_id) {
+                $stmt = $pdo->prepare("UPDATE regions SET name = ?, description = ? WHERE id = ?");
+                $stmt->execute([$region_name, $description, $region_id]);
+                $message = "منطقه با موفقیت ویرایش شد.";
             } else {
-                $err = "خطا در افزودن منطقه.";
+                $stmt = $pdo->prepare("INSERT INTO regions (name, description) VALUES (?, ?)");
+                $stmt->execute([$region_name, $description]);
+                $message = "منطقه جدید با موفقیت اضافه شد.";
             }
-            mysqli_stmt_close($stmt);
+        } catch (PDOException $e) {
+            $error = "خطا در ثبت اطلاعات: " . $e->getMessage();
         }
     }
 }
 
-// Handle Delete Region Request
-if (isset($_GET['delete_region'])) {
-    $region_to_delete = $_GET['delete_region'];
-    // We should add a check here to ensure no students are assigned to this region before deleting.
-    // For now, we'll just delete it.
-    $sql = "DELETE FROM regions WHERE id = ?";
-    if($stmt = mysqli_prepare($link, $sql)){
-        mysqli_stmt_bind_param($stmt, "i", $region_to_delete);
-        if(mysqli_stmt_execute($stmt)){
-            $success_msg = "منطقه با موفقیت حذف شد.";
-        } else {
-            $err = "خطا در حذف منطقه. ممکن است دانش‌آموزانی به این منطقه تخصیص داده شده باشند.";
-        }
-        mysqli_stmt_close($stmt);
+// Handle region deletion
+if (isset($_GET['delete'])) {
+    $region_id = $_GET['delete'];
+    try {
+        $stmt = $pdo->prepare("DELETE FROM regions WHERE id = ?");
+        $stmt->execute([$region_id]);
+        $message = "منطقه با موفقیت حذف شد.";
+    } catch (PDOException $e) {
+        $error = "خطا در حذف منطقه: " . $e->getMessage();
     }
 }
 
-// Fetch all existing regions with student and class counts
-$regions = [];
-$sql = "
-    SELECT
-        r.id,
-        r.name,
-        (SELECT COUNT(*) FROM recruited_students WHERE region_id = r.id) as student_count,
-        (SELECT GROUP_CONCAT(class_name SEPARATOR ', ') FROM classes WHERE region_id = r.id AND status = 'active') as active_classes
-    FROM regions r
-    ORDER BY r.name ASC
-";
-if($result = mysqli_query($link, $sql)){
-    $regions = mysqli_fetch_all($result, MYSQLI_ASSOC);
+// Fetch all regions to display
+try {
+    $regions_stmt = $pdo->query("SELECT * FROM regions ORDER BY name");
+    $regions = $regions_stmt->fetchAll();
+} catch (PDOException $e) {
+    $error = "خطا در دریافت لیست مناطق: " . $e->getMessage();
+    $regions = [];
 }
-// Note: mysqli_close($link) is removed from here to be at the end of the script.
 
-require_once "../includes/header.php";
+// Fetch a single region for editing
+$edit_region = null;
+if (isset($_GET['edit'])) {
+    $edit_id = $_GET['edit'];
+    $stmt = $pdo->prepare("SELECT * FROM regions WHERE id = ?");
+    $stmt->execute([$edit_id]);
+    $edit_region = $stmt->fetch();
+}
+
 ?>
 
 <div class="page-content">
-    <h2>مدیریت مناطق</h2>
-    <p>در این بخش، مناطق جغرافیایی و دانش‌آموزان جذب شده را مدیریت کنید.</p>
+    <div class="container-fluid">
+        <h2>مدیریت مناطق</h2>
+        <p>در این بخش می‌توانید مناطق جغرافیایی را برای دسته‌بندی دانش‌آموزان جذب شده، تعریف کنید.</p>
 
-    <?php
-    if(!empty($err)){ echo '<div class="alert alert-danger">' . $err . '</div>'; }
-    if(!empty($success_msg)){ echo '<div class="alert alert-success">' . $success_msg . '</div>'; }
-    ?>
+        <?php if ($message): ?>
+            <div class="alert alert-success"><?php echo $message; ?></div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert alert-danger"><?php echo $error; ?></div>
+        <?php endif; ?>
 
-    <!-- Create New Region Section -->
-    <div class="form-container" style="margin-bottom: 30px;">
-        <h3>افزودن منطقه جدید</h3>
-        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
-            <div class="form-group">
-                <label for="region_name">نام منطقه</label>
-                <input type="text" name="region_name" id="region_name" class="form-control" required>
+        <div class="card">
+            <div class="card-header">
+                <h5><?php echo $edit_region ? 'ویرایش منطقه' : 'افزودن منطقه جدید'; ?></h5>
             </div>
-            <div class="form-group">
-                <input type="submit" name="add_region" class="btn btn-primary" value="افزودن منطقه">
-            </div>
-        </form>
-    </div>
-
-    <!-- List of Existing Regions -->
-    <div class="table-container">
-        <h3>لیست مناطق</h3>
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>نام منطقه</th>
-                        <th>تعداد دانش‌آموزان جذب شده</th>
-                        <th>کلاس‌های فعال در منطقه</th>
-                        <th>عملیات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($regions)): ?>
-                        <tr><td colspan="4">هیچ منطقه‌ای تاکنون تعریف نشده است.</td></tr>
-                    <?php else: ?>
-                        <?php foreach ($regions as $region): ?>
-                            <tr>
-                                <td><strong><?php echo htmlspecialchars($region['name']); ?></strong></td>
-                                <td><?php echo $region['student_count']; ?></td>
-                                <td><?php echo htmlspecialchars($region['active_classes'] ?? '---'); ?></td>
-                                <td>
-                                    <a href="view_region_students.php?region_id=<?php echo $region['id']; ?>" class="btn btn-sm btn-info">مشاهده دانش‌آموزان</a>
-                                    <a href="manage_regions.php?delete_region=<?php echo $region['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('آیا از حذف این منطقه مطمئن هستید؟')">حذف</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+            <div class="card-body">
+                <form action="manage_regions.php" method="post">
+                    <?php if ($edit_region): ?>
+                        <input type="hidden" name="region_id" value="<?php echo htmlspecialchars($edit_region['id']); ?>">
                     <?php endif; ?>
-                </tbody>
-            </table>
+                    <div class="form-group">
+                        <label for="region_name">نام منطقه</label>
+                        <input type="text" id="region_name" name="region_name" class="form-control" value="<?php echo htmlspecialchars($edit_region['name'] ?? ''); ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">توضیحات</label>
+                        <textarea id="description" name="description" class="form-control"><?php echo htmlspecialchars($edit_region['description'] ?? ''); ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary"><?php echo $edit_region ? 'ذخیره تغییرات' : 'افزودن منطقه'; ?></button>
+                        <?php if ($edit_region): ?>
+                            <a href="manage_regions.php" class="btn btn-secondary">انصراف</a>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>لیست مناطق موجود</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>نام منطقه</th>
+                                <th>توضیحات</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($regions)): ?>
+                                <tr>
+                                    <td colspan="3" class="text-center">هیچ منطقه‌ای تعریف نشده است.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($regions as $region): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($region['name']); ?></td>
+                                        <td><?php echo htmlspecialchars($region['description']); ?></td>
+                                        <td>
+                                            <a href="manage_regions.php?edit=<?php echo $region['id']; ?>" class="btn btn-sm btn-info">ویرایش</a>
+                                            <a href="manage_regions.php?delete=<?php echo $region['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('آیا از حذف این منطقه مطمئن هستید؟');">حذف</a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>

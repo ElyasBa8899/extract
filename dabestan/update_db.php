@@ -1,124 +1,59 @@
 <?php
-session_start();
-require_once "includes/db.php"; // Ensure you have your DB connection details here
+require_once __DIR__ . '/includes/db_singleton.php';
 
-// --- Security Check: Only Admins can run this ---
-if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]) {
-    header("location: index.php");
-    exit;
+// Path to the SQLite database file
+$db_path = DB_PATH;
+
+// If the database file already exists, delete it to start fresh
+if (file_exists($db_path)) {
+    unlink($db_path);
+    echo "Existing database file deleted.<br>";
 }
 
-$page_title = "به‌روزرسانی پایگاه داده";
-require_once "includes/header.php";
+// Get the database connection (this will create the file)
+$pdo = get_db_connection();
 
-// Array of update files in the correct order
-$update_files = [
-    'database_update.sql',
-    'database_update_v2.sql',
-    'database_update_v3.sql',
-    'database_update_v4.sql',
-    'database_update_v5.sql'
-    // Add new update files here in the future
-];
+// Read the SQL file using an absolute path
+$sql_file = __DIR__ . '/final_database.sql';
+$sql = file_get_contents($sql_file);
 
-$success_messages = [];
-$error_messages = [];
+if ($sql === false) {
+    die("Error: Unable to read the SQL file at '{$sql_file}'.");
+}
 
-// --- Check and create schema_migrations table if it doesn't exist ---
-$check_table_sql = "SHOW TABLES LIKE 'schema_migrations'";
-$table_exists_result = mysqli_query($link, $check_table_sql);
-if (mysqli_num_rows($table_exists_result) == 0) {
-    $create_table_sql = "
-        CREATE TABLE `schema_migrations` (
-          `version` varchar(255) NOT NULL,
-          `applied_at` timestamp NOT NULL DEFAULT current_timestamp(),
-          PRIMARY KEY (`version`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;";
-    if (mysqli_query($link, $create_table_sql)) {
-        $success_messages[] = "جدول `schema_migrations` با موفقیت ایجاد شد.";
-    } else {
-        $error_messages[] = "خطا در ایجاد جدول `schema_migrations`: " . mysqli_error($link);
+// Simplified cleanup for SQLite compatibility
+$sql = preg_replace('/--.*$/m', '', $sql); // Remove SQL comments
+$sql = preg_replace('/SET .*;/m', '', $sql);
+$sql = preg_replace('/START TRANSACTION;/m', '', $sql);
+$sql = preg_replace('/COMMIT;/m', '', $sql);
+$sql = preg_replace('/ENGINE\s*=\s*\w+/i', '', $sql);
+$sql = preg_replace('/COLLATE\s*=\s*\w+/i', '', $sql);
+$sql = preg_replace('/`/', '', $sql);
+$sql = preg_replace('/unsigned /i', ' ', $sql);
+$sql = preg_replace('/ON UPDATE CURRENT_TIMESTAMP/i', '', $sql);
+
+// Convert AUTO_INCREMENT to SQLite's format
+// This is still a tricky part, as SQLite's AUTOINCREMENT is a bit different.
+// It must be on an "INTEGER PRIMARY KEY" column.
+$sql = preg_replace('/int\(\d+\)\s+NOT NULL\s+AUTO_INCREMENT/i', 'INTEGER PRIMARY KEY AUTOINCREMENT', $sql);
+
+
+// Split into individual statements
+$statements = explode(';', $sql);
+
+// Execute each statement
+foreach ($statements as $statement) {
+    if (trim($statement) == '') {
+        continue;
+    }
+    try {
+        $pdo->exec($statement);
+    } catch (PDOException $e) {
+        echo "Error executing statement: " . $e->getMessage() . "<br>";
+        echo "Statement: <pre>" . htmlspecialchars($statement) . "</pre><br>";
     }
 }
 
-// --- Process each update file ---
-foreach ($update_files as $file) {
-    // Check if this version has already been applied
-    $version = mysqli_real_escape_string($link, $file);
-    $check_version_sql = "SELECT version FROM schema_migrations WHERE version = '$version'";
-    $version_result = mysqli_query($link, $check_version_sql);
+echo "Database structure updated successfully from '{$sql_file}'.";
 
-    if (mysqli_num_rows($version_result) > 0) {
-        $success_messages[] = "به‌روزرسانی '{$file}' قبلاً اعمال شده است. (نادیده گرفته شد)";
-        continue; // Skip to the next file
-    }
-
-    if (file_exists($file)) {
-        $sql_content = file_get_contents($file);
-        // Split SQL file into individual queries
-        $queries = preg_split('/;(\r\n|\n|\r)/', $sql_content, -1, PREG_SPLIT_NO_EMPTY);
-
-        $all_queries_successful = true;
-        foreach ($queries as $query) {
-            $query = trim($query);
-            if (!empty($query)) {
-                if (mysqli_query($link, $query)) {
-                    // Query was successful
-                } else {
-                    // If one query fails, stop processing this file
-                    $error_messages[] = "خطا در اجرای بخشی از '{$file}': " . mysqli_error($link) . "<br><pre>{$query}</pre>";
-                    $all_queries_successful = false;
-                    break;
-                }
-            }
-        }
-
-        // If all queries in the file were successful, record the version
-        if ($all_queries_successful) {
-            $success_messages[] = "فایل '{$file}' با موفقیت اجرا شد.";
-            $record_version_sql = "INSERT INTO schema_migrations (version) VALUES ('$version')";
-            mysqli_query($link, $record_version_sql);
-        }
-
-    } else {
-        $error_messages[] = "فایل به‌روزرسانی '{$file}' یافت نشد.";
-    }
-}
-
-?>
-
-<div class="page-content">
-    <h2><i class="fas fa-database"></i> نتیجه به‌روزرسانی پایگاه داده</h2>
-
-    <?php if (!empty($success_messages)): ?>
-        <div class="alert alert-success">
-            <h4><i class="fas fa-check-circle"></i> موفقیت‌آمیز</h4>
-            <ul>
-                <?php foreach ($success_messages as $msg): ?>
-                    <li><?php echo $msg; ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    <?php endif; ?>
-
-    <?php if (!empty($error_messages)): ?>
-        <div class="alert alert-danger">
-            <h4><i class="fas fa-times-circle"></i> خطاها</h4>
-            <ul>
-                <?php foreach ($error_messages as $msg): ?>
-                    <li><?php echo $msg; ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    <?php else: ?>
-         <div class="alert alert-info">
-            <p>تمام به‌روزرسانی‌های لازم با موفقیت بررسی و اعمال شدند. پایگاه داده شما به‌روز است.</p>
-        </div>
-    <?php endif; ?>
-
-    <a href="admin/index.php" class="btn btn-primary">بازگشت به پنل مدیریت</a>
-</div>
-
-<?php
-require_once "includes/footer.php";
 ?>

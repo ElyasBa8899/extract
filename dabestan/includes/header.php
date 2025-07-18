@@ -1,16 +1,12 @@
 <?php
-// This file is included in other files, so session_start() and other requires should be in the parent.
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
-if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
-    header("location: /dabestan/index.php");
-    exit;
-}
-// Ensure access control functions are available
-if (!function_exists('has_permission')) {
-    require_once __DIR__ . "/access_control.php";
-}
+$is_logged_in = isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true;
+$is_admin_user = $is_logged_in && isset($_SESSION['is_admin']) && $_SESSION['is_admin'];
+
+// Determine the base path to correctly link assets
+$base_path = strpos($_SERVER['REQUEST_URI'], '/admin/') !== false || strpos($_SERVER['REQUEST_URI'], '/user/') !== false ? '../' : './';
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -18,143 +14,64 @@ if (!function_exists('has_permission')) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سامانه دبستان</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/dabestan/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo $base_path; ?>assets/css/style.css?v=<?php echo time(); ?>">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://unpkg.com/jmoment/jmoment.min.js"></script>
+
 </head>
 <body>
+
+<?php if ($is_logged_in): ?>
     <div class="sidebar">
         <div class="sidebar-header">
-            <h3>دبستان</h3>
+            <h3>سامانه دبستان</h3>
         </div>
-        <ul class="nav-links">
-            <li><a href="/dabestan/user/index.php"><i data-feather="home"></i><span>داشبورد</span></a></li>
-
-            <?php if(has_permission('manage_users')): ?>
-                <li class="has-submenu">
-                    <a href="#"><i data-feather="settings"></i><span>مدیریت سیستم</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                    <ul class="submenu">
-                        <li><a href="/dabestan/admin/manage_users.php"><span>کاربران</span></a></li>
-                        <li><a href="/dabestan/admin/manage_roles.php"><span>نقش‌ها</span></a></li>
-                        <li><a href="/dabestan/admin/manage_departments.php"><span>بخش‌ها</span></a></li>
-                        <li><a href="/dabestan/admin/manage_classes.php"><span>کلاس‌ها</span></a></li>
-                        <li><a href="/dabestan/admin/manage_forms.php"><span>فرم‌ها</span></a></li>
-                        <li><a href="/dabestan/admin/manage_tasks.php"><span>وظایف</span></a></li>
-                    </ul>
-                </li>
-            <?php endif; ?>
-
-            <?php if(has_permission('view_department_menu')): // A new permission to see these menus ?>
-                <!-- New Structure based on Departments -->
-                <li class="has-submenu">
-                    <a href="#"><i data-feather="eye"></i><span>نظارت</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                    <ul class="submenu">
-                        <li><a href="/dabestan/admin/view_all_assessments.php"><span>مشاهده خوداظهاری‌ها</span></a></li>
-                        <!-- Add link to visitor form -->
-                        <!-- Add link to analysis page -->
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#"><i data-feather="gift"></i><span>پرورشی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                    <ul class="submenu">
-                        <li><a href="/dabestan/user/class_event_reports.php"><span>گزارش خدمت‌گزاری‌ها</span></a></li>
-                        <li><a href="/dabestan/admin/manage_general_events.php"><span>پروژه‌های عمومی</span></a></li>
-                        <li><a href="/dabestan/user/rental_items.php"><span>کرایه‌چی</span></a></li>
-                    </ul>
-                </li>
-                 <li class="has-submenu">
-                    <a href="#"><i data-feather="users"></i><span>اولیا</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                    <ul class="submenu">
-                         <li><a href="/dabestan/user/manage_parent_meetings.php"><span>جلسات اولیا</span></a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#"><i data-feather-cpu></i><span>ضمن خدمت</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                    <ul class="submenu">
-                         <li><a href="/dabestan/user/manage_meetings.php"><span>جلسات ضمن خدمت</span></a></li>
-                    </ul>
-                </li>
-                 <li class="has-submenu">
-                    <a href="#"><i data-feather="crosshair"></i><span>جذب و راه‌اندازی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                    <ul class="submenu">
-                         <li><a href="/dabestan/admin/manage_regions.php"><span>مدیریت مناطق</span></a></li>
-                         <!-- Add link to recruited students list -->
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#"><i data-feather="dollar-sign"></i><span>مالی و پشتیبانی</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                    <ul class="submenu">
-                        <?php if(has_permission('manage_inventory')): ?>
-                            <li><a href="/dabestan/admin/manage_categories.php"><span>دسته‌بندی انبار</span></a></li>
-                            <li><a href="/dabestan/admin/manage_inventory.php"><span>اقلام انبار</span></a></li>
-                        <?php endif; ?>
-                        <?php if(has_permission('manage_financials')): ?>
-                            <li><a href="/dabestan/admin/manage_booklets.php"><span>مدیریت جزوات</span></a></li>
-                            <li><a href="/dabestan/user/financial_transactions.php"><span>ثبت تراکنش مالی</span></a></li>
-                        <?php endif; ?>
-                        <li><a href="/dabestan/user/my_financial_status.php"><span>وضعیت حساب من</span></a></li>
-                    </ul>
-                </li>
-            <?php endif; ?>
-
-
-
-            <li class="has-submenu">
-                <a href="#"><i data-feather="message-square"></i><span>ارتباطات</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                <ul class="submenu">
-                    <?php if(has_permission('submit_ticket')): ?>
-                        <li><a href="/dabestan/user/new_ticket.php"><span>ایجاد تیکت جدید</span></a></li>
-                    <?php endif; ?>
-                    <li><a href="/dabestan/user/my_tickets.php"><span>تیکت‌های من</span></a></li>
-                </ul>
-            </li>
-
-            <li class="has-submenu">
-                <a href="#"><i data-feather="briefcase"></i><span>وظایف</span><i class="submenu-arrow" data-feather="chevron-left"></i></a>
-                <ul class="submenu">
-                    <?php if(has_permission('manage_tasks')): ?>
-                        <li><a href="/dabestan/admin/manage_tasks.php"><span>ایجاد وظیفه جدید</span></a></li>
-                    <?php endif; ?>
-                    <li><a href="/dabestan/user/my_tasks.php"><span>وظایف من</span></a></li>
-                </ul>
-            </li>
-
-            <li class="nav-section-title"><span>ابزارها</span></li>
-            <li><a href="/dabestan/user/my_classes.php"><i data-feather="book-open"></i><span>مدیریت کلاس‌های من</span></a></li>
-            <li><a href="/dabestan/user/self_assessment_form.php"><i data-feather="edit-3"></i><span>فرم خوداظهاری</span></a></li>
-
-            <li class="nav-section-title"><span>پروفایل</span></li>
-            <li><a href="/dabestan/user/my_settings.php"><i data-feather="tool"></i><span>تنظیمات</span></a></li>
-            <li><a href="/dabestan/logout.php"><i data-feather="log-out"></i><span>خروج</span></a></li>
-        </ul>
+        <nav class="sidebar-nav">
+            <ul>
+                <?php if ($is_admin_user): ?>
+                    <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>"><a href="<?php echo $base_path; ?>admin/index.php"><i data-feather="home"></i> داشبورد</a></li>
+                    <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'manage_users.php' ? 'active' : ''; ?>"><a href="<?php echo $base_path; ?>admin/manage_users.php"><i data-feather="users"></i> مدیریت کاربران</a></li>
+                    <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'manage_roles.php' ? 'active' : ''; ?>"><a href="<?php echo $base_path; ?>admin/manage_roles.php"><i data-feather="shield"></i> مدیریت نقش‌ها</a></li>
+                    <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'manage_permissions.php' ? 'active' : ''; ?>"><a href="<?php echo $base_path; ?>admin/manage_permissions.php"><i data-feather="key"></i> مدیریت مجوزها</a></li>
+                    <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'manage_forms.php' ? 'active' : ''; ?>"><a href="<?php echo $base_path; ?>admin/manage_forms.php"><i data-feather="file-text"></i> مدیریت فرم‌ها</a></li>
+                    <li><hr style="border-color: #555;"></li>
+                <?php else: ?>
+                    <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>"><a href="<?php echo $base_path; ?>user/index.php"><i data-feather="home"></i> داشبورد</a></li>
+                    <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'my_tasks.php' ? 'active' : ''; ?>"><a href="<?php echo $base_path; ?>user/my_tasks.php"><i data-feather="briefcase"></i> وظایف من</a></li>
+                    <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'my_tickets.php' ? 'active' : ''; ?>"><a href="<?php echo $base_path; ?>user/my_tickets.php"><i data-feather="message-square"></i> تیکت‌های من</a></li>
+                    <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'self_assessment_form.php' ? 'active' : ''; ?>"><a href="<?php echo $base_path; ?>user/self_assessment_form.php"><i data-feather="edit-3"></i> فرم خوداظهاری</a></li>
+                    <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'my_financial_status.php' ? 'active' : ''; ?>"><a href="<?php echo $base_path; ?>user/my_financial_status.php"><i data-feather="dollar-sign"></i> وضعیت مالی</a></li>
+                <?php endif; ?>
+                <li><a href="<?php echo $base_path; ?>logout.php"><i data-feather="log-out"></i> خروج</a></li>
+            </ul>
+        </nav>
     </div>
+
     <div class="main-content">
-        <header>
+        <header class="page-header">
             <div class="header-left">
-                 <button class="menu-toggle" id="menu-toggle"><i data-feather="menu"></i></button>
-                 <div id="datetime">
-                    <span id="date"></span>
-                    <span id="time"></span>
+                <button class="hamburger-menu">
+                    <i data-feather="menu"></i>
+                </button>
+                <div class="datetime-container">
+                    <span id="persian-date"></span> | <span id="persian-time"></span>
                 </div>
             </div>
             <div class="header-right">
-                <div class="header-notifications">
-                    <div class="notification-icon" id="notification-icon">
-                        <i data-feather="bell"></i>
-                        <span class="notification-count" id="notification-count"></span>
-                    </div>
-                    <div class="notification-dropdown" id="notification-dropdown">
-                        <div class="notification-header">اعلان‌ها</div>
-                        <div id="notification-list"></div>
-                        <div class="notification-footer">
-                            <a href="/dabestan/user/view_all_notifications.php">مشاهده همه</a>
-                        </div>
-                    </div>
+                <div class="notifications-icon">
+                    <i data-feather="bell"></i>
+                    <span class="notification-count">3</span>
                 </div>
-                <div class="user-info">
-                    <span><?php echo htmlspecialchars($_SESSION["username"]); ?></span>
+                <div class="user-profile">
+                    <a href="#"><?php echo htmlspecialchars($_SESSION["username"]); ?></a>
                 </div>
             </div>
         </header>
-        <main>
-            <?php display_alert(); ?>
-            <!-- Page content will be loaded here -->
+<?php endif; ?>
+
+<script src="<?php echo $base_path; ?>assets/js/script.js?v=<?php echo time(); ?>"></script>
+<script>
+    feather.replace();
+</script>
+</body>
+</html>

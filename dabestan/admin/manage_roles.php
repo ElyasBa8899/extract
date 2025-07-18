@@ -1,132 +1,161 @@
 <?php
 session_start();
-require_once "../includes/db.php";
+require_once "../includes/db_singleton.php";
+require_once "../includes/functions.php";
+require_once "../includes/header.php";
 
-if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !$_SESSION["is_admin"]) {
-    header("location: ../index.php");
-    exit;
+// Redirect if user is not admin
+if (!is_admin()) {
+    header("Location: ../user/index.php");
+    exit();
 }
 
-$err = $success_msg = "";
+$pdo = get_db_connection();
+$message = '';
+$error = '';
 
-// Handle Add Role POST Request
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_role'])) {
+// Handle form submission for adding/editing a role
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['role_name'])) {
     $role_name = trim($_POST['role_name']);
     $role_description = trim($_POST['role_description']);
+    $role_id = isset($_POST['role_id']) ? $_POST['role_id'] : null;
 
     if (empty($role_name)) {
-        $err = "نام نقش نمی‌تواند خالی باشد.";
+        $error = "نام نقش نمی‌تواند خالی باشد.";
     } else {
-        $sql = "INSERT INTO roles (role_name, role_description) VALUES (?, ?)";
-        if ($stmt = mysqli_prepare($link, $sql)) {
-            mysqli_stmt_bind_param($stmt, "ss", $role_name, $role_description);
-            if (mysqli_stmt_execute($stmt)) {
-                $success_msg = "نقش جدید با موفقیت ایجاد شد.";
+        try {
+            if ($role_id) {
+                // Update existing role
+                $stmt = $pdo->prepare("UPDATE roles SET role_name = ?, role_description = ? WHERE id = ?");
+                $stmt->execute([$role_name, $role_description, $role_id]);
+                $message = "نقش با موفقیت ویرایش شد.";
             } else {
-                $err = "خطا در ایجاد نقش. شاید این نام قبلاً استفاده شده باشد.";
+                // Add new role
+                $stmt = $pdo->prepare("INSERT INTO roles (role_name, role_description) VALUES (?, ?)");
+                $stmt->execute([$role_name, $role_description]);
+                $message = "نقش جدید با موفقیت اضافه شد.";
             }
-            mysqli_stmt_close($stmt);
+        } catch (PDOException $e) {
+            if ($e->getCode() == 23000 || $e->getCode() == '23000' || strpos($e->getMessage(), 'UNIQUE constraint failed') !== false) {
+                 $error = "خطا: نام نقش باید منحصر به فرد باشد. این نام قبلاً استفاده شده است.";
+            } else {
+                $error = "خطا در ثبت اطلاعات: " . $e->getMessage();
+            }
         }
     }
 }
 
-// Handle Delete Role Request
-if (isset($_GET['delete_role'])) {
-    $role_to_delete = $_GET['delete_role'];
-    // First, check if any user has this role
-    $sql_check = "SELECT COUNT(*) as count FROM user_roles WHERE role_id = ?";
-    $stmt_check = mysqli_prepare($link, $sql_check);
-    mysqli_stmt_bind_param($stmt_check, "i", $role_to_delete);
-    mysqli_stmt_execute($stmt_check);
-    $result_check = mysqli_stmt_get_result($stmt_check);
-    $count = mysqli_fetch_assoc($result_check)['count'];
-
-    if($count > 0){
-        $err = "این نقش به یک یا چند کاربر اختصاص داده شده و قابل حذف نیست.";
-    } else {
-        $sql = "DELETE FROM roles WHERE id = ?";
-        if($stmt = mysqli_prepare($link, $sql)){
-            mysqli_stmt_bind_param($stmt, "i", $role_to_delete);
-            if(mysqli_stmt_execute($stmt)){
-                $success_msg = "نقش با موفقیت حذف شد.";
-            } else {
-                $err = "خطا در حذف نقش.";
-            }
-            mysqli_stmt_close($stmt);
-        }
+// Handle role deletion
+if (isset($_GET['delete'])) {
+    $role_id = $_GET['delete'];
+    try {
+        $stmt = $pdo->prepare("DELETE FROM roles WHERE id = ?");
+        $stmt->execute([$role_id]);
+        $message = "نقش با موفقیت حذف شد.";
+    } catch (PDOException $e) {
+        $error = "خطا در حذف نقش: " . $e->getMessage();
     }
 }
 
-
-// Fetch all existing roles
-$roles = [];
-$sql_roles = "SELECT id, role_name, role_description FROM roles ORDER BY role_name ASC";
-if($result = mysqli_query($link, $sql_roles)){
-    $roles = mysqli_fetch_all($result, MYSQLI_ASSOC);
+// Fetch all roles to display
+try {
+    $roles_stmt = $pdo->query("SELECT * FROM roles ORDER BY role_name");
+    $roles = $roles_stmt->fetchAll();
+} catch (PDOException $e) {
+    $error = "خطا در دریافت لیست نقش‌ها: " . $e->getMessage();
+    $roles = [];
 }
 
-require_once "../includes/header.php";
+// Fetch a single role for editing
+$edit_role = null;
+if (isset($_GET['edit'])) {
+    $edit_id = $_GET['edit'];
+    $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
+    $stmt->execute([$edit_id]);
+    $edit_role = $stmt->fetch();
+}
+
 ?>
 
 <div class="page-content">
-    <h2>مدیریت نقش‌ها</h2>
-    <p>در این بخش نقش‌های مختلف کاربران در سیستم را تعریف کنید.</p>
+    <div class="container-fluid">
+        <h2>مدیریت نقش‌ها</h2>
+        <p>در این بخش می‌توانید نقش‌های کاربری مختلف را در سیستم تعریف و مدیریت کنید.</p>
 
-    <?php
-    if(!empty($err)){ echo '<div class="alert alert-danger">' . $err . '</div>'; }
-    if(!empty($success_msg)){ echo '<div class="alert alert-success">' . $success_msg . '</div>'; }
-    ?>
+        <?php if ($message): ?>
+            <div class="alert alert-success"><?php echo $message; ?></div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert alert-danger"><?php echo $error; ?></div>
+        <?php endif; ?>
 
-    <!-- Create New Role Section -->
-    <div class="form-container" style="margin-bottom: 30px;">
-        <h3>ایجاد نقش جدید</h3>
-        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
-            <div class="form-group">
-                <label for="role_name">نام نقش (مثال: مسئول پرورشی)</label>
-                <input type="text" name="role_name" id="role_name" class="form-control" required>
+        <div class="card">
+            <div class="card-header">
+                <h5><?php echo $edit_role ? 'ویرایش نقش' : 'افزودن نقش جدید'; ?></h5>
             </div>
-            <div class="form-group">
-                <label for="role_description">توضیحات نقش</label>
-                <input type="text" name="role_description" id="role_description" class="form-control">
+            <div class="card-body">
+                <form action="manage_roles.php" method="post">
+                    <?php if ($edit_role): ?>
+                        <input type="hidden" name="role_id" value="<?php echo htmlspecialchars($edit_role['id']); ?>">
+                    <?php endif; ?>
+                    <div class="form-group">
+                        <label for="role_name">نام نقش</label>
+                        <input type="text" id="role_name" name="role_name" class="form-control" value="<?php echo htmlspecialchars($edit_role['role_name'] ?? ''); ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="role_description">توضیحات نقش</label>
+                        <textarea id="role_description" name="role_description" class="form-control"><?php echo htmlspecialchars($edit_role['role_description'] ?? ''); ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary"><?php echo $edit_role ? 'ذخیره تغییرات' : 'افزودن نقش'; ?></button>
+                        <?php if ($edit_role): ?>
+                            <a href="manage_roles.php" class="btn btn-secondary">انصراف</a>
+                        <?php endif; ?>
+                    </div>
+                </form>
             </div>
-            <div class="form-group">
-                <input type="submit" name="add_role" class="btn btn-primary" value="ایجاد نقش">
-            </div>
-        </form>
-    </div>
+        </div>
 
-    <!-- List of Existing Roles -->
-    <div class="table-container">
-        <h3>نقش‌های موجود</h3>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>نام نقش</th>
-                    <th>توضیحات</th>
-                    <th>عملیات</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($roles)): ?>
-                    <tr><td colspan="3" style="text-align: center;">هیچ نقشی تعریف نشده است.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($roles as $role): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($role['role_name']); ?></td>
-                            <td><?php echo htmlspecialchars($role['role_description']); ?></td>
-                            <td>
-                                <a href="edit_role_permissions.php?role_id=<?php echo $role['id']; ?>" class="btn btn-primary btn-sm">مدیریت دسترسی‌ها</a>
-                                <a href="manage_roles.php?delete_role=<?php echo $role['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('آیا از حذف این نقش مطمئن هستید؟')">حذف</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+        <hr>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>لیست نقش‌های موجود</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>نام نقش</th>
+                                <th>توضیحات</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($roles)): ?>
+                                <tr>
+                                    <td colspan="3" class="text-center">هیچ نقشی تعریف نشده است.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($roles as $role): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($role['role_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($role['role_description']); ?></td>
+                                        <td>
+                                            <a href="manage_roles.php?edit=<?php echo $role['id']; ?>" class="btn btn-sm btn-info">ویرایش</a>
+                                            <a href="manage_permissions.php?role_id=<?php echo $role['id']; ?>" class="btn btn-sm btn-warning">مجوزها</a>
+                                            <a href="manage_roles.php?delete=<?php echo $role['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('آیا از حذف این نقش مطمئن هستید؟');">حذف</a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<?php
-mysqli_close($link);
-require_once "../includes/footer.php";
-?>
+<?php require_once "../includes/footer.php"; ?>

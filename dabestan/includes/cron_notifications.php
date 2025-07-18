@@ -1,104 +1,77 @@
 <?php
-// This script will be run by a cron job to send task reminders and notifications.
-// Example cron job command:
-// /usr/bin/php /path/to/your/project/dabestan/includes/cron_notifications.php
+// This script is intended to be run by a cron job.
+// e.g., 0 8 * * * /usr/bin/php /path/to/your/project/dabestan/includes/cron_notifications.php
 
-// Set a long execution time
-set_time_limit(0);
+// Set the correct working directory
+chdir(dirname(__FILE__));
 
 require_once 'db_singleton.php';
 require_once 'functions.php';
-require_once '../config.php';
 
-$link = get_db_connection();
+echo "Cron job started at " . date('Y-m-d H:i:s') . "\n";
 
-// --- 1. Send Reminders for Upcoming Deadlines ---
+$pdo = get_db_connection();
 
-$reminder_days_before = defined('TASK_REMINDER_DAYS_BEFORE') ? TASK_REMINDER_DAYS_BEFORE : 1;
-$reminder_date = new DateTime();
-$reminder_date->modify("+" . $reminder_days_before . " day");
-$reminder_date_str = $reminder_date->format('Y-m-d H:i:s');
+// --- 1. Overdue Task Notifications ---
+$overdue_tasks_stmt = $pdo->prepare("
+    SELECT t.id as task_id, t.title, t.deadline, ta.assigned_to_user_id
+    FROM tasks t
+    JOIN task_assignments ta ON t.id = ta.task_id
+    WHERE t.status IN ('pending', 'in_progress')
+      AND t.deadline < date('now')
+      AND NOT EXISTS (
+          SELECT 1 FROM notifications
+          WHERE link LIKE ?
+          AND message LIKE ?
+          AND user_id = ta.assigned_to_user_id
+      )
+");
+// We check link and message to avoid sending duplicate notifications for the same event
+$overdue_tasks_stmt->execute(['../user/view_task.php?id=%', 'یادآوری: مهلت انجام وظیفه%']);
+$overdue_tasks = $overdue_tasks_stmt->fetchAll();
 
-$sql_upcoming = "SELECT t.id, t.title, ta.assigned_to_user_id
-                 FROM tasks t
-                 JOIN task_assignments ta ON t.id = ta.task_id
-                 WHERE t.status IN ('pending', 'in_progress')
-                   AND t.deadline IS NOT NULL
-                   AND t.deadline <= ?
-                   AND NOT EXISTS (
-                       SELECT 1 FROM task_reminders tr
-                       WHERE tr.task_id = t.id AND tr.reminder_type = 'upcoming'
-                   )";
+foreach ($overdue_tasks as $task) {
+    if ($task['assigned_to_user_id']) {
+        $message = "یادآوری: مهلت انجام وظیفه شما \"{$task['title']}\" در تاریخ " . to_persian_date($task['deadline']) . " به پایان رسیده است.";
+        $link = "../user/view_task.php?id=" . $task['task_id'];
 
-if ($stmt_upcoming = mysqli_prepare($link, $sql_upcoming)) {
-    mysqli_stmt_bind_param($stmt_upcoming, "s", $reminder_date_str);
-    mysqli_stmt_execute($stmt_upcoming);
-    $result_upcoming = mysqli_stmt_get_result($stmt_upcoming);
-
-    while ($task = mysqli_fetch_assoc($result_upcoming)) {
-        if ($task['assigned_to_user_id']) {
-            $message = "یادآوری: مهلت انجام وظیفه '{$task['title']}' نزدیک است.";
-            send_notification($task['assigned_to_user_id'], 'task_reminder', $task['id'], $message);
-
-            // Log that a reminder was sent
-            $sql_log = "INSERT INTO task_reminders (task_id, user_id, reminder_type, sent_at) VALUES (?, ?, 'upcoming', NOW())";
-            if($stmt_log = mysqli_prepare($link, $sql_log)){
-                mysqli_stmt_bind_param($stmt_log, "ii", $task['id'], $task['assigned_to_user_id']);
-                mysqli_stmt_execute($stmt_log);
-                mysqli_stmt_close($stmt_log);
-            }
-        }
+        $insert_stmt = $pdo->prepare("INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)");
+        $insert_stmt->execute([$task['assigned_to_user_id'], $message, $link]);
+        echo "Sent overdue notification for task #{$task['task_id']} to user #{$task['assigned_to_user_id']}\n";
     }
-    mysqli_stmt_close($stmt_upcoming);
 }
 
 
-// --- 2. Send Notifications for Overdue Tasks ---
+// --- 2. Checklist Item Reminders ---
+$upcoming_checklists_stmt = $pdo->prepare("
+    SELECT m.id as meeting_id, m.title, ci.item_description, m.created_by, ci.responsible_user_id
+    FROM meetings m
+    JOIN meeting_checklist_items ci ON m.id = ci.meeting_id
+    WHERE m.status = 'planned'
+      AND ci.is_completed = 0
+      AND m.meeting_date BETWEEN date('now') AND date('now', '+1 day')
+      AND NOT EXISTS (
+          SELECT 1 FROM notifications
+          WHERE link LIKE ?
+          AND message LIKE ?
+          AND (user_id = m.created_by OR user_id = ci.responsible_user_id)
+      )
+");
+$upcoming_checklists_stmt->execute(['../admin/meeting_details.php?id=%', 'یادآوری: جلسه%']);
+$upcoming_checklists = $upcoming_checklists_stmt->fetchAll();
 
-$now = new DateTime();
-$now_str = $now->format('Y-m-d H:i:s');
+foreach ($upcoming_checklists as $item) {
+    // Notify the responsible person if set, otherwise the creator of the meeting.
+    $user_to_notify = $item['responsible_user_id'] ?? $item['created_by'];
 
-$sql_overdue = "SELECT t.id, t.title, ta.assigned_to_user_id, t.created_by,
-                       (SELECT department_id FROM user_departments ud WHERE ud.user_id = t.created_by LIMIT 1) as creator_dept_id
-                FROM tasks t
-                JOIN task_assignments ta ON t.id = ta.task_id
-                WHERE t.status IN ('pending', 'in_progress')
-                  AND t.deadline IS NOT NULL
-                  AND t.deadline < ?
-                  AND NOT EXISTS (
-                      SELECT 1 FROM task_reminders tr
-                      WHERE tr.task_id = t.id AND tr.reminder_type = 'overdue_manager'
-                  )";
+    $message = "یادآوری: جلسه \"{$item['title']}\" فردا برگزار می‌شود. آیتم چک‌لیست \"{$item['item_description']}\" هنوز تکمیل نشده است.";
+    $link = "../admin/meeting_details.php?id=" . $item['meeting_id'];
 
-if ($stmt_overdue = mysqli_prepare($link, $sql_overdue)) {
-    mysqli_stmt_bind_param($stmt_overdue, "s", $now_str);
-    mysqli_stmt_execute($stmt_overdue);
-    $result_overdue = mysqli_stmt_get_result($stmt_overdue);
-
-    while ($task = mysqli_fetch_assoc($result_overdue)) {
-        $manager_role_name = defined('OVERDUE_TASK_NOTIFY_ROLE') ? OVERDUE_TASK_NOTIFY_ROLE : 'Admin';
-        $managers_to_notify = get_users_by_role($manager_role_name);
-
-        $user_info = get_user_info($task['assigned_to_user_id']);
-        $assigned_user_name = $user_info ? $user_info['username'] : 'کاربر';
-
-        foreach ($managers_to_notify as $manager) {
-            $message = "توجه: مهلت انجام وظیفه '{$task['title']}' که به '{$assigned_user_name}' محول شده بود، به پایان رسیده است.";
-            send_notification($manager['id'], 'task_overdue', $task['id'], $message);
-        }
-
-        // Log that a notification was sent to managers
-        $sql_log_manager = "INSERT INTO task_reminders (task_id, reminder_type, sent_at) VALUES (?, 'overdue_manager', NOW())";
-        if($stmt_log_m = mysqli_prepare($link, $sql_log_manager)){
-            mysqli_stmt_bind_param($stmt_log_m, "i", $task['id']);
-            mysqli_stmt_execute($stmt_log_m);
-            mysqli_stmt_close($stmt_log_m);
-        }
-    }
-    mysqli_stmt_close($stmt_overdue);
+    $insert_stmt = $pdo->prepare("INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)");
+    $insert_stmt->execute([$user_to_notify, $message, $link]);
+    echo "Sent checklist reminder for meeting #{$item['meeting_id']} to user #{$user_to_notify}\n";
 }
 
 
-mysqli_close($link);
-echo "Cron job finished.\n";
+echo "Cron job finished at " . date('Y-m-d H:i:s') . "\n";
 ?>

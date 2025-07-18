@@ -1,167 +1,149 @@
 <?php
 session_start();
-require_once "../includes/db.php";
+require_once "../includes/db_singleton.php";
+require_once "../includes/functions.php";
+require_once "../includes/header.php";
 
-if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
-    header("location: ../index.php");
-    exit;
+if (!isset($_SESSION['loggedin'])) {
+    header("Location: ../index.php");
+    exit();
 }
 
-if (!isset($_GET['form_id']) || empty($_GET['form_id'])) {
-    header("location: list_forms.php");
-    exit;
+$pdo = get_db_connection();
+$message = '';
+$error = '';
+$form_id = $_GET['id'] ?? null;
+
+if (!$form_id) {
+    // If no form ID is specified, show a list of available forms to the user
+    try {
+        // This logic can be improved to show only relevant forms to the user
+        $forms = $pdo->query("SELECT id, title, description FROM forms")->fetchAll();
+    } catch (PDOException $e) {
+        $error = "خطا در دریافت لیست فرم‌ها: " . $e->getMessage();
+        $forms = [];
+    }
+} else {
+    // Fetch form details and fields
+    $stmt = $pdo->prepare("SELECT * FROM forms WHERE id = ?");
+    $stmt->execute([$form_id]);
+    $form = $stmt->fetch();
+
+    if (!$form) {
+        die("فرم مورد نظر یافت نشد.");
+    }
+
+    $fields_stmt = $pdo->prepare("SELECT * FROM form_fields WHERE form_id = ? ORDER BY id");
+    $fields_stmt->execute([$form_id]);
+    $fields = $fields_stmt->fetchAll();
 }
 
-$form_id = $_GET['form_id'];
-$err = $success_msg = "";
-
-// Fetch form details
-$form = null;
-$sql_form = "SELECT form_name, form_description FROM forms WHERE id = ?";
-if($stmt_form = mysqli_prepare($link, $sql_form)){
-    mysqli_stmt_bind_param($stmt_form, "i", $form_id);
-    mysqli_stmt_execute($stmt_form);
-    $result_form = mysqli_stmt_get_result($stmt_form);
-    $form = mysqli_fetch_assoc($result_form);
-    mysqli_stmt_close($stmt_form);
-}
-
-if(!$form){
-    echo "فرم یافت نشد.";
-    exit;
-}
-
-// Fetch form fields
-$fields = [];
-$sql_fields = "SELECT id, field_label, field_type, field_options, is_required FROM form_fields WHERE form_id = ? ORDER BY field_order ASC";
-if($stmt_fields = mysqli_prepare($link, $sql_fields)){
-    mysqli_stmt_bind_param($stmt_fields, "i", $form_id);
-    mysqli_stmt_execute($stmt_fields);
-    $result_fields = mysqli_stmt_get_result($stmt_fields);
-    $fields = mysqli_fetch_all($result_fields, MYSQLI_ASSOC);
-    mysqli_stmt_close($stmt_fields);
-}
-
-// Handle Form Submission
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_form'])) {
-    // Start transaction
-    mysqli_begin_transaction($link);
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form'])) {
+    $form_id = $_POST['form_id'];
+    $user_id = $_SESSION['id'];
 
     try {
-        // 1. Create a new submission record
-        $sql_insert_submission = "INSERT INTO form_submissions (form_id, user_id) VALUES (?, ?)";
-        $stmt_insert_submission = mysqli_prepare($link, $sql_insert_submission);
-        mysqli_stmt_bind_param($stmt_insert_submission, "ii", $form_id, $_SESSION['id']);
-        mysqli_stmt_execute($stmt_insert_submission);
-        $submission_id = mysqli_insert_id($stmt_insert_submission);
-        mysqli_stmt_close($stmt_insert_submission);
+        $pdo->beginTransaction();
 
-        // 2. Insert each field's data
-        $sql_insert_data = "INSERT INTO form_submission_data (submission_id, field_id, field_value) VALUES (?, ?, ?)";
-        $stmt_insert_data = mysqli_prepare($link, $sql_insert_data);
+        $stmt_sub = $pdo->prepare("INSERT INTO form_submissions (form_id, user_id) VALUES (?, ?)");
+        $stmt_sub->execute([$form_id, $user_id]);
+        $submission_id = $pdo->lastInsertId();
 
-        foreach ($fields as $field) {
-            $field_id = $field['id'];
-            $post_key = 'field_' . $field_id;
-            $field_value = isset($_POST[$post_key]) ? $_POST[$post_key] : '';
+        $stmt_data = $pdo->prepare("INSERT INTO form_submission_data (submission_id, field_id, field_value) VALUES (?, ?, ?)");
 
-            // For checkbox, value is an array
-            if (is_array($field_value)) {
-                $field_value = implode(', ', $field_value);
-            }
-
-            mysqli_stmt_bind_param($stmt_insert_data, "iis", $submission_id, $field_id, $field_value);
-            mysqli_stmt_execute($stmt_insert_data);
+        foreach ($_POST['fields'] as $field_id => $value) {
+            $field_value = is_array($value) ? json_encode($value) : trim($value);
+            $stmt_data->execute([$submission_id, $field_id, $field_value]);
         }
-        mysqli_stmt_close($stmt_insert_data);
 
-        // If all good, commit the transaction
-        mysqli_commit($link);
-        $success_msg = "فرم شما با موفقیت ثبت شد. از همکاری شما سپاسگزاریم.";
+        $pdo->commit();
+        $message = "فرم شما با موفقیت ثبت شد.";
+        // Clear form data to prevent re-display
+        $form = null;
+        $fields = null;
 
-    } catch (mysqli_sql_exception $exception) {
-        mysqli_rollback($link);
-        $err = "خطایی در ثبت اطلاعات رخ داد. لطفا دوباره تلاش کنید.";
-        // You can log the detailed error: $exception->getMessage();
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        $error = "خطا در ثبت فرم: " . $e->getMessage();
     }
 }
 
 
-require_once "../includes/header.php";
 ?>
-
 <div class="page-content">
-    <a href="list_forms.php" class="btn btn-secondary" style="margin-bottom: 20px;">&larr; بازگشت به لیست فرم‌ها</a>
-    <h2>تکمیل فرم: <?php echo htmlspecialchars($form['form_name']); ?></h2>
-    <p><?php echo htmlspecialchars($form['form_description']); ?></p>
+    <div class="container-fluid">
 
-    <?php if(!empty($success_msg)): ?>
-        <div class="alert alert-success"><?php echo $success_msg; ?></div>
-    <?php endif; ?>
+        <?php if ($message): ?>
+            <div class="alert alert-success"><?php echo $message; ?></div>
+            <a href="index.php" class="btn btn-primary">بازگشت به داشبورد</a>
+        <?php endif; ?>
+        <?php if ($error): ?><div class="alert alert-danger"><?php echo $error; ?></div><?php endif; ?>
 
-    <?php if(empty($success_msg)): // Hide form if submission was successful ?>
-        <div class="form-container">
-            <?php if(!empty($err)){ echo '<div class="alert alert-danger">' . $err . '</div>'; } ?>
-            <form action="fill_form.php?form_id=<?php echo $form_id; ?>" method="post">
-                <?php foreach ($fields as $field): ?>
-                    <div class="form-group">
-                        <label for="field_<?php echo $field['id']; ?>">
-                            <?php echo htmlspecialchars($field['field_label']); ?>
-                            <?php if ($field['is_required']): ?><span style="color: red;">*</span><?php endif; ?>
-                        </label>
+        <?php if (isset($form) && $form): ?>
+            <h2><?php echo htmlspecialchars($form['title']); ?></h2>
+            <p><?php echo htmlspecialchars($form['description']); ?></p>
+            <hr>
+            <div class="card">
+                <div class="card-body">
+                    <form action="fill_form.php" method="post">
+                        <input type="hidden" name="form_id" value="<?php echo $form['id']; ?>">
 
-                        <?php
-                        $field_name = 'field_' . $field['id'];
-                        $required_attr = $field['is_required'] ? 'required' : '';
+                        <?php foreach ($fields as $field): ?>
+                            <div class="form-group">
+                                <label for="field_<?php echo $field['id']; ?>"><?php echo htmlspecialchars($field['label']); ?><?php if($field['is_required']) echo ' <span class="text-danger">*</span>'; ?></label>
+                                <?php
+                                    $options = json_decode($field['options'] ?? '[]', true);
+                                    switch ($field['field_type']) {
+                                        case 'textarea':
+                                            echo "<textarea name='fields[{$field['id']}]' id='field_{$field['id']}' class='form-control' " . ($field['is_required'] ? 'required' : '') . "></textarea>";
+                                            break;
+                                        case 'select':
+                                            echo "<select name='fields[{$field['id']}]' id='field_{$field['id']}' class='form-control' " . ($field['is_required'] ? 'required' : '') . ">";
+                                            echo "<option value=''>-- انتخاب کنید --</option>";
+                                            foreach ($options as $option) {
+                                                echo "<option value='" . htmlspecialchars($option) . "'>" . htmlspecialchars($option) . "</option>";
+                                            }
+                                            echo "</select>";
+                                            break;
+                                        case 'radio':
+                                            foreach ($options as $option) {
+                                                echo "<div class='form-check'><input type='radio' name='fields[{$field['id']}]' value='" . htmlspecialchars($option) . "' class='form-check-input'><label class='form-check-label'>" . htmlspecialchars($option) . "</label></div>";
+                                            }
+                                            break;
+                                        case 'checkbox':
+                                            foreach ($options as $option) {
+                                                echo "<div class='form-check'><input type='checkbox' name='fields[{$field['id']}][]' value='" . htmlspecialchars($option) . "' class='form-check-input'><label class='form-check-label'>" . htmlspecialchars($option) . "</label></div>";
+                                            }
+                                            break;
+                                        case 'number':
+                                            echo "<input type='number' name='fields[{$field['id']}]' id='field_{$field['id']}' class='form-control' " . ($field['is_required'] ? 'required' : '') . ">";
+                                            break;
+                                        case 'text':
+                                        default:
+                                            echo "<input type='text' name='fields[{$field['id']}]' id='field_{$field['id']}' class='form-control' " . ($field['is_required'] ? 'required' : '') . ">";
+                                            break;
+                                    }
+                                ?>
+                            </div>
+                        <?php endforeach; ?>
 
-                        switch ($field['field_type']) {
-                            case 'textarea':
-                                echo "<textarea name='{$field_name}' id='{$field_name}' class='form-control' {$required_attr}></textarea>";
-                                break;
-
-                            case 'select':
-                                $options = explode(',', $field['field_options']);
-                                echo "<select name='{$field_name}' id='{$field_name}' class='form-control' {$required_attr}>";
-                                echo "<option value=''>انتخاب کنید...</option>";
-                                foreach ($options as $option) {
-                                    $option = trim($option);
-                                    echo "<option value='{$option}'>" . htmlspecialchars($option) . "</option>";
-                                }
-                                echo "</select>";
-                                break;
-
-                            case 'checkbox':
-                                $options = explode(',', $field['field_options']);
-                                foreach ($options as $index => $option) {
-                                    $option = trim($option);
-                                    $checkbox_id = "{$field_name}_{$index}";
-                                    echo "<div class='checkbox-group'><input type='checkbox' name='{$field_name}[]' id='{$checkbox_id}' value='{$option}'> <label for='{$checkbox_id}'>" . htmlspecialchars($option) . "</label></div>";
-                                }
-                                break;
-
-                            case 'radio':
-                                $options = explode(',', $field['field_options']);
-                                foreach ($options as $index => $option) {
-                                    $option = trim($option);
-                                    $radio_id = "{$field_name}_{$index}";
-                                    echo "<div class='radio-group'><input type='radio' name='{$field_name}' id='{$radio_id}' value='{$option}' {$required_attr}> <label for='{$radio_id}'>" . htmlspecialchars($option) . "</label></div>";
-                                }
-                                break;
-
-                            default: // text, number, date
-                                echo "<input type='{$field['field_type']}' name='{$field_name}' id='{$field_name}' class='form-control' {$required_attr}>";
-                                break;
-                        }
-                        ?>
-                    </div>
-                <?php endforeach; ?>
-
-                <div class="form-group">
-                    <input type="submit" name="submit_form" class="btn btn-primary" value="ثبت نهایی فرم">
+                        <button type="submit" name="submit_form" class="btn btn-primary">ثبت فرم</button>
+                    </form>
                 </div>
-            </form>
-        </div>
-    <?php endif; ?>
-</div>
+            </div>
+        <?php elseif (!isset($form_id)): ?>
+            <h2>لیست فرم‌های قابل تکمیل</h2>
+            <div class="list-group">
+                <?php foreach($forms as $f): ?>
+                    <a href="fill_form.php?id=<?php echo $f['id']; ?>" class="list-group-item list-group-item-action">
+                        <h5 class="mb-1"><?php echo htmlspecialchars($f['title']); ?></h5>
+                        <p class="mb-1"><?php echo htmlspecialchars($f['description']); ?></p>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
 
+    </div>
+</div>
 <?php require_once "../includes/footer.php"; ?>

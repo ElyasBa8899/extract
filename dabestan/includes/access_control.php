@@ -1,66 +1,94 @@
 <?php
-// This file should be included after db.php and session_start()
+/**
+ * Access Control Functions
+ *
+ * This file contains functions for checking user permissions and roles.
+ * It should be included in pages that require access control.
+ */
 
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+require_once __DIR__ . '/db_singleton.php';
+
+/**
+ * Checks if a user has a specific permission.
+ *
+ * This function checks all roles assigned to the current user
+ * to see if any of them grant the specified permission.
+ * Super admins (is_admin = 1) always have all permissions.
+ *
+ * @param string $permission_name The name of the permission to check.
+ * @return bool True if the user has the permission, false otherwise.
+ */
 function has_permission($permission_name) {
-    global $link;
-    if (!isset($_SESSION['id'])) return false;
+    // If the user is not logged in, they have no permissions.
+    if (!isset($_SESSION['loggedin']) || !$_SESSION['loggedin']) {
+        return false;
+    }
 
-    // Super admin (user_id = 1 or is_admin = 1) has all permissions
-    if ((isset($_SESSION['is_admin']) && $_SESSION['is_admin']) || $_SESSION['id'] == 1) {
+    // Super admin always has all permissions.
+    if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']) {
         return true;
     }
 
-    // Check cache first
-    if (isset($_SESSION['permissions_cache']) && array_key_exists($permission_name, $_SESSION['permissions_cache'])) {
-        return $_SESSION['permissions_cache'][$permission_name];
+    // Get the database connection.
+    $pdo = get_db_connection();
+    $user_id = $_SESSION['id'];
+
+    try {
+        // Prepare a statement to find if any of the user's roles have the permission.
+        $sql = "
+            SELECT COUNT(*)
+            FROM user_roles ur
+            JOIN role_permissions rp ON ur.role_id = rp.role_id
+            JOIN permissions p ON rp.permission_id = p.id
+            WHERE ur.user_id = :user_id AND p.permission_name = :permission_name
+        ";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':user_id' => $user_id,
+            ':permission_name' => $permission_name
+        ]);
+
+        // If the count is greater than 0, the user has the permission.
+        return $stmt->fetchColumn() > 0;
+
+    } catch (PDOException $e) {
+        // Log the error and deny permission by default in case of failure.
+        error_log("Permission check failed: " . $e->getMessage());
+        return false;
     }
-
-    // If cache is not set, build it
-    if (!isset($_SESSION['permissions_cache'])) {
-        $_SESSION['permissions_cache'] = [];
-        $user_id = $_SESSION['id'];
-        $sql = "SELECT DISTINCT p.permission_name
-                FROM user_roles ur
-                JOIN role_permissions rp ON ur.role_id = rp.role_id
-                JOIN permissions p ON rp.permission_id = p.id
-                WHERE ur.user_id = ?";
-
-        if($stmt = mysqli_prepare($link, $sql)) {
-            mysqli_stmt_bind_param($stmt, "i", $user_id);
-            mysqli_stmt_execute($stmt);
-            $result = mysqli_stmt_get_result($stmt);
-            while($row = mysqli_fetch_assoc($result)) {
-                $_SESSION['permissions_cache'][$row['permission_name']] = true;
-            }
-            mysqli_stmt_close($stmt);
-        }
-    }
-
-    // Check the permission from the now-populated cache
-    return isset($_SESSION['permissions_cache'][$permission_name]);
 }
 
-// A simple function to protect a page
-function require_permission($permission_name) {
+/**
+ * Checks if the current user is a super admin.
+ *
+ * @return bool True if the user is a super admin, false otherwise.
+ */
+function is_admin() {
+    return isset($_SESSION['loggedin']) && $_SESSION['loggedin'] && isset($_SESSION['is_admin']) && $_SESSION['is_admin'];
+}
+
+/**
+ * A simple gatekeeper function to be called at the top of permission-restricted pages.
+ * If the user does not have the required permission, it redirects them.
+ *
+ * @param string $permission_name The permission required to access the page.
+ * @param string $redirect_path The path to redirect to if permission is denied. Defaults to the user dashboard.
+ */
+function require_permission($permission_name, $redirect_path = '../user/index.php') {
     if (!has_permission($permission_name)) {
-        // You can redirect to an "access denied" page or just die.
-        die("خطای دسترسی: شما اجازه مشاهده این صفحه را ندارید.");
+        // Optional: Set a flash message to inform the user why they were redirected.
+        $_SESSION['flash_message'] = [
+            'type' => 'danger',
+            'message' => 'شما مجوز دسترسی به این صفحه را ندارید.'
+        ];
+        header("Location: " . $redirect_path);
+        exit();
     }
 }
 
-function can_edit_task($task_id, $user_id) {
-    $link = get_db_connection();
-    $sql = "SELECT COUNT(*) as count
-            FROM task_assignments
-            WHERE task_id = ? AND assigned_to_user_id = ?";
-    if ($stmt = mysqli_prepare($link, $sql)) {
-        mysqli_stmt_bind_param($stmt, "ii", $task_id, $user_id);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt);
-        $row = mysqli_fetch_assoc($result);
-        mysqli_stmt_close($stmt);
-        return $row['count'] > 0;
-    }
-    return false;
-}
 ?>
