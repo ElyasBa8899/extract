@@ -1,5 +1,5 @@
 <?php
-require_once "includes/db_singleton.php";
+require_once __DIR__ . '/core/functions.php';
 $link = get_db_connection();
 
 function columnExists($link, $tableName, $columnName) {

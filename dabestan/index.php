@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once "includes/db_singleton.php";
+require_once __DIR__ . '/core/functions.php';
 $link = get_db_connection(); // Get connection
 
 $username = $password = "";
