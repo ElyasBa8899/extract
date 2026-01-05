@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سامانه مدیریت تردد پیشرفته</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-body: #0f172a; --bg-card: #1e293b; --bg-input: #334155;
+      --border-color: #475569; --text-main: #f8fafc; --text-muted: #94a3b8;
+      --primary: #3b82f6; --primary-hover: #2563eb;
+      --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+      --radius: 12px;
+    }
+    body { font-family: 'Vazirmatn', sans-serif; background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+
+    .pro-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .form-control, .form-select { background-color: var(--bg-input) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important; border-radius: 8px; padding: 10px 15px; }
+    .form-control:focus, .form-select:focus { border-color: var(--primary) !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important; }
+
+    .btn { border-radius: 8px; font-weight: 500; }
+    .btn-action-large { width: 100%; height: 70px; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; color: white; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+    .act-entry { background: linear-gradient(135deg, #059669, #10b981); }
+    .act-leave { background: linear-gradient(135deg, #d97706, #f59e0b); }
+    .act-exit { background: linear-gradient(135deg, #dc2626, #ef4444); }
+
+    .stat-card { position: relative; background: linear-gradient(145deg, #1e293b, #334155); border-radius: var(--radius); padding: 20px; height: 100%; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; display: flex; flex-direction: column; justify-content: center; transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    .stat-label { color: #cbd5e1; font-size: 0.9rem; margin-bottom: 8px; font-weight: 500; }
+    .stat-value { font-size: 1.6rem; font-weight: 800; color: white; letter-spacing: 1px; }
+    .stat-icon { position: absolute; left: 15px; bottom: 15px; font-size: 2.5rem; opacity: 0.1; color: white; }
+    .card-blue { border-bottom: 4px solid var(--primary); }
+    .card-green { border-bottom: 4px solid var(--success); }
+    .card-orange { border-bottom: 4px solid var(--warning); }
+    .card-red { border-bottom: 4px solid var(--danger); }
+
+    .user-list-item {
+        display: block !important; width: 100% !important; background: transparent !important;
+        border: 1px solid var(--border-color) !important; color: var(--text-muted) !important;
+        border-radius: 8px !important; margin-bottom: 8px !important; text-align: right !important;
+        padding: 12px !important; transition: all 0.2s !important;
+    }
+    .user-list-item:hover, .user-list-item.active { background-color: var(--primary) !important; color: white !important; border-color: var(--primary) !important; }
+
+    .table-container { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border-color); margin-top: 15px; }
+    .table-custom { width: 100%; border-collapse: collapse; }
+    .table-custom th { background-color: var(--bg-input); color: var(--text-muted); padding: 15px; text-align: center; border-bottom: 2px solid var(--border-color); }
+    .table-custom td { background-color: var(--bg-card); color: var(--text-main); padding: 14px; border-bottom: 1px solid #334155; text-align: center; vertical-align: middle; }
+
+    .notif-btn { position: relative; border: 1px solid var(--border-color); background: var(--bg-input); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; cursor: pointer; }
+    .notif-btn:hover { background: var(--primary); border-color: var(--primary); }
+    .notif-badge { position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; background: var(--danger); border-radius: 50%; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-card); }
+
+    .hidden { display: none !important; }
+    .modal-content { background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); }
+    .btn-close { filter: invert(1); }
+  </style>
+</head>
+<body>
+
+  <div id="loader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.95);z-index:9999;display:none;justify-content:center;align-items:center;flex-direction:column">
+    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+    <div class="mt-3 text-white fw-bold">لطفاً صبر کنید...</div>
+  </div>
+
+  <!-- صفحه لاگین -->
+  <div id="viewLogin" class="container d-flex justify-content-center align-items:center" style="min-height: 100vh;">
+    <div class="pro-card p-5" style="width: 100%; max-width: 400px;">
+      <div class="text-center mb-4"><i class="fas fa-fingerprint fa-3x text-primary"></i><h3 class="fw-bold mt-3">ورود به سامانه</h3></div>
+      <div class="mb-3"><input type="text" id="lUser" class="form-control text-center" placeholder="نام کاربری" dir="ltr"></div>
+      <div class="mb-4"><input type="password" id="lPass" class="form-control text-center" placeholder="رمز عبور" dir="ltr"></div>
+      <button onclick="doLogin()" class="btn btn-primary w-100 py-2">ورود امن</button>
+      <div id="lMsg" class="text-danger text-center mt-3 small fw-bold"></div>
+    </div>
+  </div>
+
+  <!-- پنل کاربر -->
+  <div id="viewUser" class="container hidden" style="max-width: 550px; padding-top: 30px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex align-items-center gap-3">
+        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="fas fa-user"></i></div>
+        <h5 id="uName" class="m-0 fw-bold">کارمند</h5>
+      </div>
+      <button onclick="doLogout()" class="btn btn-outline-danger btn-sm px-3">خروج</button>
+    </div>
+    <div class="pro-card text-center py-4"><small class="text-muted text-uppercase">وضعیت کنونی</small><h2 id="uStat" class="mt-2 mb-0 fw-bold">-</h2></div>
+
+    <div class="mb-4">
+      <button onclick="act('Entry')" class="btn-action-large act-entry">ثبت ورود</button>
+      <div class="row g-2">
+        <div class="col-6"><button onclick="act('HourlyLeave')" class="btn-action-large act-leave">مرخصی ساعتی</button></div>
+        <div class="col-6"><button onclick="act('Exit')" class="btn-action-large act-exit">خروج</button></div>
+      </div>
+    </div>
+
+    <div class="pro-card">
+      <div class="d-flex justify-content-between border-bottom border-secondary pb-2 mb-3"><span class="text-white">فعالیت‌های امروز</span><span class="badge bg-secondary" id="todayDate">--/--/--</span></div>
+      <div id="todayLogsList" class="px-1"></div>
+    </div>
+    <button onclick="openUserDash()" class="btn btn-primary w-100 py-3 mb-5">مشاهده کارنامه ماهانه</button>
+  </div>
+
+  <!-- داشبورد کاربر -->
+  <div id="viewUserDash" class="container hidden" style="max-width: 900px; padding-top: 30px;">
+    <div class="pro-card d-flex justify-content-between align-items-center mb-4"><h4 class="m-0">کارنامه عملکرد</h4><button onclick="backToUserPanel()" class="btn btn-outline-light btn-sm">بازگشت</button></div>
+    <div class="pro-card">
+      <div class="row g-2 justify-content-center mb-4"><select id="uYear" class="form-select w-auto text-center"></select><select id="uMonth" class="form-select w-auto text-center"></select><button onclick="loadUserSelfReport()" class="btn btn-primary px-4">نمایش</button></div>
+
+      <div id="uDash" class="hidden">
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div><div class="stat-label">موظفی</div><div class="stat-value" id="uTarg">0</div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-label">جریمه (دقیقه)</div><div class="stat-value text-danger" id="uPenalty">0</div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-label">کارکرد مفید</div><div class="stat-value text-info" id="uWork">0</div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card card-green"><div class="stat-icon"><i class="fas fa-wallet"></i></div><div class="stat-label">حقوق نهایی</div><div class="stat-value text-success" id="uSal">0</div></div></div>
+        </div>
+
+        <div class="table-container"><div class="table-responsive"><table class="table-custom w-100 text-center"><thead><tr><th>تاریخ</th><th>کارکرد</th><th>تاخیر (دقیقه)</th><th class="text-danger">جریمه (کسر)</th></tr></thead><tbody id="uTbMain"></tbody></table></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- پنل ادمین -->
+  <div id="viewAdmin" class="container hidden" style="max-width: 1300px; padding-top: 30px;">
+    <div class="pro-card d-flex justify-content-between align-items-center mb-4">
+      <h4 class="m-0 fw-bold text-white">داشبورد مدیریت</h4>
+      <div class="d-flex align-items-center gap-2">
+        <button onclick="checkNotifications()" class="notif-btn" title="پیام‌ها"><i class="fas fa-bell"></i><span id="notifBadge" class="notif-badge hidden">0</span></button>
+        <button onclick="openSetDays()" class="btn btn-outline-info btn-sm px-3">روز کاری</button>
+        <button onclick="doLogout()" class="btn btn-danger btn-sm px-3">خروج</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-3 mb-4">
+        <div class="pro-card h-100 d-flex flex-column">
+          <button onclick="openAdd()" class="btn btn-primary w-100 mb-3 py-2">کارمند جدید</button>
+          <div id="uList" class="flex-grow-1 overflow-auto pe-1 d-flex flex-column gap-2" style="max-height: 600px;"></div>
+        </div>
+      </div>
+      <div class="col-md-9"><div class="pro-card" style="min-height: 650px;">
+        <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 border-bottom border-secondary pb-3"><div><h5 id="repTitle" class="fw-bold mb-1">یک کارمند را انتخاب کنید</h5><div class="d-flex gap-2 mt-2"><button id="btnEditUser" class="btn btn-sm btn-link text-info p-0 hidden" onclick="openEditUser()">ویرایش</button><button id="btnManual" class="btn btn-sm btn-link text-success p-0 hidden ms-3" onclick="openManual()">ثبت دستی</button></div></div><div class="d-flex gap-2 align-items-center mt-3 mt-md-0"><select id="sYear" class="form-select w-auto"></select><select id="sMonth" class="form-select w-auto"></select><button onclick="loadRep()" class="btn btn-primary px-3">نمایش</button></div></div>
+
+        <div id="dash" class="hidden">
+           <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div><div class="stat-label">کل موظفی</div><div class="stat-value" id="vTarg">0</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-balance-scale"></i></div><div class="stat-label">تراز نهایی</div><div class="stat-value" id="vNet">0</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-sort-amount-down"></i></div><div class="stat-label">جریمه (کسر شده)</div><div class="stat-value text-danger" id="vPenalty">0</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card card-green"><div class="stat-icon"><i class="fas fa-coins"></i></div><div class="stat-label">قابل پرداخت</div><div class="stat-value text-success" id="vSal">0</div></div></div>
+          </div>
+
+          <ul class="nav nav-tabs mb-3 border-secondary"><li class="nav-item"><button class="nav-link active" onclick="swTab('tab1',this)">گزارش مالی</button></li><li class="nav-item"><button class="nav-link" onclick="swTab('tab2',this)">ریز ترددها</button></li></ul>
+          <div id="tab1"><div class="table-container"><div class="table-responsive"><table class="table-custom w-100 text-center"><thead><tr><th>تاریخ</th><th>کارکرد</th><th>تاخیر (دقیقه)</th><th class="text-danger">جریمه (کسر)</th><th>وضعیت</th></tr></thead><tbody id="tbMain"></tbody></table></div></div></div>
+          <div id="tab2" class="hidden"><div class="accordion" id="accLogs"></div></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- مودال‌ها -->
+  <div id="mdlManual" class="modal fade"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h6>ثبت دستی تردد</h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="text" id="mDate" class="form-control mb-2 text-center" dir="ltr"><input type="text" id="mTime" class="form-control mb-2 text-center fs-4" placeholder="HH:mm" dir="ltr"><select id="mAct" class="form-select mb-3"><option value="Entry">ورود</option><option value="Exit">خروج</option></select><button onclick="subManual()" class="btn btn-success w-100">ثبت</button></div></div></div></div>
+  <div id="mdlLog" class="modal fade"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h6>ویرایش ساعت</h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><input type="hidden" id="lid"><input type="text" id="ltm" class="form-control text-center fs-2 mb-3" placeholder="HH:mm" dir="ltr" maxlength="5"><button onclick="subLog()" class="btn btn-primary w-100">ذخیره</button></div></div></div></div>
+
+  <div id="mdlUser" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 id="muTitle">کاربر</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="uid"><div class="row g-3"><div class="col-12"><input type="text" id="fn" class="form-control" placeholder="نام کامل"></div><div class="col-6"><input type="text" id="un" class="form-control" placeholder="نام کاربری"></div><div class="col-6"><input type="text" id="pw" class="form-control" placeholder="رمز عبور"></div><div class="col-6"><label class="small text-muted">ساعت کاری روزانه</label><input type="number" id="hr" class="form-control" placeholder="مثال: 8"></div><div class="col-6"><label class="small text-muted">ساعت کاری پنجشنبه</label><input type="number" id="thr" class="form-control" placeholder="مثال: 4"></div><div class="col-12"><label class="small text-muted">حقوق ثابت ماهانه (ریال)</label><input type="number" id="tsal" class="form-control border-success" placeholder="مبلغ کل حقوق"></div></div></div><div class="modal-footer"><button onclick="subUser()" class="btn btn-primary">ذخیره</button></div></div></div></div>
+
+  <div id="mdlSetDays" class="modal fade"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h6>روز کاری</h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><select id="wdYear" class="form-select mb-2"></select><select id="wdMonth" class="form-select mb-2"></select><input type="number" id="wdCount" class="form-control text-center fs-3 mb-3"><button onclick="subWorkDays()" class="btn btn-primary w-100">ذخیره</button></div></div></div></div>
+  <div id="mdlAlert" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-warning"><div class="modal-header bg-warning text-dark"><h5 class="modal-title"><i class="fas fa-bell me-2"></i>پیام‌های سیستم</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="notifList" class="notif-list p-2"></div></div><div class="modal-footer"><button onclick="ackNotif()" class="btn btn-dark w-100">علامت‌گذاری به عنوان خوانده شده</button></div></div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    var curU=null, selU=null;
+    var mU=new bootstrap.Modal(document.getElementById('mdlUser')), mL=new bootstrap.Modal(document.getElementById('mdlLog')), mWD=new bootstrap.Modal(document.getElementById('mdlSetDays')), mM=new bootstrap.Modal(document.getElementById('mdlManual')), mAlert=new bootstrap.Modal(document.getElementById('mdlAlert'));
+    var isEdit=false;
+
+    window.onload=function(){
+      var ys=[document.getElementById('sYear'),document.getElementById('wdYear'),document.getElementById('uYear')]; for(var i=0;i<21;i++){var v=1403+i;ys.forEach(s=>{var o=document.createElement('option');o.value=v;o.innerText=v;if(v==1404)o.selected=true;s.appendChild(o)})}
+      var ms=[{v:'01',n:'فروردین'},{v:'02',n:'اردیبهشت'},{v:'03',n:'خرداد'},{v:'04',n:'تیر'},{v:'05',n:'مرداد'},{v:'06',n:'شهریور'},{v:'07',n:'مهر'},{v:'08',n:'آبان'},{v:'09',n:'آذر'},{v:'10',n:'دی'},{v:'11',n:'بهمن'},{v:'12',n:'اسفند'}];
+      var mS=[document.getElementById('sMonth'),document.getElementById('wdMonth'),document.getElementById('uMonth')]; mS.forEach(s=>{ms.forEach(m=>{var o=document.createElement('option');o.value=m.v;o.innerText=m.n;if(m.v=='09')o.selected=true;s.appendChild(o)})});
+      document.getElementById('todayDate').innerText=new Date().toLocaleDateString('fa-IR-u-nu-latn');
+    };
+
+    function sh(){document.getElementById('loader').style.display='flex'}
+    function hd(){document.getElementById('loader').style.display='none'}
+    function handleError(e){hd();alert("خطا: "+e)}
+    function doLogout(){
+      document.getElementById('viewUser').classList.add('hidden');
+      document.getElementById('viewAdmin').classList.add('hidden');
+      document.getElementById('viewUserDash').classList.add('hidden');
+      document.getElementById('viewLogin').classList.remove('hidden');
+      document.getElementById('lUser').value = '';
+      document.getElementById('lPass').value = '';
+      document.getElementById('lMsg').innerText = '';
+      curU = null; selU = null;
+    }
+    function doLogin(){
+      var u=document.getElementById('lUser').value, p=document.getElementById('lPass').value; if(!u||!p)return;
+      sh(); google.script.run.withSuccessHandler(r=>{
+        hd();
+        if(r.success){
+          curU=r; document.getElementById('viewLogin').classList.add('hidden');
+          if(r.role=='admin'){ document.getElementById('viewAdmin').classList.remove('hidden'); ldUs(); checkNotifications(); }
+          else initUs(r);
+        } else document.getElementById('lMsg').innerText=r.message;
+      }).withFailureHandler(handleError).loginUser(u,p);
+    }
+
+    function checkNotifications() {
+      google.script.run.withSuccessHandler(msgs => {
+        var badge = document.getElementById('notifBadge');
+        if(msgs.length > 0) {
+          badge.innerText = msgs.length;
+          badge.classList.remove('hidden');
+          var h = "";
+          msgs.forEach(m => { h += `<div class="mb-3 border-bottom border-secondary pb-2"><i class="fas fa-exclamation-circle text-warning me-2"></i><span class="text-white">${m}</span></div>`; });
+          document.getElementById('notifList').innerHTML = h;
+        } else {
+          badge.classList.add('hidden');
+          document.getElementById('notifList').innerHTML = '<div class="text-center text-muted">پیام جدیدی وجود ندارد</div>';
+        }
+      }).getUnreadNotifications();
+    }
+    function ackNotif() { sh(); google.script.run.withSuccessHandler(() => { hd(); mAlert.hide(); checkNotifications(); }).markNotificationsAsRead(); }
+    document.querySelector('.notif-btn').onclick = function() { checkNotifications(); mAlert.show(); };
+
+    function initUs(u){document.getElementById('viewUser').classList.remove('hidden');document.getElementById('uName').innerText=u.name;updB(u.summary.status);renderToday(u.summary.history);}
+    function renderToday(l){var h="";if(l.length==0)h='<div class="text-center text-muted py-3 small">خالی</div>';else l.forEach(x=>{var b=x.raw=='Entry'?'bg-success':(x.raw=='Exit'?'bg-danger':'bg-warning');h+=`<div class="timeline-item"><div><span class="badge ${b} rounded-pill">${x.action}</span></div><span class="text-info fw-bold" style="font-family:monospace">${x.time}</span></div>`});document.getElementById('todayLogsList').innerHTML=h;}
+    function updB(s){var b1=document.querySelector('.act-entry'),b2=document.querySelector('.act-leave'),b3=document.querySelector('.act-exit'),st=document.getElementById('uStat');b1.disabled=false;b2.disabled=false;b3.disabled=false;if(s=='Exit'){st.innerHTML='<span class="text-exit">خارج</span>';b2.disabled=true;b3.disabled=true;}else if(s.includes('LeaveStart')){st.innerHTML='<span class="text-leave">مرخصی</span>';b1.disabled=true;b3.disabled=true;b2.innerText='پایان مرخصی';}else{st.innerHTML='<span class="text-entry">حاضر</span>';b1.disabled=true;b2.innerText='مرخصی ساعتی';}}
+    function act(t){sh();google.script.run.withSuccessHandler(r=>{hd();if(r.success){if(t=='Exit'){alert('خروج ثبت شد');doLogout();}else{updB(r.newStatus);renderToday(r.summary.history);}}else alert(r.message)}).withFailureHandler(handleError).registerAction(curU.id,curU.name,t);}
+    function openUserDash(){document.getElementById('viewUser').classList.add('hidden');document.getElementById('viewUserDash').classList.remove('hidden');}
+    function backToUserPanel(){document.getElementById('viewUserDash').classList.add('hidden');document.getElementById('viewUser').classList.remove('hidden');}
+
+    // User Self-Report (Updated)
+    function loadUserSelfReport() {
+      sh(); var y = document.getElementById('uYear').value, m = document.getElementById('uMonth').value;
+      google.script.run.withSuccessHandler(r => {
+        hd();
+        document.getElementById('uDash').classList.remove('hidden');
+        document.getElementById('uSal').innerText = r.stats.totalSalary;
+        document.getElementById('uWork').innerText = r.stats.totalWork;
+        document.getElementById('uTarg').innerText = r.stats.totalTarget; // Correctly display target hours
+        document.getElementById('uPenalty').innerText = r.stats.totalPenalty;
+
+        var h = '';
+        r.details.forEach(d => { h += `<tr><td>${d.date}</td><td>${d.work}</td><td>${d.delay}</td><td class="text-danger">${d.penalty}</td><td class="text-white small">${d.status}</td></tr>` });
+        document.getElementById('uTbMain').innerHTML = h || '<tr><td colspan=5>خالی</td></tr>';
+      }).withFailureHandler(handleError).getMonthlyReportCalc(curU.id, y, m);
+    }
+
+    // Admin Functions (Updated)
+    function ldUs() { google.script.run.withSuccessHandler(u => { var h = ''; u.forEach(x => { h += `<button class="user-list-item" onclick='sel(${JSON.stringify(x)},this)'><b>${x.name}</b></button>` }); document.getElementById('uList').innerHTML = h }).withFailureHandler(handleError).getEmployeesList(); }
+    function sel(u, el) { selU = u; document.querySelectorAll('.user-list-item').forEach(x => x.classList.remove('active')); el.classList.add('active'); document.getElementById('repTitle').innerText = u.name; document.getElementById('btnEditUser').classList.remove('hidden'); document.getElementById('btnManual').classList.remove('hidden'); loadRep(); }
+
+    function loadRep() {
+      if (!selU) return; sh(); var y = document.getElementById('sYear').value, m = document.getElementById('sMonth').value;
+      google.script.run.withSuccessHandler(r => {
+        hd();
+        document.getElementById('dash').classList.remove('hidden');
+        document.getElementById('vTarg').innerText = r.stats.totalTarget;
+        document.getElementById('vSal').innerText = r.stats.totalSalary;
+        document.getElementById('vPenalty').innerText = r.stats.totalPenalty;
+        var vNet = document.getElementById('vNet');
+        vNet.innerText = r.stats.netSign + r.stats.netBalance;
+        vNet.className = 'stat-value ' + (r.stats.netSign == '+' ? 'text-success' : 'text-danger');
+
+        var h = '';
+        r.details.forEach(d => { h += `<tr><td>${d.date}</td><td>${d.work}</td><td>${d.delay}</td><td class="text-danger">${d.penalty}</td><td class="text-white small">${d.status}</td></tr>` });
+        document.getElementById('tbMain').innerHTML = h || '<tr><td colspan=5>خالی</td></tr>'
+      }).withFailureHandler(handleError).getMonthlyReportCalc(selU.id, y, m);
+
+      google.script.run.withSuccessHandler(g => { var h = ""; g.forEach((x, i) => { var l = x.items.map(z => `<div class="timeline-item"><span>${z.actionName}</span><span class="text-info">${z.time}</span><button class="btn btn-sm btn-outline-secondary py-0" onclick="openEditLog(${z.row},'${z.time}')"><i class="fas fa-pen"></i></button></div>`).join(''); h += `<div class="accordion-item mb-2"><h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#c${i}"><span>${x.date}</span></button></h2><div id="c${i}" class="accordion-collapse collapse" data-bs-parent="#accLogs"><div class="accordion-body">${l}</div></div></div>` }); document.getElementById('accLogs').innerHTML = h || 'خالی' }).withFailureHandler(handleError).getGroupedLogs(selU.id, y, m);
+    }
+
+    function swTab(t, el) { document.getElementById('tab1').classList.add('hidden'); document.getElementById('tab2').classList.add('hidden'); document.getElementById(t).classList.remove('hidden'); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); el.classList.add('active'); }
+
+    function openAdd() {
+      isEdit = false;
+      document.getElementById('muTitle').innerText = "افزودن کاربر";
+      document.getElementById('uid').value = "";
+      document.getElementById('fn').value = ""; document.getElementById('un').value = ""; document.getElementById('pw').value = "";
+      document.getElementById('hr').value = 8; document.getElementById('thr').value = 4; document.getElementById('tsal').value = "";
+      mU.show();
+    }
+
+    function openEditUser() {
+      if (!selU) { alert("لطفاً کاربری را انتخاب کنید"); return; }
+      isEdit = true;
+      document.getElementById('muTitle').innerText = "ویرایش کاربر";
+      document.getElementById('uid').value = selU.id;
+      document.getElementById('fn').value = selU.name;
+      document.getElementById('un').value = selU.username;
+      document.getElementById('pw').value = selU.password;
+      document.getElementById('hr').value = selU.dailyHours;
+      document.getElementById('thr').value = selU.thursdayHours;
+      document.getElementById('tsal').value = selU.totalMonthlySalary;
+      mU.show();
+    }
+
+    function subUser() {
+      var id = document.getElementById('uid').value;
+      var name = document.getElementById('fn').value, username = document.getElementById('un').value, password = document.getElementById('pw').value;
+      var dailyHours = document.getElementById('hr').value, thursdayHours = document.getElementById('thr').value, totalMonthlySalary = document.getElementById('tsal').value;
+
+      if(!name || !username || !password || !totalMonthlySalary) { alert('تمام فیلدها الزامی است'); return; }
+
+      sh();
+      var api = isEdit ? 'updateUserInfo' : 'adminSaveUser';
+      var args = isEdit ? [id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary] : [name, username, password, dailyHours, thursdayHours, totalMonthlySalary];
+
+      google.script.run.withSuccessHandler(() => { hd(); mU.hide(); ldUs(); alert('عملیات موفقیت آمیز بود'); }).withFailureHandler(handleError)[api](...args);
+    }
+    function openEditLog(r,t){document.getElementById('lid').value=r;document.getElementById('ltm').value=t.substring(0,5);mL.show();}
+    function subLog(){var r=document.getElementById('lid').value,t=document.getElementById('ltm').value;if(t.length!==5||!t.includes(':')){alert('14:30');return}sh();google.script.run.withSuccessHandler(()=>{hd();mL.hide();loadRep()}).updateLogTime(r,t);}
+    function openSetDays(){mWD.show()} function subWorkDays(){var y=document.getElementById('wdYear').value,m=document.getElementById('wdMonth').value,d=document.getElementById('wdCount').value;sh();google.script.run.withSuccessHandler(()=>{hd();mWD.hide();loadRep();alert('ok')}).setMonthDays(y,m,d);}
+    function openManual(){document.getElementById('mDate').value="1404/09/25";mM.show();} function subManual(){var d=document.getElementById('mDate').value,t=document.getElementById('mTime').value,a=document.getElementById('mAct').value;if(t.length!==5||!t.includes(':')){alert('09:00');return}sh();google.script.run.withSuccessHandler(()=>{hd();mM.hide();loadRep();alert('ok')}).withFailureHandler(handleError).adminAddLog(selU.id,selU.name,d,t,a);}
+  </script>
+</body>
+</html>
