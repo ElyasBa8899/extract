@@ -259,86 +259,46 @@ function timeToMins(t) {
 
 // Unused function `getSalaryConfig` is removed.
 
-// --- Rewritten User Data Functions ---
+function getUserById(id) {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+    if (!sheet) return null;
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) return null;
 
-function getEmployeesList() {
-  try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
-    if (!sheet) {
-      throw new Error("شیت 'Users' پیدا نشد. لطفاً از وجود این شیت در فایل خود اطمینان حاصل کنید.");
-    }
-
-    const data = sheet.getDataRange().getValues();
-    if (data.length < 2) {
-      return []; // No user data is not an error
-    }
-
-    const headers = data.shift().map(h => String(h ? h : "").trim());
-    const headerMap = {};
+    var headers = data[0].map(h => String(h).trim());
+    var headerMap = {};
     headers.forEach((h, i) => { if (h) headerMap[h] = i; });
 
-    // --- Robust Header Validation ---
-    const requiredHeaders = ["ID", "Name", "Username", "Password", "DailyHours", "ThursdayHours", "Shift1Start"];
-    const salaryHeaders = ["TotalMonthlySalary", "BaseHouryRate"];
+    const requiredHeaders = ["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"];
+    const missingHeaders = requiredHeaders.filter(h => !(h in headerMap));
 
-    for (const header of requiredHeaders) {
-      if (headerMap[header] === undefined) {
-        throw new Error(`ستون ضروری '${header}' در شیت 'Users' پیدا نشد. لطفاً نام ستون‌ها را بررسی کنید.`);
-      }
+    if (missingHeaders.length > 0) {
+      // This case should be handled by getEmployeesList, but as a fallback.
+      return null;
     }
 
-    const salaryHeader = salaryHeaders.find(h => headerMap[h] !== undefined);
-    if (!salaryHeader) {
-        throw new Error(`هیچ‌کدام از ستون‌های حقوق ('TotalMonthlySalary' یا 'BaseHouryRate') در شیت 'Users' پیدا نشد.`);
-    }
-    // --- End Validation ---
-
-    const list = data.map(row => {
-      if (row.join("").trim().length === 0) return null; // Filter this out later
-
-      const get = (key) => row[headerMap[key]];
-
-      return {
-        id: get('ID'),
-        name: get('Name'),
-        username: get('Username'),
-        password: get('Password'),
-        role: get('Role') || 'user',
-        dailyHours: get('DailyHours'),
-        thursdayHours: get('ThursdayHours'),
-        totalMonthlySalary: get(salaryHeader),
-        shift1Start: get('Shift1Start'),
-        shift2Start: get('Shift2Start') || "",
-        isPartTime: get('isPartTime') === true || String(get('isPartTime') || 'FALSE').toUpperCase() === 'TRUE'
-      };
-    }).filter(user => user !== null); // Remove empty rows
-
-    return list;
-
-  } catch (e) {
-    console.error(`Error in getEmployeesList: ${e.message} \nStack: ${e.stack}`);
-    return { error: true, message: e.message };
-  }
-}
-
-function getUserById(id) {
-    try {
-        const allUsers = getEmployeesList();
-        if (allUsers.error) {
-            throw new Error(allUsers.message);
+    const idIndex = headerMap['ID'];
+    for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+        if (String(row[idIndex]) == String(id)) {
+            const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
+            return {
+                id: get('ID'),
+                name: get('Name'),
+                username: get('Username'),
+                password: get('Password'),
+                role: get('Role'),
+                dailyHours: get('DailyHours'),
+                thursdayHours: get('ThursdayHours'),
+                totalMonthlySalary: get('TotalMonthlySalary'),
+                shift1Start: get('Shift1Start'),
+                shift2Start: get('Shift2Start'),
+                isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
+            };
         }
-
-        const user = allUsers.find(u => String(u.id) == String(id));
-        if (!user) {
-            return null;
-        }
-        return user;
-    } catch (e) {
-        console.error(`Error in getUserById: ${e.message}`);
-        throw new Error(`خطا در پیدا کردن کاربر با شناسه ${id}: ${e.message}`);
     }
+    return null;
 }
-
 
 // Unused leave request functions `submitLeaveRequest` and `getMyLeaveRequests` are removed.
 
@@ -467,6 +427,32 @@ function translateAction(a) { if (a == 'Entry') return 'ورود'; if (a == 'Exi
 function fmt(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (n < 10 ? "0" + n : n); }
 
 // --- Admin Functions (Updated) ---
+function getEmployeesList() {
+    try {
+        var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+        if (!sheet) {
+            throw new Error("شیت 'Users' پیدا نشد.");
+        }
+        var data = sheet.getDataRange().getValues();
+        var rowCount = data.length;
+        var headers = (data.length > 0) ? data[0].map(h => String(h).trim()) : [];
+        var firstRow = (data.length > 1) ? data[1].join(", ") : "No data rows";
+
+        // This is a diagnostic function. It will always throw an error with sheet info.
+        throw new Error(
+            "DIAGNOSTIC INFO:\n" +
+            "Row Count: " + rowCount + "\n" +
+            "Headers Found: [" + headers.join(", ") + "]\n" +
+            "First Data Row: [" + firstRow + "]"
+        );
+
+    } catch (e) {
+        // Re-throw the error to be caught by the frontend
+        throw new Error(e.message);
+    }
+}
+
+
 function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
   var s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
   var d = s.getDataRange().getValues();
