@@ -92,7 +92,7 @@ function getMonthlyReportCalc(userId, year, month) {
   var totalDelay = 0;
   var totalOvertime = 0;
 
-  var daysInMonth = new Date(year, month, 0).getDate();
+  var daysInMonth = getJalaliDaysInMonth(year, month); // Use the new accurate Jalali function
 
   for (var d = 1; d <= daysInMonth; d++) {
     var dStr = (d < 10) ? "0" + d : d;
@@ -222,8 +222,9 @@ function getMonthlyReportCalc(userId, year, month) {
 // محاسبه دقیق تاخیر بر اساس شیفت
 function calculateStrictDelay(timeStr, shift1Start, shift2Start) {
   // timeStr format: HH:mm:ss
-  if (!timeStr) return 0;
+  if (!timeStr || typeof timeStr.split !== 'function') return 0;
   var parts = timeStr.split(':');
+  if (parts.length < 2) return 0;
   var h = parseInt(parts[0]);
   var m = parseInt(parts[1]);
   var timeMins = h * 60 + m;
@@ -249,7 +250,9 @@ function calculateStrictDelay(timeStr, shift1Start, shift2Start) {
 }
 
 function timeToMins(t) {
+  if (!t || typeof t.split !== 'function') return 0;
   var p = t.split(':');
+  if (p.length < 2) return 0;
   return parseInt(p[0])*60 + parseInt(p[1]);
 }
 
@@ -361,6 +364,26 @@ function getJalaliDate(d) {
 
 function translateAction(a) { if (a == 'Entry') return 'ورود'; if (a == 'Exit') return 'خروج'; if (a == 'LeaveStart') return 'شروع مرخصی'; return 'پایان مرخصی'; }
 function fmt(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (n < 10 ? "0" + n : n); }
+
+// New helper functions for accurate Jalali calendar calculations
+function isJalaliLeapYear(year) {
+  // A reliable algorithm for determining leap years in the Persian calendar for the current era.
+  const leapYearRemainders = [1, 5, 9, 13, 17, 22, 26, 30];
+  return leapYearRemainders.includes(parseInt(year) % 33);
+}
+
+function getJalaliDaysInMonth(year, month) {
+  year = parseInt(year);
+  month = parseInt(month);
+  if (month >= 1 && month <= 6) {
+    return 31;
+  } else if (month >= 7 && month <= 11) {
+    return 30;
+  } else if (month === 12) {
+    return isJalaliLeapYear(year) ? 30 : 29;
+  }
+  return 30; // Default fallback for invalid month
+}
 
 // --- Admin Functions (Updated) ---
 function getEmployeesList() {
