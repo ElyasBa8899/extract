@@ -92,7 +92,7 @@ function getMonthlyReportCalc(userId, year, month) {
   var totalDelay = 0;
   var totalOvertime = 0;
 
-  var daysInMonth = getJalaliDaysInMonth(year, month); // Use the new accurate Jalali function
+  var daysInMonth = getJalaliDaysInMonth(parseInt(year), parseInt(month));
 
   for (var d = 1; d <= daysInMonth; d++) {
     var dStr = (d < 10) ? "0" + d : d;
@@ -222,9 +222,8 @@ function getMonthlyReportCalc(userId, year, month) {
 // محاسبه دقیق تاخیر بر اساس شیفت
 function calculateStrictDelay(timeStr, shift1Start, shift2Start) {
   // timeStr format: HH:mm:ss
-  if (!timeStr || typeof timeStr.split !== 'function') return 0;
+  if (!timeStr) return 0;
   var parts = timeStr.split(':');
-  if (parts.length < 2) return 0;
   var h = parseInt(parts[0]);
   var m = parseInt(parts[1]);
   var timeMins = h * 60 + m;
@@ -250,27 +249,50 @@ function calculateStrictDelay(timeStr, shift1Start, shift2Start) {
 }
 
 function timeToMins(t) {
-  if (!t || typeof t.split !== 'function') return 0;
   var p = t.split(':');
-  if (p.length < 2) return 0;
   return parseInt(p[0])*60 + parseInt(p[1]);
 }
 
 // Unused function `getSalaryConfig` is removed.
 
 function getUserById(id) {
-  var users = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues();
-  for (var i = 1; i < users.length; i++) {
-    if (String(users[i][0]) == String(id)) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  if (!sheet) return null;
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return null;
+
+  var headers = data.shift();
+  var headerMap = {};
+  headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
+
+  const idIndex = headerMap['ID'];
+  if (idIndex === undefined) return null; // Can't find anyone without an ID column
+
+  // Fallbacks for potentially unlabeled columns
+  if (!headerMap['Shift1Start'] && headers.length > 9) headerMap['Shift1Start'] = 9;
+  if (!headerMap['Shift2Start'] && headers.length > 10) headerMap['Shift2Start'] = 10;
+  if (!headerMap['isPartTime'] && headers.length > 11) headerMap['isPartTime'] = 11;
+
+  // Handle different naming for salary
+  const salaryKey = 'TotalMonthlySalary';
+  const fallbackSalaryKey = 'BaseHouryRate';
+  if(!headerMap[salaryKey] && headerMap[fallbackSalaryKey]) {
+      headerMap[salaryKey] = headerMap[fallbackSalaryKey];
+  }
+
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    if (String(row[idIndex]) == String(id)) {
+      const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
       return {
-        id: users[i][0],
-        name: users[i][1],
-        dailyHours: users[i][5],
-        thursdayHours: users[i][6],
-        totalMonthlySalary: users[i][7],
-        shift1Start: users[i][8],
-        shift2Start: users[i][9],
-        isPartTime: users[i][10] === true || String(users[i][10]).toUpperCase() === 'TRUE'
+        id: get('ID'),
+        name: get('Name'),
+        dailyHours: get('DailyHours'),
+        thursdayHours: get('ThursdayHours'),
+        totalMonthlySalary: get(salaryKey),
+        shift1Start: get('Shift1Start'),
+        shift2Start: get('Shift2Start'),
+        isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
       };
     }
   }
@@ -282,11 +304,32 @@ function getUserById(id) {
 // --- Core App Functions ---
 function loginUser(u, p) {
   setupSheet();
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var users = ss.getSheetByName("Users").getDataRange().getValues();
-  for (var i = 1; i < users.length; i++) {
-    if (users[i][2] == u && users[i][3] == p) {
-      return { success: true, id: users[i][0], name: users[i][1], role: users[i][4], summary: getTodayUserSummary(users[i][0]) };
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  if (!sheet) throw new Error("User sheet not found.");
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) throw new Error("No user data found.");
+
+  var headers = data.shift();
+  var headerMap = {};
+  headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
+
+  const userIndex = headerMap['Username'];
+  const passIndex = headerMap['Password'];
+  const idIndex = headerMap['ID'];
+  const nameIndex = headerMap['Name'];
+  const roleIndex = headerMap['Role'];
+
+  if (userIndex === undefined || passIndex === undefined) {
+    throw new Error("Username or Password column not found in Users sheet.");
+  }
+
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    if (row[userIndex] == u && row[passIndex] == p) {
+      const id = idIndex !== undefined ? row[idIndex] : 'N/A';
+      const name = nameIndex !== undefined ? row[nameIndex] : 'N/A';
+      const role = roleIndex !== undefined ? row[roleIndex] : 'user';
+      return { success: true, id: id, name: name, role: role, summary: getTodayUserSummary(id) };
     }
   }
   throw new Error("اطلاعات ورود اشتباه است");
@@ -340,6 +383,23 @@ function getTodayUserSummary(userId) {
 }
 
 // --- Date and Formatting Helpers ---
+
+function isJalaliLeapYear(year) {
+  // The 33-year cycle is a good approximation for Jalali leap years
+  const remainder = (year - 474) % 33;
+  return [1, 5, 9, 13, 17, 22, 26, 30].indexOf(remainder) !== -1;
+}
+
+function getJalaliDaysInMonth(year, month) {
+    if (month <= 6) {
+        return 31;
+    } else if (month <= 11) {
+        return 30;
+    } else { // Esfand
+        return isJalaliLeapYear(year) ? 30 : 29;
+    }
+}
+
 function jalaliToGregorian(j_y, j_m, j_d) {
   j_y = parseInt(j_y); j_m = parseInt(j_m); j_d = parseInt(j_d);
   var jy = j_y - 979;
@@ -365,54 +425,50 @@ function getJalaliDate(d) {
 function translateAction(a) { if (a == 'Entry') return 'ورود'; if (a == 'Exit') return 'خروج'; if (a == 'LeaveStart') return 'شروع مرخصی'; return 'پایان مرخصی'; }
 function fmt(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (n < 10 ? "0" + n : n); }
 
-// New helper functions for accurate Jalali calendar calculations
-function isJalaliLeapYear(year) {
-  // A reliable algorithm for determining leap years in the Persian calendar for the current era.
-  const leapYearRemainders = [1, 5, 9, 13, 17, 22, 26, 30];
-  return leapYearRemainders.includes(parseInt(year) % 33);
-}
-
-function getJalaliDaysInMonth(year, month) {
-  year = parseInt(year);
-  month = parseInt(month);
-  if (month >= 1 && month <= 6) {
-    return 31;
-  } else if (month >= 7 && month <= 11) {
-    return 30;
-  } else if (month === 12) {
-    return isJalaliLeapYear(year) ? 30 : 29;
-  }
-  return 30; // Default fallback for invalid month
-}
-
 // --- Admin Functions (Updated) ---
 function getEmployeesList() {
-  try {
-    var usersSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
-    if (!usersSheet) return []; // Return empty array if sheet doesn't exist
-    var users = usersSheet.getDataRange().getValues();
-    var list = [];
-    // Start from 1 to skip header row
-    for (var i = 1; i < users.length; i++) {
-      list.push({
-        id: users[i][0],
-        name: users[i][1],
-        username: users[i][2],
-        password: users[i][3],
-        dailyHours: users[i][5],
-        thursdayHours: users[i][6],
-        totalMonthlySalary: users[i][7],
-        shift1Start: users[i][8],
-        shift2Start: users[i][9],
-        isPartTime: users[i][10] === true || String(users[i][10]).toUpperCase() === 'TRUE'
-      });
-    }
-    return list;
-  } catch (e) {
-    // Log the error for debugging and return an empty array to prevent crashes
-    console.error("Error in getEmployeesList: " + e.toString());
-    return [];
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+
+  var headers = data.shift();
+  var headerMap = {};
+  headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
+
+  // Fallbacks for potentially unlabeled columns based on user screenshot
+  if (!headerMap['Shift1Start'] && headers.length > 9) headerMap['Shift1Start'] = 9;
+  if (!headerMap['Shift2Start'] && headers.length > 10) headerMap['Shift2Start'] = 10;
+  if (!headerMap['isPartTime'] && headers.length > 11) headerMap['isPartTime'] = 11;
+
+  // Handle different naming for salary. User sheet has 'BaseHouryRate'.
+  const salaryKey = 'TotalMonthlySalary';
+  const fallbackSalaryKey = 'BaseHouryRate';
+  if(!headerMap[salaryKey] && headerMap[fallbackSalaryKey]) {
+      headerMap[salaryKey] = headerMap[fallbackSalaryKey];
   }
+
+  var list = [];
+  data.forEach(row => {
+    if (row.join("").trim().length === 0) return; // Skip empty rows
+    const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
+
+    list.push({
+      id: get('ID'),
+      name: get('Name'),
+      username: get('Username'),
+      password: get('Password'),
+      role: get('Role'),
+      dailyHours: get('DailyHours'),
+      thursdayHours: get('ThursdayHours'),
+      totalMonthlySalary: get(salaryKey),
+      shift1Start: get('Shift1Start'),
+      shift2Start: get('Shift2Start'),
+      isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
+    });
+  });
+
+  return list;
 }
 
 function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
