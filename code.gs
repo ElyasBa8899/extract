@@ -259,44 +259,86 @@ function timeToMins(t) {
 
 // Unused function `getSalaryConfig` is removed.
 
-function getUserById(id) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
-  if (!sheet) return null;
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2) return null;
+// --- Rewritten User Data Functions ---
 
-  var headers = data.shift();
-  var headerMap = {};
-  headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
+function getEmployeesList() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+    if (!sheet) {
+      throw new Error("شیت 'Users' پیدا نشد. لطفاً از وجود این شیت در فایل خود اطمینان حاصل کنید.");
+    }
 
-  const idIndex = headerMap['ID'];
-  if (idIndex === undefined) return null; // Can't find anyone without an ID column
+    const data = sheet.getDataRange().getValues();
+    if (data.length < 2) {
+      return []; // No user data is not an error
+    }
 
-  // Handle different naming for salary
-  const salaryKey = 'TotalMonthlySalary';
-  const fallbackSalaryKey = 'BaseHouryRate';
-  if(!headerMap[salaryKey] && headerMap[fallbackSalaryKey]) {
-      headerMap[salaryKey] = headerMap[fallbackSalaryKey];
-  }
+    const headers = data.shift().map(h => String(h ? h : "").trim());
+    const headerMap = {};
+    headers.forEach((h, i) => { if (h) headerMap[h] = i; });
 
-  for (var i = 0; i < data.length; i++) {
-    var row = data[i];
-    if (String(row[idIndex]) == String(id)) {
-      const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
+    // --- Robust Header Validation ---
+    const requiredHeaders = ["ID", "Name", "Username", "Password", "DailyHours", "ThursdayHours", "Shift1Start"];
+    const salaryHeaders = ["TotalMonthlySalary", "BaseHouryRate"];
+
+    for (const header of requiredHeaders) {
+      if (headerMap[header] === undefined) {
+        throw new Error(`ستون ضروری '${header}' در شیت 'Users' پیدا نشد. لطفاً نام ستون‌ها را بررسی کنید.`);
+      }
+    }
+
+    const salaryHeader = salaryHeaders.find(h => headerMap[h] !== undefined);
+    if (!salaryHeader) {
+        throw new Error(`هیچ‌کدام از ستون‌های حقوق ('TotalMonthlySalary' یا 'BaseHouryRate') در شیت 'Users' پیدا نشد.`);
+    }
+    // --- End Validation ---
+
+    const list = data.map(row => {
+      if (row.join("").trim().length === 0) return null; // Filter this out later
+
+      const get = (key) => row[headerMap[key]];
+
       return {
         id: get('ID'),
         name: get('Name'),
+        username: get('Username'),
+        password: get('Password'),
+        role: get('Role') || 'user',
         dailyHours: get('DailyHours'),
         thursdayHours: get('ThursdayHours'),
-        totalMonthlySalary: get(salaryKey),
+        totalMonthlySalary: get(salaryHeader),
         shift1Start: get('Shift1Start'),
-        shift2Start: get('Shift2Start'),
-        isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
+        shift2Start: get('Shift2Start') || "",
+        isPartTime: get('isPartTime') === true || String(get('isPartTime') || 'FALSE').toUpperCase() === 'TRUE'
       };
-    }
+    }).filter(user => user !== null); // Remove empty rows
+
+    return list;
+
+  } catch (e) {
+    console.error(`Error in getEmployeesList: ${e.message} \nStack: ${e.stack}`);
+    return { error: true, message: e.message };
   }
-  return null;
 }
+
+function getUserById(id) {
+    try {
+        const allUsers = getEmployeesList();
+        if (allUsers.error) {
+            throw new Error(allUsers.message);
+        }
+
+        const user = allUsers.find(u => String(u.id) == String(id));
+        if (!user) {
+            return null;
+        }
+        return user;
+    } catch (e) {
+        console.error(`Error in getUserById: ${e.message}`);
+        throw new Error(`خطا در پیدا کردن کاربر با شناسه ${id}: ${e.message}`);
+    }
+}
+
 
 // Unused leave request functions `submitLeaveRequest` and `getMyLeaveRequests` are removed.
 
@@ -425,52 +467,6 @@ function translateAction(a) { if (a == 'Entry') return 'ورود'; if (a == 'Exi
 function fmt(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (n < 10 ? "0" + n : n); }
 
 // --- Admin Functions (Updated) ---
-function getEmployeesList() {
-  try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
-    if (!sheet) return [];
-    var data = sheet.getDataRange().getValues();
-    if (data.length < 2) return [];
-
-    var headers = data.shift();
-  var headerMap = {};
-  headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
-
-  // Handle different naming for salary. User sheet has 'BaseHouryRate'.
-  const salaryKey = 'TotalMonthlySalary';
-  const fallbackSalaryKey = 'BaseHouryRate';
-  if(!headerMap[salaryKey] && headerMap[fallbackSalaryKey]) {
-      headerMap[salaryKey] = headerMap[fallbackSalaryKey];
-  }
-
-  var list = [];
-  data.forEach(row => {
-    if (row.join("").trim().length === 0) return; // Skip empty rows
-    const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
-
-    list.push({
-      id: get('ID'),
-      name: get('Name'),
-      username: get('Username'),
-      password: get('Password'),
-      role: get('Role'),
-      dailyHours: get('DailyHours'),
-      thursdayHours: get('ThursdayHours'),
-      totalMonthlySalary: get(salaryKey),
-      shift1Start: get('Shift1Start'),
-      shift2Start: get('Shift2Start'),
-      isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
-    });
-  });
-
-  return list;
-  } catch (e) {
-    // Log the error for debugging and return it to the frontend for display.
-    console.error("Error in getEmployeesList:", e);
-    return { error: true, message: e.message };
-  }
-}
-
 function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
   var s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
   var d = s.getDataRange().getValues();
