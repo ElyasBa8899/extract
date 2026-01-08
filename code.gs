@@ -273,9 +273,9 @@ function getUserById(id) {
   if (idIndex === undefined) return null; // Can't find anyone without an ID column
 
   // Fallbacks for potentially unlabeled columns
-  if (!headerMap['Shift1Start'] && headers.length > 9) headerMap['Shift1Start'] = 9;
-  if (!headerMap['Shift2Start'] && headers.length > 10) headerMap['Shift2Start'] = 10;
-  if (!headerMap['isPartTime'] && headers.length > 11) headerMap['isPartTime'] = 11;
+  if (!headerMap['Shift1Start'] && headers.length > 8) headerMap['Shift1Start'] = 8;
+  if (!headerMap['Shift2Start'] && headers.length > 9) headerMap['Shift2Start'] = 9;
+  if (!headerMap['isPartTime'] && headers.length > 10) headerMap['isPartTime'] = 10;
 
   // Handle different naming for salary
   const salaryKey = 'TotalMonthlySalary';
@@ -442,9 +442,9 @@ function getEmployeesList() {
   headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
 
   // Fallbacks for potentially unlabeled columns based on user screenshot
-  if (!headerMap['Shift1Start'] && headers.length > 9) headerMap['Shift1Start'] = 9;
-  if (!headerMap['Shift2Start'] && headers.length > 10) headerMap['Shift2Start'] = 10;
-  if (!headerMap['isPartTime'] && headers.length > 11) headerMap['isPartTime'] = 11;
+  if (!headerMap['Shift1Start'] && headers.length > 8) headerMap['Shift1Start'] = 8;
+  if (!headerMap['Shift2Start'] && headers.length > 9) headerMap['Shift2Start'] = 9;
+  if (!headerMap['isPartTime'] && headers.length > 10) headerMap['isPartTime'] = 10;
 
   // Handle different naming for salary. User sheet has 'BaseHouryRate'.
   const salaryKey = 'TotalMonthlySalary';
