@@ -18,12 +18,16 @@ function setupSheet() {
   setupWorkWeekSettings();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // 1. Users Sheet (Simplified)
-  if (!ss.getSheetByName("Users")) {
-    var u = ss.insertSheet("Users");
-    // New structure: TotalMonthlySalary and ThursdayHours are added
-    u.appendRow(["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"]);
-    u.appendRow([1, "مدیر سیستم", "admin", "123", "admin", 8, 4, 10000000, "08:30", "17:00", "FALSE"]); // Example values
+  // 1. Users Sheet: Create if it doesn't exist and add a default admin if it's empty.
+  var usersSheet = ss.getSheetByName("Users");
+  if (!usersSheet) {
+    usersSheet = ss.insertSheet("Users");
+    usersSheet.appendRow(["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"]);
+  }
+
+  // Check if the sheet has only the header row (i.e., no actual users)
+  if (usersSheet.getLastRow() < 2) {
+    usersSheet.appendRow([1, "مدیر سیستم", "admin", "123", "admin", 8, 4, 10000000, "08:30", "17:00", "FALSE"]);
   }
 
   // 2. Logs
@@ -202,7 +206,7 @@ function getMonthlyReportCalc(userId, year, month) {
   }
 
   return {
-    details: summary.reverse(),
+    details: summary,
     stats: {
       daysConfig: getMonthDays(year, month),
       totalSalary: Math.round(finalPay).toLocaleString(),
