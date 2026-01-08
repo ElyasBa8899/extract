@@ -114,6 +114,16 @@
       <div class="d-flex justify-content-between border-bottom border-secondary pb-2 mb-3"><span class="text-white">فعالیت‌های امروز</span><span class="badge bg-secondary" id="todayDate">--/--/--</span></div>
       <div id="todayLogsList" class="px-1"></div>
     </div>
+
+    <div class="pro-card">
+      <h6 class="mb-3 border-bottom border-secondary pb-2">ثبت مرخصی روزانه</h6>
+      <div class="row g-2">
+        <div class="col-6"><label class="small text-muted">از تاریخ</label><input type="text" id="leaveStartDate" class="form-control text-center" placeholder="YYYY/MM/DD" dir="ltr"></div>
+        <div class="col-6"><label class="small text-muted">تا تاریخ</label><input type="text" id="leaveEndDate" class="form-control text-center" placeholder="YYYY/MM/DD" dir="ltr"></div>
+      </div>
+      <button onclick="submitLeaveRequest()" class="btn btn-info w-100 mt-3">ارسال درخواست</button>
+    </div>
+
     <button onclick="openUserDash()" class="btn btn-primary w-100 py-3 mb-5">مشاهده کارنامه ماهانه</button>
   </div>
 
@@ -142,6 +152,7 @@
       <h4 class="m-0 fw-bold text-white">داشبورد مدیریت</h4>
       <div class="d-flex align-items-center gap-2">
         <button onclick="checkNotifications()" class="notif-btn" title="پیام‌ها"><i class="fas fa-bell"></i><span id="notifBadge" class="notif-badge hidden">0</span></button>
+        <button onclick="openLeaveRequests()" class="btn btn-outline-warning btn-sm px-3">درخواست‌های مرخصی</button>
         <button onclick="openCalendarSettings()" class="btn btn-outline-info btn-sm px-3">تنظیمات تقویم</button>
         <button onclick="doLogout()" class="btn btn-danger btn-sm px-3">خروج</button>
       </div>
@@ -164,7 +175,8 @@
             <div class="col-6 col-lg-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-arrow-down"></i></div><div class="stat-label">کل تاخیر</div><div class="stat-value text-danger" id="vDelay">0</div></div></div>
             <div class="col-6 col-lg-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-sort-amount-down"></i></div><div class="stat-label">جریمه (کسر شده)</div><div class="stat-value text-danger" id="vPenalty">0</div></div></div>
             <div class="col-6 col-lg-3"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-times"></i></div><div class="stat-label">تعداد غیبت</div><div class="stat-value" id="vAbsence">0</div></div></div>
-             <div class="col-12 col-lg-6"><div class="stat-card card-green" style="height: 150px;"><div class="stat-icon" style="font-size: 4rem;"><i class="fas fa-coins"></i></div><div class="stat-label">مبلغ نهایی قابل پرداخت</div><div class="stat-value text-success" style="font-size: 2.2rem;" id="vSal">0</div></div></div>
+            <div class="col-12 col-lg-6"><div id="vBenefits" class="stat-card"><div class="stat-icon" style="font-size: 4rem;"><i class="fas fa-gift"></i></div><div class="stat-label">وضعیت مزایا</div><div class="stat-value" id="vBenefitsStatus"></div><small id="vBenefitsReason"></small></div></div>
+            <div class="col-12 col-lg-6"><div class="stat-card card-green"><div class="stat-icon" style="font-size: 4rem;"><i class="fas fa-coins"></i></div><div class="stat-label">مبلغ نهایی قابل پرداخت</div><div class="stat-value text-success" style="font-size: 2.2rem;" id="vSal">0</div></div></div>
           </div>
 
           <ul class="nav nav-tabs mb-3 border-secondary"><li class="nav-item"><button class="nav-link active" onclick="swTab('tab1',this)">گزارش مالی</button></li><li class="nav-item"><button class="nav-link" onclick="swTab('tab2',this)">ریز ترددها</button></li></ul>
@@ -183,6 +195,8 @@
 
   <div id="mdlCalendar" class="modal fade"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">تقویم تعطیلات</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><p class="small text-muted mb-3">برای ثبت یا حذف تعطیلی رسمی، روی روز مورد نظر در تقویم کلیک کنید.</p><div id="holidayCalendar"></div></div></div></div></div>
   <div id="mdlAlert" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-warning"><div class="modal-header bg-warning text-dark"><h5 class="modal-title"><i class="fas fa-bell me-2"></i>پیام‌های سیستم</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="notifList" class="notif-list p-2"></div></div><div class="modal-footer"><button onclick="ackNotif()" class="btn btn-dark w-100">علامت‌گذاری به عنوان خوانده شده</button></div></div></div></div>
+
+  <div id="mdlLeaveRequests" class="modal fade"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">مدیریت درخواست‌های مرخصی</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="table-responsive"><table class="table-custom"><thead><tr><th>کارمند</th><th>از تاریخ</th><th>تا تاریخ</th><th>وضعیت</th><th>اقدام</th></tr></thead><tbody id="leaveRequestsBody"></tbody></table></div></div></div></div></div>
 
   <!-- Generic Message Modal -->
   <div id="mdlMessage" class="modal fade" tabindex="-1">
@@ -207,8 +221,50 @@
   <script>
     var curU=null, selU=null;
     var calendar;
-    var mU=new bootstrap.Modal(document.getElementById('mdlUser')), mL=new bootstrap.Modal(document.getElementById('mdlLog')), mCalendar=new bootstrap.Modal(document.getElementById('mdlCalendar')), mM=new bootstrap.Modal(document.getElementById('mdlManual')), mAlert=new bootstrap.Modal(document.getElementById('mdlAlert')), mMessage = new bootstrap.Modal(document.getElementById('mdlMessage'));
+    var mU=new bootstrap.Modal(document.getElementById('mdlUser')), mL=new bootstrap.Modal(document.getElementById('mdlLog')), mCalendar=new bootstrap.Modal(document.getElementById('mdlCalendar')), mM=new bootstrap.Modal(document.getElementById('mdlManual')), mAlert=new bootstrap.Modal(document.getElementById('mdlAlert')), mMessage = new bootstrap.Modal(document.getElementById('mdlMessage')), mLeave = new bootstrap.Modal(document.getElementById('mdlLeaveRequests'));
     var isEdit=false;
+
+    function openLeaveRequests() {
+      sh();
+      google.script.run.withSuccessHandler(requests => {
+        hd();
+        var tbody = document.getElementById('leaveRequestsBody');
+        tbody.innerHTML = '';
+        if (requests.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">هیچ درخواستی یافت نشد.</td></tr>';
+        } else {
+          requests.forEach(r => {
+            var row = `<tr>
+              <td>${r.userName}</td>
+              <td>${r.startDate}</td>
+              <td>${r.endDate}</td>
+              <td><span class="badge ${r.status === 'تایید شده' ? 'bg-success' : (r.status === 'رد شده' ? 'bg-danger' : 'bg-warning')}">${r.status}</span></td>
+              <td>
+                ${r.status === 'در انتظار' ? `
+                  <button class="btn btn-sm btn-success py-0" onclick="updateLeaveStatus('${r.id}', 'تایید شده')">تایید</button>
+                  <button class="btn btn-sm btn-danger py-0" onclick="updateLeaveStatus('${r.id}', 'رد شده')">رد</button>
+                ` : '-'}
+              </td>
+            </tr>`;
+            tbody.innerHTML += row;
+          });
+        }
+        mLeave.show();
+      }).withFailureHandler(handleError).getLeaveRequests();
+    }
+
+    function updateLeaveStatus(requestId, newStatus) {
+      sh();
+      google.script.run.withSuccessHandler(r => {
+        hd();
+        if (r.success) {
+          showMessage('وضعیت با موفقیت به‌روزرسانی شد.', 'success');
+          openLeaveRequests(); // Refresh the list
+        } else {
+          showMessage('خطا در به‌روزرسانی وضعیت.', 'error');
+        }
+      }).withFailureHandler(handleError).updateLeaveStatus(requestId, newStatus);
+    }
 
     function showMessage(message, type = 'info', title = 'پیام سیستم') {
       const header = document.getElementById('msgHeader');
@@ -291,6 +347,28 @@
     function openUserDash(){document.getElementById('viewUser').classList.add('hidden');document.getElementById('viewUserDash').classList.remove('hidden');}
     function backToUserPanel(){document.getElementById('viewUserDash').classList.add('hidden');document.getElementById('viewUser').classList.remove('hidden');}
 
+    function submitLeaveRequest() {
+      var startDate = document.getElementById('leaveStartDate').value.trim();
+      var endDate = document.getElementById('leaveEndDate').value.trim();
+      if (!startDate || !endDate) {
+        showMessage('لطفاً هر دو تاریخ شروع و پایان را وارد کنید.', 'error');
+        return;
+      }
+      // Basic format validation
+      var dateFormat = /^\d{4}\/\d{2}\/\d{2}$/;
+      if (!dateFormat.test(startDate) || !dateFormat.test(endDate)) {
+        showMessage('فرمت تاریخ باید YYYY/MM/DD باشد.', 'error');
+        return;
+      }
+      sh();
+      google.script.run.withSuccessHandler(r => {
+        hd();
+        showMessage(r.message, 'success');
+        document.getElementById('leaveStartDate').value = '';
+        document.getElementById('leaveEndDate').value = '';
+      }).withFailureHandler(handleError).submitLeaveRequest(curU, startDate, endDate);
+    }
+
     // User Self-Report (Updated)
     function loadUserSelfReport() {
       sh(); var y = document.getElementById('uYear').value, m = document.getElementById('uMonth').value;
@@ -348,6 +426,22 @@
         document.getElementById('vPenalty').innerText = fmtMins(r.stats.totalPenalty);
         document.getElementById('vAbsence').innerText = r.stats.countAbsence;
         document.getElementById('vSal').innerText = r.stats.totalSalary;
+
+        var benefitsCard = document.getElementById('vBenefits');
+        var benefitsStatusEl = document.getElementById('vBenefitsStatus');
+        var benefitsReasonEl = document.getElementById('vBenefitsReason');
+
+        benefitsStatusEl.innerText = r.stats.benefitsStatus;
+        benefitsReasonEl.innerText = r.stats.benefitsRevocationReason || '';
+
+        benefitsCard.classList.remove('card-green', 'card-red');
+        if (r.stats.benefitsStatus === 'حذف شده') {
+          benefitsCard.classList.add('card-red');
+          benefitsStatusEl.classList.add('text-danger');
+        } else {
+          benefitsCard.classList.add('card-green');
+          benefitsStatusEl.classList.remove('text-danger');
+        }
 
         var h = '';
         r.details.forEach(d => { h += `<tr><td>${d.date}</td><td>${d.work}</td><td>${d.delay}</td><td class="text-danger">${d.penalty}</td><td class="text-white small">${d.status}</td></tr>` });

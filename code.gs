@@ -52,7 +52,12 @@ function setupSheet() {
     s.getRange("A:A").setNumberFormat("@");
   }
 
-  // SalaryConfig and LeaveRequests sheets are intentionally removed to simplify the system.
+  // SalaryConfig sheet is intentionally removed to simplify the system.
+
+  // 6. Leave Requests
+  if (!ss.getSheetByName("LeaveRequests")) {
+    ss.insertSheet("LeaveRequests").appendRow(["ID", "UserID", "UserName", "StartDate", "EndDate", "Status"]);
+  }
 }
 
 // --- توابع محاسباتی هسته (Core Logic) ---
@@ -68,6 +73,7 @@ function getMonthlyReportCalc(userId, year, month) {
   var logsRaw = logsSheet.getDataRange().getValues(); // Use raw values for dates
 
   var holidays = getHolidaysList();
+  var approvedLeaves = getApprovedLeavesForUser(userId); // Get approved leaves
   var workWeekSettings = getWorkWeekSettings();
   var dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   var targetYM = year + "/" + month;
@@ -102,12 +108,13 @@ function getMonthlyReportCalc(userId, year, month) {
     var dStr = (d < 10) ? "0" + d : d;
     var k = targetYM + "/" + dStr;
     var isH = holidays.some(h => h.trim() == k);
+    var isOnLeave = approvedLeaves.some(l => k >= l.start && k <= l.end); // Check if the date is within a leave period
     var currentDate = jalaliToGregorian(year, month, dStr);
     var dayOfWeek = currentDate.getDay(); // 0=Sun, 5=Fri
 
     var dayTarget = 0;
-    // Fridays (assuming weekend) and holidays have 0 target hours
-    if (!isH) {
+    // Fridays, holidays, and approved leave days have 0 target hours
+    if (!isH && !isOnLeave) {
       var dayName = dayNames[dayOfWeek];
       var dayStatus = workWeekSettings[dayName];
       if (dayStatus === "Full Day") {
@@ -177,7 +184,6 @@ function getMonthlyReportCalc(userId, year, month) {
     });
   }
 
-  // --- Final Salary Calculation (Simplified Model) ---
   var perMinuteRate = 0;
   if (totalMonthTargetMins > 0) {
     perMinuteRate = (user.totalMonthlySalary || 0) / totalMonthTargetMins;
@@ -205,6 +211,16 @@ function getMonthlyReportCalc(userId, year, month) {
     finalPay = (user.totalMonthlySalary || 0) + adjustmentAmount;
   }
 
+  var benefitsStatus = "برقرار";
+  var benefitsRevocationReason = "";
+  if (countDelay > 5) {
+    benefitsStatus = "حذف شده";
+    benefitsRevocationReason = "تاخیر بیش از 5 بار";
+  } else if (countAbsence > 2) {
+    benefitsStatus = "حذف شده";
+    benefitsRevocationReason = "غیبت بیش از 2 بار";
+  }
+
   return {
     details: summary,
     stats: {
@@ -218,7 +234,9 @@ function getMonthlyReportCalc(userId, year, month) {
       netSign: finalDifference >= 0 ? "+" : "-",
       totalDelay: totalDelay,
       totalOvertime: totalOvertime,
-      totalTarget: totalMonthTargetMins
+      totalTarget: totalMonthTargetMins,
+      benefitsStatus: benefitsStatus,
+      benefitsRevocationReason: benefitsRevocationReason
     }
   };
 }
@@ -236,18 +254,19 @@ function calculateStrictDelay(timeStr, shift1Start, shift2Start) {
   var s1 = shift1Start ? timeToMins(shift1Start) : 0;
   var s2 = shift2Start ? timeToMins(shift2Start) : 0;
 
-  // If there is no second shift, or the entry is before the second shift starts
-  if (s2 === 0 || timeMins < s2 - 30) {
+  // If the entry is for the first shift (before 14:00)
+  if (timeMins < 14 * 60) {
     if (s1 > 0 && timeMins > s1) {
       delay = timeMins - s1;
     }
   }
-  // If there is a second shift and the entry is after it starts
-  else {
+  // If the entry is for the second shift (after 17:00)
+  else if (timeMins >= 17 * 60) {
     if (s2 > 0 && timeMins > s2) {
       delay = timeMins - s2;
     }
   }
+  // Entries between 14:00 and 16:59 have no delay.
 
   return delay;
 }
@@ -589,5 +608,64 @@ function getGroupedLogs(userId, year, month) {
 
   return res;
 }
+
+// --- توابع جدید مدیریت مرخصی ---
+
+function submitLeaveRequest(userInfo, startDate, endDate) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("LeaveRequests");
+  var newId = new Date().getTime(); // Simple unique ID
+  sheet.appendRow([newId, userInfo.id, userInfo.name, startDate, endDate, "در انتظار"]);
+  return { success: true, message: "درخواست مرخصی شما ثبت شد و در انتظار تایید مدیر است." };
+}
+
+function getLeaveRequests() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("LeaveRequests");
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getDisplayValues();
+  if (data.length < 2) return [];
+  var requests = [];
+  // Start from the end to get the newest requests first
+  for (var i = data.length - 1; i >= 1; i--) {
+    requests.push({
+      id: data[i][0],
+      userId: data[i][1],
+      userName: data[i][2],
+      startDate: data[i][3],
+      endDate: data[i][4],
+      status: data[i][5]
+    });
+  }
+  return requests;
+}
+
+function updateLeaveStatus(requestId, newStatus) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("LeaveRequests");
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) == String(requestId)) {
+      sheet.getRange(i + 1, 6).setValue(newStatus); // Column 6 is 'Status'
+      return { success: true };
+    }
+  }
+  throw new Error("درخواست مرخصی یافت نشد.");
+}
+
+function getApprovedLeavesForUser(userId) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("LeaveRequests");
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getDisplayValues();
+  var leaves = [];
+  for (var i = 1; i < data.length; i++) {
+    // Check if the user ID matches and the status is 'تایید شده'
+    if (String(data[i][1]) == String(userId) && data[i][5] === 'تایید شده') {
+      leaves.push({
+        start: data[i][3], // StartDate
+        end: data[i][4]     // EndDate
+      });
+    }
+  }
+  return leaves;
+}
+
 function getUnreadNotifications() { var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName("Notifications"); if (!sheet) return []; var data = sheet.getDataRange().getValues(); var unreadMessages = []; for (var i = data.length - 1; i > 0; i--) { if (data[i][2] == "Unread") { unreadMessages.push(data[i][1]); } } return unreadMessages; }
 function markNotificationsAsRead() { var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName("Notifications"); if (!sheet) return; var data = sheet.getDataRange().getValues(); for (var i = 1; i < data.length; i++) { if (data[i][2] == "Unread") { sheet.getRange(i + 1, 3).setValue("Read"); } } }
