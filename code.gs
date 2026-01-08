@@ -253,31 +253,25 @@ function calculateStrictDelay(timeStr, shift1Start, shift2Start) {
 }
 
 function timeToMins(t) {
+  if (!t || typeof t !== 'string' || !t.includes(':')) return 0;
   var p = t.split(':');
   return parseInt(p[0])*60 + parseInt(p[1]);
 }
 
-// Unused function `getSalaryConfig` is removed.
-
 function getUserById(id) {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
     if (!sheet) return null;
-    var data = sheet.getDataRange().getValues();
+    // FIX: Use getDisplayValues() to ensure time is read as a string 'HH:mm'
+    var data = sheet.getDataRange().getDisplayValues();
     if (data.length < 2) return null;
 
     var headers = data[0].map(h => String(h).trim());
     var headerMap = {};
     headers.forEach((h, i) => { if (h) headerMap[h] = i; });
 
-    const requiredHeaders = ["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"];
-    const missingHeaders = requiredHeaders.filter(h => !(h in headerMap));
-
-    if (missingHeaders.length > 0) {
-      // This case should be handled by getEmployeesList, but as a fallback.
-      return null;
-    }
-
     const idIndex = headerMap['ID'];
+    if (idIndex === undefined) return null; // Can't find anyone without an ID column
+
     for (var i = 1; i < data.length; i++) {
         var row = data[i];
         if (String(row[idIndex]) == String(id)) {
@@ -285,14 +279,11 @@ function getUserById(id) {
             return {
                 id: get('ID'),
                 name: get('Name'),
-                username: get('Username'),
-                password: get('Password'),
-                role: get('Role'),
                 dailyHours: get('DailyHours'),
                 thursdayHours: get('ThursdayHours'),
                 totalMonthlySalary: get('TotalMonthlySalary'),
-                shift1Start: get('Shift1Start'),
-                shift2Start: get('Shift2Start'),
+                shift1Start: get('Shift1Start'), // This will now be a string 'HH:mm'
+                shift2Start: get('Shift2Start'), // This will now be a string 'HH:mm'
                 isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
             };
         }
@@ -300,7 +291,6 @@ function getUserById(id) {
     return null;
 }
 
-// Unused leave request functions `submitLeaveRequest` and `getMyLeaveRequests` are removed.
 
 // --- Core App Functions ---
 function loginUser(u, p) {
@@ -428,28 +418,50 @@ function fmt(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (
 
 // --- Admin Functions (Updated) ---
 function getEmployeesList() {
-    try {
-        var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
-        if (!sheet) {
-            throw new Error("شیت 'Users' پیدا نشد.");
-        }
-        var data = sheet.getDataRange().getValues();
-        var rowCount = data.length;
-        var headers = (data.length > 0) ? data[0].map(h => String(h).trim()) : [];
-        var firstRow = (data.length > 1) ? data[1].join(", ") : "No data rows";
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+    if (!sheet) return [];
+    // FIX: Use getDisplayValues() to read formatted strings (like '08:30') instead of Date objects.
+    var data = sheet.getDataRange().getDisplayValues();
+    if (data.length < 2) return [];
 
-        // This is a diagnostic function. It will always throw an error with sheet info.
-        throw new Error(
-            "DIAGNOSTIC INFO:\n" +
-            "Row Count: " + rowCount + "\n" +
-            "Headers Found: [" + headers.join(", ") + "]\n" +
-            "First Data Row: [" + firstRow + "]"
-        );
+    var headers = data.shift().map(h => String(h).trim());
+    var headerMap = {};
+    headers.forEach((h, i) => { if (h) headerMap[h] = i; });
 
-    } catch (e) {
-        // Re-throw the error to be caught by the frontend
-        throw new Error(e.message);
+    // Validate that all essential headers are present
+    const requiredHeaders = ["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"];
+    const missingHeaders = requiredHeaders.filter(h => !(h in headerMap));
+    if (missingHeaders.length > 0) {
+        throw new Error("ستون‌های زیر در شیت Users وجود ندارند: " + missingHeaders.join(', '));
     }
+
+    var list = [];
+    data.forEach(row => {
+      if (row.join("").trim().length === 0) return; // Skip empty rows
+      const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
+
+      list.push({
+        id: get('ID'),
+        name: get('Name'),
+        username: get('Username'),
+        password: get('Password'),
+        role: get('Role'),
+        dailyHours: get('DailyHours'),
+        thursdayHours: get('ThursdayHours'),
+        totalMonthlySalary: get('TotalMonthlySalary'),
+        shift1Start: get('Shift1Start'), // This will now be a string 'HH:mm'
+        shift2Start: get('Shift2Start'), // This will now be a string 'HH:mm'
+        isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
+      });
+    });
+
+    return list;
+  } catch (e) {
+    console.error("Error in getEmployeesList:", e);
+    // Re-throw the error so the frontend can display it.
+    throw new Error("خطا در خواندن لیست کارمندان: " + e.message);
+  }
 }
 
 

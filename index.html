@@ -309,23 +309,29 @@
 
     // Admin Functions (Updated)
     function ldUs() {
+      sh();
       google.script.run.withSuccessHandler(u => {
-        // Check if the backend returned a custom error object
-        if (u && u.error) {
-          showMessage('خطای سرور: ' + u.message, 'error', 'خطا در بارگذاری لیست');
-          return; // Stop execution to prevent further errors
-        }
-
+        hd();
         var h = '';
         // Defensive check: Ensure u is an array before trying to iterate
         if (Array.isArray(u)) {
           u.forEach(x => {
-            // IMPORTANT: Escape quotes in the name to prevent breaking the JSON string
-            const safeUser = JSON.stringify(x).replace(/'/g, "\\'");
-            h += `<button class="user-list-item" onclick='sel(${safeUser},this)'><b>${x.name}</b></button>`;
+            try {
+               // Ensure user object and name are valid before processing
+              if (!x || typeof x.name === 'undefined' || x.name === null) {
+                console.error('Skipping invalid user object:', x);
+                return; // Skips to the next item in the loop
+              }
+              // IMPORTANT: Escape quotes in the name to prevent breaking the JSON string
+              const safeUser = JSON.stringify(x).replace(/'/g, "\\'");
+              h += `<button class="user-list-item" onclick='sel(${safeUser},this)'><b>${x.name}</b></button>`;
+            } catch(e) {
+              console.error("Failed to render user. Data:", x, "Error:", e);
+              // This try-catch ensures that one bad record doesn't stop others from rendering.
+            }
           });
         }
-        document.getElementById('uList').innerHTML = h;
+        document.getElementById('uList').innerHTML = h || '<div class="text-center text-muted p-3">هیچ کارمندی یافت نشد.</div>';
       }).withFailureHandler(handleError).getEmployeesList();
     }
     function sel(u, el) { selU = u; document.querySelectorAll('.user-list-item').forEach(x => x.classList.remove('active')); el.classList.add('active'); document.getElementById('repTitle').innerText = u.name; document.getElementById('btnEditUser').classList.remove('hidden'); document.getElementById('btnManual').classList.remove('hidden'); loadRep(); }
