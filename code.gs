@@ -206,16 +206,15 @@ function getMonthlyReportCalc(userId, year, month) {
     stats: {
       daysConfig: getMonthDays(year, month),
       totalSalary: Math.round(finalPay).toLocaleString(),
-      totalWork: fmt(totWork),
-      totalPenalty: fmt(totalPenaltyMins),
+      totalWork: totWork,
+      totalPenalty: totalPenaltyMins,
       countDelay: countDelay,
       countAbsence: countAbsence,
-      netBalance: fmt(Math.abs(finalDifference)),
+      netBalance: Math.abs(finalDifference),
       netSign: finalDifference >= 0 ? "+" : "-",
-      totalDelay: fmt(totalDelay),
-      totalOvertime: fmt(totalOvertime),
-      // BUG FIX: Add totalTarget to the return object
-      totalTarget: fmt(totalMonthTargetMins)
+      totalDelay: totalDelay,
+      totalOvertime: totalOvertime,
+      totalTarget: totalMonthTargetMins
     }
   };
 }

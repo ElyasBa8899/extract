@@ -189,6 +189,7 @@
     function sh(){document.getElementById('loader').style.display='flex'}
     function hd(){document.getElementById('loader').style.display='none'}
     function handleError(e){hd();alert("خطا: "+e)}
+    function fmtMins(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (n < 10 ? "0" + n : n); }
     function doLogout(){
       document.getElementById('viewUser').classList.add('hidden');
       document.getElementById('viewAdmin').classList.add('hidden');
@@ -243,10 +244,9 @@
         hd();
         document.getElementById('uDash').classList.remove('hidden');
         document.getElementById('uSal').innerText = r.stats.totalSalary;
-        document.getElementById('uWork').innerText = r.stats.totalWork;
-        document.getElementById('uTarg').innerText = r.stats.totalTarget; // Correctly display target hours
-        document.getElementById('uPenalty').innerText = r.stats.totalPenalty;
-
+        document.getElementById('uWork').innerText = fmtMins(r.stats.totalWork);
+        document.getElementById('uTarg').innerText = fmtMins(r.stats.totalTarget);
+        document.getElementById('uPenalty').innerText = fmtMins(r.stats.totalPenalty);
         var h = '';
         r.details.forEach(d => { h += `<tr><td>${d.date}</td><td>${d.work}</td><td>${d.delay}</td><td class="text-danger">${d.penalty}</td><td class="text-white small">${d.status}</td></tr>` });
         document.getElementById('uTbMain').innerHTML = h || '<tr><td colspan=5>خالی</td></tr>';
@@ -262,11 +262,11 @@
       google.script.run.withSuccessHandler(r => {
         hd();
         document.getElementById('dash').classList.remove('hidden');
-        document.getElementById('vTarg').innerText = r.stats.totalTarget;
-        document.getElementById('vWork').innerText = r.stats.totalWork;
-        document.getElementById('vOvertime').innerText = r.stats.totalOvertime;
-        document.getElementById('vDelay').innerText = r.stats.totalDelay;
-        document.getElementById('vPenalty').innerText = r.stats.totalPenalty;
+        document.getElementById('vTarg').innerText = fmtMins(r.stats.totalTarget);
+        document.getElementById('vWork').innerText = fmtMins(r.stats.totalWork);
+        document.getElementById('vOvertime').innerText = fmtMins(r.stats.totalOvertime);
+        document.getElementById('vDelay').innerText = fmtMins(r.stats.totalDelay);
+        document.getElementById('vPenalty').innerText = fmtMins(r.stats.totalPenalty);
         document.getElementById('vAbsence').innerText = r.stats.countAbsence;
         document.getElementById('vSal').innerText = r.stats.totalSalary;
 
