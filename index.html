@@ -312,7 +312,7 @@
     }
 
     // Admin Functions (Updated)
-    function ldUs() { google.script.run.withSuccessHandler(u => { var h = ''; u.forEach(x => { h += `<button class="user-list-item" onclick='sel(${JSON.stringify(x)},this)'><b>${x.name}</b></button>` }); document.getElementById('uList').innerHTML = h }).withFailureHandler(handleError).getEmployeesList(); }
+    function ldUs() { google.script.run.withSuccessHandler(u => { var h = ''; if (Array.isArray(u)) { u.forEach(x => { h += `<button class="user-list-item" onclick='sel(${JSON.stringify(x)},this)'><b>${x.name}</b></button>` }); } document.getElementById('uList').innerHTML = h; }).withFailureHandler(handleError).getEmployeesList(); }
     function sel(u, el) { selU = u; document.querySelectorAll('.user-list-item').forEach(x => x.classList.remove('active')); el.classList.add('active'); document.getElementById('repTitle').innerText = u.name; document.getElementById('btnEditUser').classList.remove('hidden'); document.getElementById('btnManual').classList.remove('hidden'); loadRep(); }
 
     function loadRep() {

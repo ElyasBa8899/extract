@@ -387,23 +387,32 @@ function getJalaliDaysInMonth(year, month) {
 
 // --- Admin Functions (Updated) ---
 function getEmployeesList() {
-  var users = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues();
-  var list = [];
-  for (var i = 1; i < users.length; i++) {
-    list.push({
-      id: users[i][0],
-      name: users[i][1],
-      username: users[i][2],
-      password: users[i][3],
-      dailyHours: users[i][5],
-      thursdayHours: users[i][6],
-      totalMonthlySalary: users[i][7],
-      shift1Start: users[i][8],
-      shift2Start: users[i][9],
-      isPartTime: users[i][10] === true || String(users[i][10]).toUpperCase() === 'TRUE'
-    });
+  try {
+    var usersSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+    if (!usersSheet) return []; // Return empty array if sheet doesn't exist
+    var users = usersSheet.getDataRange().getValues();
+    var list = [];
+    // Start from 1 to skip header row
+    for (var i = 1; i < users.length; i++) {
+      list.push({
+        id: users[i][0],
+        name: users[i][1],
+        username: users[i][2],
+        password: users[i][3],
+        dailyHours: users[i][5],
+        thursdayHours: users[i][6],
+        totalMonthlySalary: users[i][7],
+        shift1Start: users[i][8],
+        shift2Start: users[i][9],
+        isPartTime: users[i][10] === true || String(users[i][10]).toUpperCase() === 'TRUE'
+      });
+    }
+    return list;
+  } catch (e) {
+    // Log the error for debugging and return an empty array to prevent crashes
+    console.error("Error in getEmployeesList: " + e.toString());
+    return [];
   }
-  return list;
 }
 
 function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
