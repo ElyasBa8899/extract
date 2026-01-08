@@ -431,12 +431,13 @@ function fmt(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (
 
 // --- Admin Functions (Updated) ---
 function getEmployeesList() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
-  if (!sheet) return [];
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2) return [];
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+    if (!sheet) return [];
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) return [];
 
-  var headers = data.shift();
+    var headers = data.shift();
   var headerMap = {};
   headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
 
@@ -473,6 +474,11 @@ function getEmployeesList() {
   });
 
   return list;
+  } catch (e) {
+    // Log the error for debugging, but return an empty array to prevent frontend crash
+    console.error("Error in getEmployeesList:", e);
+    return [];
+  }
 }
 
 function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
@@ -563,6 +569,41 @@ function saveWorkWeekSettings(settings) {
   }
   return { success: true };
 }
-function getGroupedLogs(userId, year, month) { var ss = SpreadsheetApp.getActiveSpreadsheet(); var logs = ss.getSheetByName("Logs").getDataRange().getDisplayValues(); var targetYM = year + "/" + month; var grouped = {}; for (var i = 1; i < logs.length; i++) { var d = String(logs[i][4]).split(' ')[0].trim(); if (String(logs[i][0]) == String(userId) && d.startsWith(targetYM)) { if(!grouped[d]) grouped[d] = []; grouped[d].push({ row: i+1, actionName: translateAction(logs[i][2]), rawAction: logs[i][2], time: logs[i][5], note: logs[i][6] }); } } var res = []; var keys = Object.keys(grouped).sort().reverse(); keys.forEach(k => { grouped[k].sort((a,b)=>(a.time>b.time)?1:-1); res.push({ date: k, items: grouped[k] }); }); return res; }
+function getGroupedLogs(userId, year, month) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var logs = ss.getSheetByName("Logs").getDataRange().getDisplayValues();
+  var targetYM = year + "/" + month;
+  var grouped = {};
+
+  for (var i = 1; i < logs.length; i++) {
+    var d = String(logs[i][4]).split(' ')[0].trim();
+    if (String(logs[i][0]) == String(userId) && d.startsWith(targetYM)) {
+      if (!grouped[d]) grouped[d] = [];
+      grouped[d].push({
+        row: i + 1,
+        actionName: translateAction(logs[i][2]),
+        rawAction: logs[i][2],
+        time: logs[i][5],
+        note: logs[i][6]
+      });
+    }
+  }
+
+  var res = [];
+  // Sort keys numerically based on the day, and from latest to earliest date
+  var keys = Object.keys(grouped).sort((a, b) => {
+    var dayA = parseInt(a.split('/')[2]);
+    var dayB = parseInt(b.split('/')[2]);
+    return dayB - dayA; // Sort in descending order (e.g., day 31, 30, 29...)
+  });
+
+  keys.forEach(k => {
+    // Sort items within each day chronologically
+    grouped[k].sort((a, b) => (a.time > b.time) ? 1 : -1);
+    res.push({ date: k, items: grouped[k] });
+  });
+
+  return res;
+}
 function getUnreadNotifications() { var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName("Notifications"); if (!sheet) return []; var data = sheet.getDataRange().getValues(); var unreadMessages = []; for (var i = data.length - 1; i > 0; i--) { if (data[i][2] == "Unread") { unreadMessages.push(data[i][1]); } } return unreadMessages; }
 function markNotificationsAsRead() { var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName("Notifications"); if (!sheet) return; var data = sheet.getDataRange().getValues(); for (var i = 1; i < data.length; i++) { if (data[i][2] == "Unread") { sheet.getRange(i + 1, 3).setValue("Read"); } } }
