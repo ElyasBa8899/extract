@@ -465,9 +465,9 @@ function getEmployeesList() {
 
   return list;
   } catch (e) {
-    // Log the error for debugging, but return an empty array to prevent frontend crash
+    // Log the error for debugging and return it to the frontend for display.
     console.error("Error in getEmployeesList:", e);
-    return [];
+    return { error: true, message: e.message };
   }
 }
 

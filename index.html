@@ -310,6 +310,12 @@
     // Admin Functions (Updated)
     function ldUs() {
       google.script.run.withSuccessHandler(u => {
+        // Check if the backend returned a custom error object
+        if (u && u.error) {
+          showMessage('خطای سرور: ' + u.message, 'error', 'خطا در بارگذاری لیست');
+          return; // Stop execution to prevent further errors
+        }
+
         var h = '';
         // Defensive check: Ensure u is an array before trying to iterate
         if (Array.isArray(u)) {
