@@ -208,7 +208,7 @@ function getMonthlyReportCalc(userId, year, month) {
 
     // Apply the 1.4 multiplier to the final time balance (positive or negative)
     var adjustmentAmount = (finalDifference * OVERTIME_MULTIPLIER) * perMinuteRate;
-    finalPay = (user.totalMonthlySalary || 0) + adjustmentAmount;
+    finalPay = (parseFloat(user.totalMonthlySalary) || 0) + adjustmentAmount;
   }
 
   var benefitsStatus = "برقرار";
