@@ -22,8 +22,8 @@ function setupSheet() {
   if (!ss.getSheetByName("Users")) {
     var u = ss.insertSheet("Users");
     // New structure: TotalMonthlySalary and ThursdayHours are added
-    u.appendRow(["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start"]);
-    u.appendRow([1, "مدیر سیستم", "admin", "123", "admin", 8, 4, 10000000, "08:30", "17:00"]); // Example values
+    u.appendRow(["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"]);
+    u.appendRow([1, "مدیر سیستم", "admin", "123", "admin", 8, 4, 10000000, "08:30", "17:00", "FALSE"]); // Example values
   }
 
   // 2. Logs
@@ -89,6 +89,8 @@ function getMonthlyReportCalc(userId, year, month) {
   var countAbsence = 0;
   var totalPenaltyMins = 0;
   var totalMonthTargetMins = 0; // Will be calculated dynamically
+  var totalDelay = 0;
+  var totalOvertime = 0;
 
   var daysInMonth = new Date(year, month, 0).getDate();
 
@@ -101,7 +103,7 @@ function getMonthlyReportCalc(userId, year, month) {
 
     var dayTarget = 0;
     // Fridays (assuming weekend) and holidays have 0 target hours
-    if (!isH && dayOfWeek !== 5) { // 5 is Friday
+    if (!isH) {
       var dayName = dayNames[dayOfWeek];
       var dayStatus = workWeekSettings[dayName];
       if (dayStatus === "Full Day") {
@@ -138,6 +140,10 @@ function getMonthlyReportCalc(userId, year, month) {
 
     var wMin = Math.floor(workMs / 60000);
     totWork += wMin;
+    totalDelay += dailyDelayMins;
+    if (wMin > dayTarget) {
+      totalOvertime += (wMin - dayTarget);
+    }
     var statusText = "", isAbsent = false;
 
     if (items.length === 0 && dayTarget > 0) {
@@ -156,7 +162,6 @@ function getMonthlyReportCalc(userId, year, month) {
     }
 
     if (isH) statusText = "تعطیل رسمی";
-    if (dayOfWeek === 5 && !isH) statusText = "روز تعطیل";
     if (missingExit) statusText = "⚠️ عدم خروج";
 
     summary.push({
@@ -174,27 +179,42 @@ function getMonthlyReportCalc(userId, year, month) {
     perMinuteRate = (user.totalMonthlySalary || 0) / totalMonthTargetMins;
   }
 
+  var finalPay;
   var rawDifference = totWork - totalMonthTargetMins;
-  var finalDifference = rawDifference - totalPenaltyMins;
+  var finalDifference;
 
-  // Apply the 1.4 multiplier to the final time balance (positive or negative)
-  var adjustmentAmount = (finalDifference * OVERTIME_MULTIPLIER) * perMinuteRate;
+  if (user.isPartTime) {
+    // Part-time logic: No penalties, simple ratio calculation
+    totalPenaltyMins = 0; // Ensure no penalties are applied
+    finalDifference = rawDifference; // Net balance is just the raw difference
+    if (totalMonthTargetMins > 0) {
+      finalPay = (user.totalMonthlySalary || 0) * (totWork / totalMonthTargetMins);
+    } else {
+      finalPay = 0; // Avoid division by zero if there's no target work time
+    }
+  } else {
+    // Full-time logic (existing logic)
+    finalDifference = rawDifference - totalPenaltyMins;
 
-  var finalPay = (user.totalMonthlySalary || 0) + adjustmentAmount;
+    // Apply the 1.4 multiplier to the final time balance (positive or negative)
+    var adjustmentAmount = (finalDifference * OVERTIME_MULTIPLIER) * perMinuteRate;
+    finalPay = (user.totalMonthlySalary || 0) + adjustmentAmount;
+  }
 
   return {
     details: summary.reverse(),
     stats: {
       daysConfig: getMonthDays(year, month),
       totalSalary: Math.round(finalPay).toLocaleString(),
-      totalWork: fmt(totWork),
-      totalPenalty: fmt(totalPenaltyMins),
+      totalWork: totWork,
+      totalPenalty: totalPenaltyMins,
       countDelay: countDelay,
       countAbsence: countAbsence,
-      netBalance: fmt(Math.abs(finalDifference)),
+      netBalance: Math.abs(finalDifference),
       netSign: finalDifference >= 0 ? "+" : "-",
-      // BUG FIX: Add totalTarget to the return object
-      totalTarget: fmt(totalMonthTargetMins)
+      totalDelay: totalDelay,
+      totalOvertime: totalOvertime,
+      totalTarget: totalMonthTargetMins
     }
   };
 }
@@ -246,7 +266,8 @@ function getUserById(id) {
         thursdayHours: users[i][6],
         totalMonthlySalary: users[i][7],
         shift1Start: users[i][8],
-        shift2Start: users[i][9]
+        shift2Start: users[i][9],
+        isPartTime: users[i][10] === true || String(users[i][10]).toUpperCase() === 'TRUE'
       };
     }
   }
@@ -355,26 +376,27 @@ function getEmployeesList() {
       thursdayHours: users[i][6],
       totalMonthlySalary: users[i][7],
       shift1Start: users[i][8],
-      shift2Start: users[i][9]
+      shift2Start: users[i][9],
+      isPartTime: users[i][10] === true || String(users[i][10]).toUpperCase() === 'TRUE'
     });
   }
   return list;
 }
 
-function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start) {
+function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
   var s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
   var d = s.getDataRange().getValues();
   for (var i = 1; i < d.length; i++) {
     if (String(d[i][0]) == String(id)) {
-      s.getRange(i + 1, 2, 1, 9).setValues([[name, username, password, "user", dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start]]);
+      s.getRange(i + 1, 2, 1, 10).setValues([[name, username, password, "user", dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime]]);
       return { success: true };
     }
   }
   return { success: false };
 }
 
-function adminSaveUser(name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start) {
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([new Date().getTime(), name, username, password, 'user', dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start]);
+function adminSaveUser(name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([new Date().getTime(), name, username, password, 'user', dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime]);
   return { success: true };
 }
 function adminAddLog(userId, userName, jalaliDateStr, timeStr, action) {
@@ -422,6 +444,7 @@ function setupWorkWeekSettings() {
     s.appendRow(["Tuesday", "Full Day"]);
     s.appendRow(["Wednesday", "Full Day"]);
     s.appendRow(["Thursday", "Half Day"]);
+    s.appendRow(["Friday", "Non-Working"]);
   }
 }
 

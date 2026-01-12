@@ -147,11 +147,14 @@
         <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 border-bottom border-secondary pb-3"><div><h5 id="repTitle" class="fw-bold mb-1">یک کارمند را انتخاب کنید</h5><div class="d-flex gap-2 mt-2"><button id="btnEditUser" class="btn btn-sm btn-link text-info p-0 hidden" onclick="openEditUser()">ویرایش</button><button id="btnManual" class="btn btn-sm btn-link text-success p-0 hidden ms-3" onclick="openManual()">ثبت دستی</button></div></div><div class="d-flex gap-2 align-items-center mt-3 mt-md-0"><select id="sYear" class="form-select w-auto"></select><select id="sMonth" class="form-select w-auto"></select><button onclick="loadRep()" class="btn btn-primary px-3">نمایش</button></div></div>
 
         <div id="dash" class="hidden">
-           <div class="row g-3 mb-4">
-            <div class="col-6 col-md-3"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div><div class="stat-label">کل موظفی</div><div class="stat-value" id="vTarg">0</div></div></div>
-            <div class="col-6 col-md-3"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-balance-scale"></i></div><div class="stat-label">تراز نهایی</div><div class="stat-value" id="vNet">0</div></div></div>
-            <div class="col-6 col-md-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-sort-amount-down"></i></div><div class="stat-label">جریمه (کسر شده)</div><div class="stat-value text-danger" id="vPenalty">0</div></div></div>
-            <div class="col-6 col-md-3"><div class="stat-card card-green"><div class="stat-icon"><i class="fas fa-coins"></i></div><div class="stat-label">قابل پرداخت</div><div class="stat-value text-success" id="vSal">0</div></div></div>
+          <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div><div class="stat-label">کل موظفی</div><div class="stat-value" id="vTarg">0</div></div></div>
+            <div class="col-6 col-lg-3"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-label">کل کارکرد</div><div class="stat-value" id="vWork">0</div></div></div>
+            <div class="col-6 col-lg-3"><div class="stat-card card-green"><div class="stat-icon"><i class="fas fa-arrow-up"></i></div><div class="stat-label">اضافه کاری</div><div class="stat-value text-success" id="vOvertime">0</div></div></div>
+            <div class="col-6 col-lg-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-arrow-down"></i></div><div class="stat-label">کل تاخیر</div><div class="stat-value text-danger" id="vDelay">0</div></div></div>
+            <div class="col-6 col-lg-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-sort-amount-down"></i></div><div class="stat-label">جریمه (کسر شده)</div><div class="stat-value text-danger" id="vPenalty">0</div></div></div>
+            <div class="col-6 col-lg-3"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-times"></i></div><div class="stat-label">تعداد غیبت</div><div class="stat-value" id="vAbsence">0</div></div></div>
+             <div class="col-12 col-lg-6"><div class="stat-card card-green" style="height: 150px;"><div class="stat-icon" style="font-size: 4rem;"><i class="fas fa-coins"></i></div><div class="stat-label">مبلغ نهایی قابل پرداخت</div><div class="stat-value text-success" style="font-size: 2.2rem;" id="vSal">0</div></div></div>
           </div>
 
           <ul class="nav nav-tabs mb-3 border-secondary"><li class="nav-item"><button class="nav-link active" onclick="swTab('tab1',this)">گزارش مالی</button></li><li class="nav-item"><button class="nav-link" onclick="swTab('tab2',this)">ریز ترددها</button></li></ul>
@@ -166,7 +169,7 @@
   <div id="mdlManual" class="modal fade"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h6>ثبت دستی تردد</h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="text" id="mDate" class="form-control mb-2 text-center" dir="ltr"><input type="text" id="mTime" class="form-control mb-2 text-center fs-4" placeholder="HH:mm" dir="ltr"><select id="mAct" class="form-select mb-3"><option value="Entry">ورود</option><option value="Exit">خروج</option></select><button onclick="subManual()" class="btn btn-success w-100">ثبت</button></div></div></div></div>
   <div id="mdlLog" class="modal fade"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h6>ویرایش ساعت</h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><input type="hidden" id="lid"><input type="text" id="ltm" class="form-control text-center fs-2 mb-3" placeholder="HH:mm" dir="ltr" maxlength="5"><button onclick="subLog()" class="btn btn-primary w-100">ذخیره</button></div></div></div></div>
 
-  <div id="mdlUser" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 id="muTitle">کاربر</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="uid"><div class="row g-3"><div class="col-12"><input type="text" id="fn" class="form-control" placeholder="نام کامل"></div><div class="col-6"><input type="text" id="un" class="form-control" placeholder="نام کاربری"></div><div class="col-6"><input type="text" id="pw" class="form-control" placeholder="رمز عبور"></div><div class="col-6"><label class="small text-muted">ساعت کاری روزانه</label><input type="number" id="hr" class="form-control" placeholder="مثال: 8"></div><div class="col-6"><label class="small text-muted">ساعت کاری پنجشنبه</label><input type="number" id="thr" class="form-control" placeholder="مثال: 4"></div><div class="col-6"><label class="small text-muted">شروع شیفت اول</label><input type="text" id="s1" class="form-control" placeholder="HH:mm" dir="ltr"></div><div class="col-6"><label class="small text-muted">شروع شیفت دوم (اختیاری)</label><input type="text" id="s2" class="form-control" placeholder="HH:mm" dir="ltr"></div><div class="col-12"><label class="small text-muted">حقوق ثابت ماهانه (ریال)</label><input type="number" id="tsal" class="form-control border-success" placeholder="مبلغ کل حقوق"></div></div></div><div class="modal-footer"><button onclick="subUser()" class="btn btn-primary">ذخیره</button></div></div></div></div>
+  <div id="mdlUser" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 id="muTitle">کاربر</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="uid"><div class="row g-3"><div class="col-12"><input type="text" id="fn" class="form-control" placeholder="نام کامل"></div><div class="col-6"><input type="text" id="un" class="form-control" placeholder="نام کاربری"></div><div class="col-6"><input type="text" id="pw" class="form-control" placeholder="رمز عبور"></div><div class="col-6"><label class="small text-muted">ساعت کاری روزانه</label><input type="number" id="hr" class="form-control" placeholder="مثال: 8"></div><div class="col-6"><label class="small text-muted">ساعت کاری پنجشنبه</label><input type="number" id="thr" class="form-control" placeholder="مثال: 4"></div><div class="col-6"><label class="small text-muted">شروع شیفت اول</label><input type="text" id="s1" class="form-control" placeholder="HH:mm" dir="ltr"></div><div class="col-6"><label class="small text-muted">شروع شیفت دوم (اختیاری)</label><input type="text" id="s2" class="form-control" placeholder="HH:mm" dir="ltr"></div><div class="col-12"><div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" role="switch" id="isPartTime"><label class="form-check-label" for="isPartTime">کارمند پاره‌وقت (محاسبه بدون جریمه)</label></div></div><div class="col-12"><label class="small text-muted">حقوق ثابت ماهانه (ریال)</label><input type="number" id="tsal" class="form-control border-success" placeholder="مبلغ کل حقوق"></div></div></div><div class="modal-footer"><button onclick="subUser()" class="btn btn-primary">ذخیره</button></div></div></div></div>
 
   <div id="mdlCalendar" class="modal fade"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h6>تنظیمات تقویم</h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row"><div class="col-md-6"><h5>روزهای کاری هفته</h5><div id="workWeekSettings"></div></div><div class="col-md-6"><h5>تعطیلات رسمی</h5><div id="holidaysList"></div><div class="input-group mt-3"><input type="text" id="holidayDate" class="form-control" placeholder="YYYY/MM/DD" dir="ltr"><button onclick="addHoliday()" class="btn btn-success">افزودن</button></div></div></div></div><div class="modal-footer"><button onclick="saveWorkWeek()" class="btn btn-primary">ذخیره</button></div></div></div></div>
   <div id="mdlAlert" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-warning"><div class="modal-header bg-warning text-dark"><h5 class="modal-title"><i class="fas fa-bell me-2"></i>پیام‌های سیستم</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="notifList" class="notif-list p-2"></div></div><div class="modal-footer"><button onclick="ackNotif()" class="btn btn-dark w-100">علامت‌گذاری به عنوان خوانده شده</button></div></div></div></div>
@@ -186,6 +189,7 @@
     function sh(){document.getElementById('loader').style.display='flex'}
     function hd(){document.getElementById('loader').style.display='none'}
     function handleError(e){hd();alert("خطا: "+e)}
+    function fmtMins(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (n < 10 ? "0" + n : n); }
     function doLogout(){
       document.getElementById('viewUser').classList.add('hidden');
       document.getElementById('viewAdmin').classList.add('hidden');
@@ -240,10 +244,9 @@
         hd();
         document.getElementById('uDash').classList.remove('hidden');
         document.getElementById('uSal').innerText = r.stats.totalSalary;
-        document.getElementById('uWork').innerText = r.stats.totalWork;
-        document.getElementById('uTarg').innerText = r.stats.totalTarget; // Correctly display target hours
-        document.getElementById('uPenalty').innerText = r.stats.totalPenalty;
-
+        document.getElementById('uWork').innerText = fmtMins(r.stats.totalWork);
+        document.getElementById('uTarg').innerText = fmtMins(r.stats.totalTarget);
+        document.getElementById('uPenalty').innerText = fmtMins(r.stats.totalPenalty);
         var h = '';
         r.details.forEach(d => { h += `<tr><td>${d.date}</td><td>${d.work}</td><td>${d.delay}</td><td class="text-danger">${d.penalty}</td><td class="text-white small">${d.status}</td></tr>` });
         document.getElementById('uTbMain').innerHTML = h || '<tr><td colspan=5>خالی</td></tr>';
@@ -259,12 +262,13 @@
       google.script.run.withSuccessHandler(r => {
         hd();
         document.getElementById('dash').classList.remove('hidden');
-        document.getElementById('vTarg').innerText = r.stats.totalTarget;
+        document.getElementById('vTarg').innerText = fmtMins(r.stats.totalTarget);
+        document.getElementById('vWork').innerText = fmtMins(r.stats.totalWork);
+        document.getElementById('vOvertime').innerText = fmtMins(r.stats.totalOvertime);
+        document.getElementById('vDelay').innerText = fmtMins(r.stats.totalDelay);
+        document.getElementById('vPenalty').innerText = fmtMins(r.stats.totalPenalty);
+        document.getElementById('vAbsence').innerText = r.stats.countAbsence;
         document.getElementById('vSal').innerText = r.stats.totalSalary;
-        document.getElementById('vPenalty').innerText = r.stats.totalPenalty;
-        var vNet = document.getElementById('vNet');
-        vNet.innerText = r.stats.netSign + r.stats.netBalance;
-        vNet.className = 'stat-value ' + (r.stats.netSign == '+' ? 'text-success' : 'text-danger');
 
         var h = '';
         r.details.forEach(d => { h += `<tr><td>${d.date}</td><td>${d.work}</td><td>${d.delay}</td><td class="text-danger">${d.penalty}</td><td class="text-white small">${d.status}</td></tr>` });
@@ -300,6 +304,7 @@
       document.getElementById('tsal').value = selU.totalMonthlySalary;
       document.getElementById('s1').value = selU.shift1Start;
       document.getElementById('s2').value = selU.shift2Start;
+      document.getElementById('isPartTime').checked = selU.isPartTime;
       mU.show();
     }
 
@@ -309,12 +314,13 @@
       var dailyHours = document.getElementById('hr').value, thursdayHours = document.getElementById('thr').value, totalMonthlySalary = document.getElementById('tsal').value;
       var shift1Start = document.getElementById('s1').value;
       var shift2Start = document.getElementById('s2').value;
+      var isPartTime = document.getElementById('isPartTime').checked;
 
       if(!name || !username || !password || !totalMonthlySalary) { alert('تمام فیلدها الزامی است'); return; }
 
       sh();
       var api = isEdit ? 'updateUserInfo' : 'adminSaveUser';
-      var args = isEdit ? [id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start] : [name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start];
+      var args = isEdit ? [id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime] : [name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime];
 
       google.script.run.withSuccessHandler(() => { hd(); mU.hide(); ldUs(); alert('عملیات موفقیت آمیز بود'); }).withFailureHandler(handleError)[api](...args);
     }
