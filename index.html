@@ -8,6 +8,7 @@
   <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
   <style>
     :root {
       --bg-body: #0f172a; --bg-card: #1e293b; --bg-input: #334155;
@@ -61,6 +62,15 @@
     #mdlUser .text-muted {
       color: var(--text-main) !important;
     }
+    /* FullCalendar Customizations */
+    .fc { direction: rtl; }
+    .fc .fc-toolbar-title { font-size: 1.1rem !important; color: var(--text-main); }
+    .fc .fc-daygrid-day-number { color: var(--text-muted); }
+    .fc .fc-button, .fc .fc-button:active, .fc .fc-button:focus { background-color: var(--bg-input) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; box-shadow: none !important; }
+    .fc .fc-button-primary:hover { background-color: var(--primary) !important; }
+    .fc-day-today { background-color: rgba(59, 130, 246, 0.15) !important; }
+    .fc-day-other .fc-daygrid-day-top { opacity: 0.5; }
+    .holiday-event { background-color: var(--danger) !important; border-color: var(--danger) !important; color: white !important; display: block; text-align: center; }
   </style>
 </head>
 <body>
@@ -171,13 +181,57 @@
 
   <div id="mdlUser" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 id="muTitle">کاربر</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="uid"><div class="row g-3"><div class="col-12"><input type="text" id="fn" class="form-control" placeholder="نام کامل"></div><div class="col-6"><input type="text" id="un" class="form-control" placeholder="نام کاربری"></div><div class="col-6"><input type="text" id="pw" class="form-control" placeholder="رمز عبور"></div><div class="col-6"><label class="small text-muted">ساعت کاری روزانه</label><input type="number" id="hr" class="form-control" placeholder="مثال: 8"></div><div class="col-6"><label class="small text-muted">ساعت کاری پنجشنبه</label><input type="number" id="thr" class="form-control" placeholder="مثال: 4"></div><div class="col-6"><label class="small text-muted">شروع شیفت اول</label><input type="text" id="s1" class="form-control" placeholder="HH:mm" dir="ltr"></div><div class="col-6"><label class="small text-muted">شروع شیفت دوم (اختیاری)</label><input type="text" id="s2" class="form-control" placeholder="HH:mm" dir="ltr"></div><div class="col-12"><div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" role="switch" id="isPartTime"><label class="form-check-label" for="isPartTime">کارمند پاره‌وقت (محاسبه بدون جریمه)</label></div></div><div class="col-12"><label class="small text-muted">حقوق ثابت ماهانه (ریال)</label><input type="number" id="tsal" class="form-control border-success" placeholder="مبلغ کل حقوق"></div></div></div><div class="modal-footer"><button onclick="subUser()" class="btn btn-primary">ذخیره</button></div></div></div></div>
 
-  <div id="mdlCalendar" class="modal fade"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h6>تنظیمات تقویم</h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row"><div class="col-md-6"><h5>روزهای کاری هفته</h5><div id="workWeekSettings"></div></div><div class="col-md-6"><h5>تعطیلات رسمی</h5><div id="holidaysList"></div><div class="input-group mt-3"><input type="text" id="holidayDate" class="form-control" placeholder="YYYY/MM/DD" dir="ltr"><button onclick="addHoliday()" class="btn btn-success">افزودن</button></div></div></div></div><div class="modal-footer"><button onclick="saveWorkWeek()" class="btn btn-primary">ذخیره</button></div></div></div></div>
+  <div id="mdlCalendar" class="modal fade"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">تقویم تعطیلات</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><p class="small text-muted mb-3">برای ثبت یا حذف تعطیلی رسمی، روی روز مورد نظر در تقویم کلیک کنید.</p><div id="holidayCalendar"></div></div></div></div></div>
   <div id="mdlAlert" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-warning"><div class="modal-header bg-warning text-dark"><h5 class="modal-title"><i class="fas fa-bell me-2"></i>پیام‌های سیستم</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="notifList" class="notif-list p-2"></div></div><div class="modal-footer"><button onclick="ackNotif()" class="btn btn-dark w-100">علامت‌گذاری به عنوان خوانده شده</button></div></div></div></div>
+
+  <!-- Generic Message Modal -->
+  <div id="mdlMessage" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+      <div class="modal-content">
+        <div id="msgHeader" class="modal-header text-white">
+          <h5 id="msgTitle" class="modal-title">پیام سیستم</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center py-4">
+          <i id="msgIcon" class="fas fa-3x mb-3"></i>
+          <p id="msgText" class="mb-0"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/fa.js'></script>
+  <script src="https://cdn.jsdelivr.net/npm/jalali-moment/dist/jalali-moment.browser.js"></script>
   <script>
     var curU=null, selU=null;
-    var mU=new bootstrap.Modal(document.getElementById('mdlUser')), mL=new bootstrap.Modal(document.getElementById('mdlLog')), mCalendar=new bootstrap.Modal(document.getElementById('mdlCalendar')), mM=new bootstrap.Modal(document.getElementById('mdlManual')), mAlert=new bootstrap.Modal(document.getElementById('mdlAlert'));
+    var calendar;
+    var mU=new bootstrap.Modal(document.getElementById('mdlUser')), mL=new bootstrap.Modal(document.getElementById('mdlLog')), mCalendar=new bootstrap.Modal(document.getElementById('mdlCalendar')), mM=new bootstrap.Modal(document.getElementById('mdlManual')), mAlert=new bootstrap.Modal(document.getElementById('mdlAlert')), mMessage = new bootstrap.Modal(document.getElementById('mdlMessage'));
     var isEdit=false;
+
+    function showMessage(message, type = 'info', title = 'پیام سیستم') {
+      const header = document.getElementById('msgHeader');
+      const icon = document.getElementById('msgIcon');
+      document.getElementById('msgTitle').innerText = title;
+      document.getElementById('msgText').innerText = message;
+
+      // Reset classes
+      header.className = 'modal-header text-white';
+      icon.className = 'fas fa-3x mb-3';
+
+      if (type === 'success') {
+        header.classList.add('bg-success');
+        icon.classList.add('fa-check-circle', 'text-success');
+      } else if (type === 'error') {
+        header.classList.add('bg-danger');
+        icon.classList.add('fa-times-circle', 'text-danger');
+      } else { // info
+        header.classList.add('bg-primary');
+        icon.classList.add('fa-info-circle', 'text-primary');
+      }
+      mMessage.show();
+    }
 
     window.onload=function(){
       var ys=[document.getElementById('sYear'),document.getElementById('uYear')]; for(var i=0;i<21;i++){var v=1403+i;ys.forEach(s=>{var o=document.createElement('option');o.value=v;o.innerText=v;if(v==1404)o.selected=true;s.appendChild(o)})}
@@ -188,7 +242,7 @@
 
     function sh(){document.getElementById('loader').style.display='flex'}
     function hd(){document.getElementById('loader').style.display='none'}
-    function handleError(e){hd();alert("خطا: "+e)}
+    function handleError(e){hd(); showMessage(e.message || e, 'error', 'خطا');}
     function fmtMins(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (n < 10 ? "0" + n : n); }
     function doLogout(){
       document.getElementById('viewUser').classList.add('hidden');
@@ -233,7 +287,7 @@
     function initUs(u){document.getElementById('viewUser').classList.remove('hidden');document.getElementById('uName').innerText=u.name;updB(u.summary.status);renderToday(u.summary.history);}
     function renderToday(l){var h="";if(l.length==0)h='<div class="text-center text-muted py-3 small">خالی</div>';else l.forEach(x=>{var b=x.raw=='Entry'?'bg-success':(x.raw=='Exit'?'bg-danger':'bg-warning');h+=`<div class="timeline-item"><div><span class="badge ${b} rounded-pill">${x.action}</span></div><span class="text-info fw-bold" style="font-family:monospace">${x.time}</span></div>`});document.getElementById('todayLogsList').innerHTML=h;}
     function updB(s){var b1=document.querySelector('.act-entry'),b2=document.querySelector('.act-leave'),b3=document.querySelector('.act-exit'),st=document.getElementById('uStat');b1.disabled=false;b2.disabled=false;b3.disabled=false;if(s=='Exit'){st.innerHTML='<span class="text-exit">خارج</span>';b2.disabled=true;b3.disabled=true;}else if(s.includes('LeaveStart')){st.innerHTML='<span class="text-leave">مرخصی</span>';b1.disabled=true;b3.disabled=true;b2.innerText='پایان مرخصی';}else{st.innerHTML='<span class="text-entry">حاضر</span>';b1.disabled=true;b2.innerText='مرخصی ساعتی';}}
-    function act(t){sh();google.script.run.withSuccessHandler(r=>{hd();if(r.success){if(t=='Exit'){alert('خروج ثبت شد');doLogout();}else{updB(r.newStatus);renderToday(r.summary.history);}}else alert(r.message)}).withFailureHandler(handleError).registerAction(curU.id,curU.name,t);}
+    function act(t){sh();google.script.run.withSuccessHandler(r=>{hd();if(r.success){if(t=='Exit'){showMessage('خروج شما با موفقیت ثبت شد.', 'success'); doLogout();}else{updB(r.newStatus);renderToday(r.summary.history);}}else showMessage(r.message, 'error')}).withFailureHandler(handleError).registerAction(curU.id,curU.name,t);}
     function openUserDash(){document.getElementById('viewUser').classList.add('hidden');document.getElementById('viewUserDash').classList.remove('hidden');}
     function backToUserPanel(){document.getElementById('viewUserDash').classList.add('hidden');document.getElementById('viewUser').classList.remove('hidden');}
 
@@ -254,7 +308,20 @@
     }
 
     // Admin Functions (Updated)
-    function ldUs() { google.script.run.withSuccessHandler(u => { var h = ''; u.forEach(x => { h += `<button class="user-list-item" onclick='sel(${JSON.stringify(x)},this)'><b>${x.name}</b></button>` }); document.getElementById('uList').innerHTML = h }).withFailureHandler(handleError).getEmployeesList(); }
+    function ldUs() {
+      google.script.run.withSuccessHandler(u => {
+        var h = '';
+        // Defensive check: Ensure u is an array before trying to iterate
+        if (Array.isArray(u)) {
+          u.forEach(x => {
+            // IMPORTANT: Escape quotes in the name to prevent breaking the JSON string
+            const safeUser = JSON.stringify(x).replace(/'/g, "\\'");
+            h += `<button class="user-list-item" onclick='sel(${safeUser},this)'><b>${x.name}</b></button>`;
+          });
+        }
+        document.getElementById('uList').innerHTML = h;
+      }).withFailureHandler(handleError).getEmployeesList();
+    }
     function sel(u, el) { selU = u; document.querySelectorAll('.user-list-item').forEach(x => x.classList.remove('active')); el.classList.add('active'); document.getElementById('repTitle').innerText = u.name; document.getElementById('btnEditUser').classList.remove('hidden'); document.getElementById('btnManual').classList.remove('hidden'); loadRep(); }
 
     function loadRep() {
@@ -292,7 +359,7 @@
     }
 
     function openEditUser() {
-      if (!selU) { alert("لطفاً کاربری را انتخاب کنید"); return; }
+      if (!selU) { showMessage("لطفاً کاربری را انتخاب کنید", 'error'); return; }
       isEdit = true;
       document.getElementById('muTitle').innerText = "ویرایش کاربر";
       document.getElementById('uid').value = selU.id;
@@ -316,69 +383,88 @@
       var shift2Start = document.getElementById('s2').value;
       var isPartTime = document.getElementById('isPartTime').checked;
 
-      if(!name || !username || !password || !totalMonthlySalary) { alert('تمام فیلدها الزامی است'); return; }
+      if(!name || !username || !password || !totalMonthlySalary) { showMessage('تمام فیلدها الزامی است', 'error'); return; }
 
       sh();
       var api = isEdit ? 'updateUserInfo' : 'adminSaveUser';
       var args = isEdit ? [id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime] : [name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime];
 
-      google.script.run.withSuccessHandler(() => { hd(); mU.hide(); ldUs(); alert('عملیات موفقیت آمیز بود'); }).withFailureHandler(handleError)[api](...args);
+      google.script.run.withSuccessHandler(() => { hd(); mU.hide(); ldUs(); showMessage('عملیات موفقیت آمیز بود', 'success'); }).withFailureHandler(handleError)[api](...args);
     }
     function openEditLog(r,t){document.getElementById('lid').value=r;document.getElementById('ltm').value=t.substring(0,5);mL.show();}
-    function subLog(){var r=document.getElementById('lid').value,t=document.getElementById('ltm').value;if(t.length!==5||!t.includes(':')){alert('14:30');return}sh();google.script.run.withSuccessHandler(()=>{hd();mL.hide();loadRep()}).updateLogTime(r,t);}
-    function openCalendarSettings(){
-      sh();
-      google.script.run.withSuccessHandler(r => {
-        hd();
-        var h = '';
-        for (var day in r) {
-          h += `<div class="input-group mb-2"><span class="input-group-text">${day}</span><select class="form-select" data-day="${day}"><option value="Full Day" ${r[day] === 'Full Day' ? 'selected' : ''}>تمام وقت</option><option value="Half Day" ${r[day] === 'Half Day' ? 'selected' : ''}>نیمه وقت</option><option value="Non-Working" ${r[day] === 'Non-Working' ? 'selected' : ''}>تعطیل</option></select></div>`;
-        }
-        document.getElementById('workWeekSettings').innerHTML = h;
+    function subLog(){var r=document.getElementById('lid').value,t=document.getElementById('ltm').value;if(t.length!==5||!t.includes(':')){showMessage('14:30', 'error');return}sh();google.script.run.withSuccessHandler(()=>{hd();mL.hide();loadRep()}).updateLogTime(r,t);}
+    function openCalendarSettings() {
         mCalendar.show();
-      }).withFailureHandler(handleError).getWorkWeekSettings();
 
-      google.script.run.withSuccessHandler(r => {
-        var h = '';
-        r.forEach(d => {
-          h += `<div class="input-group mb-2"><input type="text" class="form-control" value="${d}" disabled><button onclick="removeHoliday(this)" class="btn btn-danger">حذف</button></div>`;
-        });
-        document.getElementById('holidaysList').innerHTML = h;
-      }).withFailureHandler(handleError).getHolidaysList();
+        // Use a short delay to ensure the modal is visible before rendering the calendar
+        setTimeout(initializeCalendar, 200);
     }
-    function saveWorkWeek(){
-      var settings = {};
-      document.querySelectorAll('#workWeekSettings select').forEach(s => {
-        settings[s.dataset.day] = s.value;
-      });
-      sh();
-      google.script.run.withSuccessHandler(() => {
-        hd();
-        mCalendar.hide();
-        alert('تنظیمات ذخیره شد');
-      }).withFailureHandler(handleError).saveWorkWeekSettings(settings);
-    }
-    function addHoliday(){
-      var date = document.getElementById('holidayDate').value;
-      if (date) {
+
+    function initializeCalendar() {
+        var calendarEl = document.getElementById('holidayCalendar');
+        if (!calendarEl) return;
+
+        // Destroy previous instance if it exists to prevent memory leaks
+        if (calendar) {
+            calendar.destroy();
+        }
+
         sh();
-        google.script.run.withSuccessHandler(() => {
-          hd();
-          openCalendarSettings();
-        }).withFailureHandler(handleError).addHolidayToSheet(date);
-      }
+        google.script.run.withSuccessHandler(holidays => {
+            hd();
+            let holidayEvents = [];
+            if(Array.isArray(holidays)) {
+                holidayEvents = holidays.map(h => ({
+                    id: h,
+                    title: 'تعطیل رسمی',
+                    start: moment(h, 'jYYYY/jMM/jDD').format('YYYY-MM-DD'),
+                    allDay: true,
+                    classNames: ['holiday-event']
+                }));
+            }
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                headerToolbar: {
+                    right: 'prev,next today',
+                    center: 'title',
+                    left: ''
+                },
+                locale: 'fa',
+                dayCellDidMount: function(arg) {
+                    arg.el.setAttribute('data-jalali-date', moment(arg.date).format('jYYYY/jMM/jDD'));
+                },
+                initialView: 'dayGridMonth',
+                showNonCurrentDates: false, //  Hides days from other months
+                events: holidayEvents,
+                dateClick: function(info) {
+                    const clickedDate = moment(info.date).format('jYYYY/jMM/jDD');
+                    const existingEvent = calendar.getEventById(clickedDate);
+
+                    sh();
+                    if (existingEvent) {
+                        google.script.run.withSuccessHandler(() => {
+                            hd();
+                            existingEvent.remove();
+                        }).withFailureHandler(handleError).removeHolidayFromSheet(clickedDate);
+                    } else {
+                        google.script.run.withSuccessHandler(() => {
+                            hd();
+                            calendar.addEvent({
+                                id: clickedDate,
+                                title: 'تعطیل رسمی',
+                                start: info.dateStr,
+                                allDay: true,
+                                classNames: ['holiday-event']
+                            });
+                        }).withFailureHandler(handleError).addHolidayToSheet(clickedDate);
+                    }
+                }
+            });
+            calendar.render();
+        }).withFailureHandler(handleError).getHolidaysList();
     }
-    function removeHoliday(btn){
-      var date = btn.previousElementSibling.value;
-      if (date) {
-        sh();
-        google.script.run.withSuccessHandler(() => {
-          hd();
-          openCalendarSettings();
-        }).withFailureHandler(handleError).removeHolidayFromSheet(date);
-      }
-    }
-    function openManual(){document.getElementById('mDate').value="1404/09/25";mM.show();} function subManual(){var d=document.getElementById('mDate').value,t=document.getElementById('mTime').value,a=document.getElementById('mAct').value;if(t.length!==5||!t.includes(':')){alert('09:00');return}sh();google.script.run.withSuccessHandler(()=>{hd();mM.hide();loadRep();alert('ok')}).withFailureHandler(handleError).adminAddLog(selU.id,selU.name,d,t,a);}
+    function openManual(){document.getElementById('mDate').value="1404/09/25";mM.show();}
+    function subManual(){var d=document.getElementById('mDate').value,t=document.getElementById('mTime').value,a=document.getElementById('mAct').value;if(t.length!==5||!t.includes(':')){showMessage('09:00', 'error');return}sh();google.script.run.withSuccessHandler((r)=>{hd();mM.hide();loadRep();if(r.success)showMessage('ok','success');else showMessage(r.message, 'error');}).withFailureHandler(handleError).adminAddLog(selU.id,selU.name,d,t,a);}
   </script>
 </body>
 </html>

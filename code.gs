@@ -18,12 +18,16 @@ function setupSheet() {
   setupWorkWeekSettings();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // 1. Users Sheet (Simplified)
-  if (!ss.getSheetByName("Users")) {
-    var u = ss.insertSheet("Users");
-    // New structure: TotalMonthlySalary and ThursdayHours are added
-    u.appendRow(["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"]);
-    u.appendRow([1, "مدیر سیستم", "admin", "123", "admin", 8, 4, 10000000, "08:30", "17:00", "FALSE"]); // Example values
+  // 1. Users Sheet: Create if it doesn't exist and add a default admin if it's empty.
+  var usersSheet = ss.getSheetByName("Users");
+  if (!usersSheet) {
+    usersSheet = ss.insertSheet("Users");
+    usersSheet.appendRow(["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"]);
+  }
+
+  // Check if the sheet has only the header row (i.e., no actual users)
+  if (usersSheet.getLastRow() < 2) {
+    usersSheet.appendRow([1, "مدیر سیستم", "admin", "123", "admin", 8, 4, 10000000, "08:30", "17:00", "FALSE"]);
   }
 
   // 2. Logs
@@ -92,7 +96,7 @@ function getMonthlyReportCalc(userId, year, month) {
   var totalDelay = 0;
   var totalOvertime = 0;
 
-  var daysInMonth = new Date(year, month, 0).getDate();
+  var daysInMonth = getJalaliDaysInMonth(parseInt(year), parseInt(month));
 
   for (var d = 1; d <= daysInMonth; d++) {
     var dStr = (d < 10) ? "0" + d : d;
@@ -202,7 +206,7 @@ function getMonthlyReportCalc(userId, year, month) {
   }
 
   return {
-    details: summary.reverse(),
+    details: summary,
     stats: {
       daysConfig: getMonthDays(year, month),
       totalSalary: Math.round(finalPay).toLocaleString(),
@@ -256,18 +260,43 @@ function timeToMins(t) {
 // Unused function `getSalaryConfig` is removed.
 
 function getUserById(id) {
-  var users = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues();
-  for (var i = 1; i < users.length; i++) {
-    if (String(users[i][0]) == String(id)) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  if (!sheet) return null;
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return null;
+
+  var headers = data.shift();
+  var headerMap = {};
+  headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
+
+  const idIndex = headerMap['ID'];
+  if (idIndex === undefined) return null; // Can't find anyone without an ID column
+
+  // Fallbacks for potentially unlabeled columns
+  if (!headerMap['Shift1Start'] && headers.length > 9) headerMap['Shift1Start'] = 9;
+  if (!headerMap['Shift2Start'] && headers.length > 10) headerMap['Shift2Start'] = 10;
+  if (!headerMap['isPartTime'] && headers.length > 11) headerMap['isPartTime'] = 11;
+
+  // Handle different naming for salary
+  const salaryKey = 'TotalMonthlySalary';
+  const fallbackSalaryKey = 'BaseHouryRate';
+  if(!headerMap[salaryKey] && headerMap[fallbackSalaryKey]) {
+      headerMap[salaryKey] = headerMap[fallbackSalaryKey];
+  }
+
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    if (String(row[idIndex]) == String(id)) {
+      const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
       return {
-        id: users[i][0],
-        name: users[i][1],
-        dailyHours: users[i][5],
-        thursdayHours: users[i][6],
-        totalMonthlySalary: users[i][7],
-        shift1Start: users[i][8],
-        shift2Start: users[i][9],
-        isPartTime: users[i][10] === true || String(users[i][10]).toUpperCase() === 'TRUE'
+        id: get('ID'),
+        name: get('Name'),
+        dailyHours: get('DailyHours'),
+        thursdayHours: get('ThursdayHours'),
+        totalMonthlySalary: get(salaryKey),
+        shift1Start: get('Shift1Start'),
+        shift2Start: get('Shift2Start'),
+        isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
       };
     }
   }
@@ -279,11 +308,32 @@ function getUserById(id) {
 // --- Core App Functions ---
 function loginUser(u, p) {
   setupSheet();
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var users = ss.getSheetByName("Users").getDataRange().getValues();
-  for (var i = 1; i < users.length; i++) {
-    if (users[i][2] == u && users[i][3] == p) {
-      return { success: true, id: users[i][0], name: users[i][1], role: users[i][4], summary: getTodayUserSummary(users[i][0]) };
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  if (!sheet) throw new Error("User sheet not found.");
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) throw new Error("No user data found.");
+
+  var headers = data.shift();
+  var headerMap = {};
+  headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
+
+  const userIndex = headerMap['Username'];
+  const passIndex = headerMap['Password'];
+  const idIndex = headerMap['ID'];
+  const nameIndex = headerMap['Name'];
+  const roleIndex = headerMap['Role'];
+
+  if (userIndex === undefined || passIndex === undefined) {
+    throw new Error("Username or Password column not found in Users sheet.");
+  }
+
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    if (row[userIndex] == u && row[passIndex] == p) {
+      const id = idIndex !== undefined ? row[idIndex] : 'N/A';
+      const name = nameIndex !== undefined ? row[nameIndex] : 'N/A';
+      const role = roleIndex !== undefined ? row[roleIndex] : 'user';
+      return { success: true, id: id, name: name, role: role, summary: getTodayUserSummary(id) };
     }
   }
   throw new Error("اطلاعات ورود اشتباه است");
@@ -337,6 +387,23 @@ function getTodayUserSummary(userId) {
 }
 
 // --- Date and Formatting Helpers ---
+
+function isJalaliLeapYear(year) {
+  // The 33-year cycle is a good approximation for Jalali leap years
+  const remainder = (year - 474) % 33;
+  return [1, 5, 9, 13, 17, 22, 26, 30].indexOf(remainder) !== -1;
+}
+
+function getJalaliDaysInMonth(year, month) {
+    if (month <= 6) {
+        return 31;
+    } else if (month <= 11) {
+        return 30;
+    } else { // Esfand
+        return isJalaliLeapYear(year) ? 30 : 29;
+    }
+}
+
 function jalaliToGregorian(j_y, j_m, j_d) {
   j_y = parseInt(j_y); j_m = parseInt(j_m); j_d = parseInt(j_d);
   var jy = j_y - 979;
@@ -364,23 +431,54 @@ function fmt(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (
 
 // --- Admin Functions (Updated) ---
 function getEmployeesList() {
-  var users = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues();
-  var list = [];
-  for (var i = 1; i < users.length; i++) {
-    list.push({
-      id: users[i][0],
-      name: users[i][1],
-      username: users[i][2],
-      password: users[i][3],
-      dailyHours: users[i][5],
-      thursdayHours: users[i][6],
-      totalMonthlySalary: users[i][7],
-      shift1Start: users[i][8],
-      shift2Start: users[i][9],
-      isPartTime: users[i][10] === true || String(users[i][10]).toUpperCase() === 'TRUE'
-    });
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+    if (!sheet) return [];
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) return [];
+
+    var headers = data.shift();
+  var headerMap = {};
+  headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
+
+  // Fallbacks for potentially unlabeled columns based on user screenshot
+  if (!headerMap['Shift1Start'] && headers.length > 9) headerMap['Shift1Start'] = 9;
+  if (!headerMap['Shift2Start'] && headers.length > 10) headerMap['Shift2Start'] = 10;
+  if (!headerMap['isPartTime'] && headers.length > 11) headerMap['isPartTime'] = 11;
+
+  // Handle different naming for salary. User sheet has 'BaseHouryRate'.
+  const salaryKey = 'TotalMonthlySalary';
+  const fallbackSalaryKey = 'BaseHouryRate';
+  if(!headerMap[salaryKey] && headerMap[fallbackSalaryKey]) {
+      headerMap[salaryKey] = headerMap[fallbackSalaryKey];
   }
+
+  var list = [];
+  data.forEach(row => {
+    if (row.join("").trim().length === 0) return; // Skip empty rows
+    const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
+
+    list.push({
+      id: get('ID'),
+      name: get('Name'),
+      username: get('Username'),
+      password: get('Password'),
+      role: get('Role'),
+      dailyHours: get('DailyHours'),
+      thursdayHours: get('ThursdayHours'),
+      totalMonthlySalary: get(salaryKey),
+      shift1Start: get('Shift1Start'),
+      shift2Start: get('Shift2Start'),
+      isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
+    });
+  });
+
   return list;
+  } catch (e) {
+    // Log the error for debugging, but return an empty array to prevent frontend crash
+    console.error("Error in getEmployeesList:", e);
+    return [];
+  }
 }
 
 function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
@@ -471,6 +569,41 @@ function saveWorkWeekSettings(settings) {
   }
   return { success: true };
 }
-function getGroupedLogs(userId, year, month) { var ss = SpreadsheetApp.getActiveSpreadsheet(); var logs = ss.getSheetByName("Logs").getDataRange().getDisplayValues(); var targetYM = year + "/" + month; var grouped = {}; for (var i = 1; i < logs.length; i++) { var d = String(logs[i][4]).split(' ')[0].trim(); if (String(logs[i][0]) == String(userId) && d.startsWith(targetYM)) { if(!grouped[d]) grouped[d] = []; grouped[d].push({ row: i+1, actionName: translateAction(logs[i][2]), rawAction: logs[i][2], time: logs[i][5], note: logs[i][6] }); } } var res = []; var keys = Object.keys(grouped).sort().reverse(); keys.forEach(k => { grouped[k].sort((a,b)=>(a.time>b.time)?1:-1); res.push({ date: k, items: grouped[k] }); }); return res; }
+function getGroupedLogs(userId, year, month) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var logs = ss.getSheetByName("Logs").getDataRange().getDisplayValues();
+  var targetYM = year + "/" + month;
+  var grouped = {};
+
+  for (var i = 1; i < logs.length; i++) {
+    var d = String(logs[i][4]).split(' ')[0].trim();
+    if (String(logs[i][0]) == String(userId) && d.startsWith(targetYM)) {
+      if (!grouped[d]) grouped[d] = [];
+      grouped[d].push({
+        row: i + 1,
+        actionName: translateAction(logs[i][2]),
+        rawAction: logs[i][2],
+        time: logs[i][5],
+        note: logs[i][6]
+      });
+    }
+  }
+
+  var res = [];
+  // Sort keys numerically based on the day, and from latest to earliest date
+  var keys = Object.keys(grouped).sort((a, b) => {
+    var dayA = parseInt(a.split('/')[2]);
+    var dayB = parseInt(b.split('/')[2]);
+    return dayB - dayA; // Sort in descending order (e.g., day 31, 30, 29...)
+  });
+
+  keys.forEach(k => {
+    // Sort items within each day chronologically
+    grouped[k].sort((a, b) => (a.time > b.time) ? 1 : -1);
+    res.push({ date: k, items: grouped[k] });
+  });
+
+  return res;
+}
 function getUnreadNotifications() { var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName("Notifications"); if (!sheet) return []; var data = sheet.getDataRange().getValues(); var unreadMessages = []; for (var i = data.length - 1; i > 0; i--) { if (data[i][2] == "Unread") { unreadMessages.push(data[i][1]); } } return unreadMessages; }
 function markNotificationsAsRead() { var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName("Notifications"); if (!sheet) return; var data = sheet.getDataRange().getValues(); for (var i = 1; i < data.length; i++) { if (data[i][2] == "Unread") { sheet.getRange(i + 1, 3).setValue("Read"); } } }
