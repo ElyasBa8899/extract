@@ -253,57 +253,44 @@ function calculateStrictDelay(timeStr, shift1Start, shift2Start) {
 }
 
 function timeToMins(t) {
+  if (!t || typeof t !== 'string' || !t.includes(':')) return 0;
   var p = t.split(':');
   return parseInt(p[0])*60 + parseInt(p[1]);
 }
 
-// Unused function `getSalaryConfig` is removed.
-
 function getUserById(id) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
-  if (!sheet) return null;
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2) return null;
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+    if (!sheet) return null;
+    // FIX: Use getDisplayValues() to ensure time is read as a string 'HH:mm'
+    var data = sheet.getDataRange().getDisplayValues();
+    if (data.length < 2) return null;
 
-  var headers = data.shift();
-  var headerMap = {};
-  headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
+    var headers = data[0].map(h => String(h).trim());
+    var headerMap = {};
+    headers.forEach((h, i) => { if (h) headerMap[h] = i; });
 
-  const idIndex = headerMap['ID'];
-  if (idIndex === undefined) return null; // Can't find anyone without an ID column
+    const idIndex = headerMap['ID'];
+    if (idIndex === undefined) return null; // Can't find anyone without an ID column
 
-  // Fallbacks for potentially unlabeled columns
-  if (!headerMap['Shift1Start'] && headers.length > 9) headerMap['Shift1Start'] = 9;
-  if (!headerMap['Shift2Start'] && headers.length > 10) headerMap['Shift2Start'] = 10;
-  if (!headerMap['isPartTime'] && headers.length > 11) headerMap['isPartTime'] = 11;
-
-  // Handle different naming for salary
-  const salaryKey = 'TotalMonthlySalary';
-  const fallbackSalaryKey = 'BaseHouryRate';
-  if(!headerMap[salaryKey] && headerMap[fallbackSalaryKey]) {
-      headerMap[salaryKey] = headerMap[fallbackSalaryKey];
-  }
-
-  for (var i = 0; i < data.length; i++) {
-    var row = data[i];
-    if (String(row[idIndex]) == String(id)) {
-      const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
-      return {
-        id: get('ID'),
-        name: get('Name'),
-        dailyHours: get('DailyHours'),
-        thursdayHours: get('ThursdayHours'),
-        totalMonthlySalary: get(salaryKey),
-        shift1Start: get('Shift1Start'),
-        shift2Start: get('Shift2Start'),
-        isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
-      };
+    for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+        if (String(row[idIndex]) == String(id)) {
+            const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
+            return {
+                id: get('ID'),
+                name: get('Name'),
+                dailyHours: get('DailyHours'),
+                thursdayHours: get('ThursdayHours'),
+                totalMonthlySalary: get('TotalMonthlySalary'),
+                shift1Start: get('Shift1Start'), // This will now be a string 'HH:mm'
+                shift2Start: get('Shift2Start'), // This will now be a string 'HH:mm'
+                isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
+            };
+        }
     }
-  }
-  return null;
+    return null;
 }
 
-// Unused leave request functions `submitLeaveRequest` and `getMyLeaveRequests` are removed.
 
 // --- Core App Functions ---
 function loginUser(u, p) {
@@ -434,52 +421,49 @@ function getEmployeesList() {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
     if (!sheet) return [];
-    var data = sheet.getDataRange().getValues();
+    // FIX: Use getDisplayValues() to read formatted strings (like '08:30') instead of Date objects.
+    var data = sheet.getDataRange().getDisplayValues();
     if (data.length < 2) return [];
 
-    var headers = data.shift();
-  var headerMap = {};
-  headers.forEach((h, i) => { if(h) headerMap[String(h).trim()] = i; });
+    var headers = data.shift().map(h => String(h).trim());
+    var headerMap = {};
+    headers.forEach((h, i) => { if (h) headerMap[h] = i; });
 
-  // Fallbacks for potentially unlabeled columns based on user screenshot
-  if (!headerMap['Shift1Start'] && headers.length > 9) headerMap['Shift1Start'] = 9;
-  if (!headerMap['Shift2Start'] && headers.length > 10) headerMap['Shift2Start'] = 10;
-  if (!headerMap['isPartTime'] && headers.length > 11) headerMap['isPartTime'] = 11;
+    // Validate that all essential headers are present
+    const requiredHeaders = ["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"];
+    const missingHeaders = requiredHeaders.filter(h => !(h in headerMap));
+    if (missingHeaders.length > 0) {
+        throw new Error("ستون‌های زیر در شیت Users وجود ندارند: " + missingHeaders.join(', '));
+    }
 
-  // Handle different naming for salary. User sheet has 'BaseHouryRate'.
-  const salaryKey = 'TotalMonthlySalary';
-  const fallbackSalaryKey = 'BaseHouryRate';
-  if(!headerMap[salaryKey] && headerMap[fallbackSalaryKey]) {
-      headerMap[salaryKey] = headerMap[fallbackSalaryKey];
-  }
+    var list = [];
+    data.forEach(row => {
+      if (row.join("").trim().length === 0) return; // Skip empty rows
+      const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
 
-  var list = [];
-  data.forEach(row => {
-    if (row.join("").trim().length === 0) return; // Skip empty rows
-    const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
-
-    list.push({
-      id: get('ID'),
-      name: get('Name'),
-      username: get('Username'),
-      password: get('Password'),
-      role: get('Role'),
-      dailyHours: get('DailyHours'),
-      thursdayHours: get('ThursdayHours'),
-      totalMonthlySalary: get(salaryKey),
-      shift1Start: get('Shift1Start'),
-      shift2Start: get('Shift2Start'),
-      isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
+      list.push({
+        id: get('ID'),
+        name: get('Name'),
+        username: get('Username'),
+        password: get('Password'),
+        role: get('Role'),
+        dailyHours: get('DailyHours'),
+        thursdayHours: get('ThursdayHours'),
+        totalMonthlySalary: get('TotalMonthlySalary'),
+        shift1Start: get('Shift1Start'), // This will now be a string 'HH:mm'
+        shift2Start: get('Shift2Start'), // This will now be a string 'HH:mm'
+        isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
+      });
     });
-  });
 
-  return list;
+    return list;
   } catch (e) {
-    // Log the error for debugging, but return an empty array to prevent frontend crash
     console.error("Error in getEmployeesList:", e);
-    return [];
+    // Re-throw the error so the frontend can display it.
+    throw new Error("خطا در خواندن لیست کارمندان: " + e.message);
   }
 }
+
 
 function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
   var s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
