@@ -31,9 +31,17 @@ function setupSheet() {
     ss.insertSheet("Logs").appendRow(["ID", "Name", "Action", "Timestamp", "JalaliDate", "Time", "Note", "IsSystem"]);
   }
 
-  // 3. Notifications
+  // 3. Notifications (New Structure)
   if (!ss.getSheetByName("Notifications")) {
-    ss.insertSheet("Notifications").appendRow(["Date", "Message", "Status"]);
+    var nSheet = ss.insertSheet("Notifications");
+    nSheet.appendRow(["ID", "Timestamp", "Message", "Status", "TargetUser", "RequestType", "RequestDetails", "IsActioned"]);
+    nSheet.getRange("A:A").setNumberFormat("@");
+  } else {
+    // Ensure new columns exist if sheet is old
+    var nSheet = ss.getSheetByName("Notifications");
+    if (nSheet.getLastColumn() < 8) {
+      nSheet.getRange(1, 4, 1, 5).setValues([["Status", "TargetUser", "RequestType", "RequestDetails", "IsActioned"]]);
+    }
   }
 
   // 4. Holidays
@@ -49,6 +57,13 @@ function setupSheet() {
   }
 
   // SalaryConfig and LeaveRequests sheets are intentionally removed to simplify the system.
+
+  // 6. Bonuses Sheet
+  if (!ss.getSheetByName("Bonuses")) {
+    var bSheet = ss.insertSheet("Bonuses");
+    bSheet.appendRow(["ID", "UserID", "YearMonth", "Amount", "Description", "IsForfeited"]);
+    bSheet.getRange("A:A").setNumberFormat("@");
+  }
 }
 
 // --- توابع محاسباتی هسته (Core Logic) ---
@@ -71,12 +86,16 @@ function getMonthlyReportCalc(userId, year, month) {
 
   // Process logs into a daily structure
   for (var i = 1; i < logsRaw.length; i++) {
-    var d = String(logsDisplay[i][4]).split(' ')[0].trim();
+    // BUG FIX: Group logs by the Jalali date derived from the actual timestamp,
+    // not the potentially inconsistent Jalali date string in the sheet.
+    var logDate = new Date(logsRaw[i][3]);
+    var d = getJalaliDate(logDate);
+
     if (String(logsRaw[i][0]) == String(userId) && d.startsWith(targetYM)) {
       if (!daysData[d]) daysData[d] = { logs: [] };
       daysData[d].logs.push({
         act: logsRaw[i][2],
-        ts: new Date(logsRaw[i][3]).getTime(),
+        ts: logDate.getTime(), // Use the same date object
         timeStr: logsDisplay[i][5], // HH:mm:ss from display values
         isAuto: logsDisplay[i][7]
       });
@@ -180,21 +199,38 @@ function getMonthlyReportCalc(userId, year, month) {
   // Apply the 1.4 multiplier to the final time balance (positive or negative)
   var adjustmentAmount = (finalDifference * OVERTIME_MULTIPLIER) * perMinuteRate;
 
-  var finalPay = (user.totalMonthlySalary || 0) + adjustmentAmount;
+  // --- Bonus Calculation ---
+  var bonuses = getUserBonuses(userId, targetYM);
+  var totalBonusAmount = 0;
+  var isBonusForfeited = (countDelay > 5 || countAbsence > 2);
+
+  bonuses.forEach(b => {
+    if (!b.isForfeited) { // isForfeited is the override from the sheet
+      if (!isBonusForfeited) {
+        totalBonusAmount += b.amount;
+      }
+    } else { // If it's manually overridden to NOT be forfeited, always add it.
+      totalBonusAmount += b.amount;
+    }
+  });
+
+  var finalPay = (user.totalMonthlySalary || 0) + adjustmentAmount + totalBonusAmount;
 
   return {
     details: summary.reverse(),
     stats: {
       daysConfig: getMonthDays(year, month),
       totalSalary: Math.round(finalPay).toLocaleString(),
-      totalWork: fmt(totWork),
+      totalWork: fmt(totWork), // Raw work hours
       totalPenalty: fmt(totalPenaltyMins),
       countDelay: countDelay,
       countAbsence: countAbsence,
-      netBalance: fmt(Math.abs(finalDifference)),
+      netBalance: fmt(Math.abs(finalDifference)), // This is the final calculated balance
       netSign: finalDifference >= 0 ? "+" : "-",
-      // BUG FIX: Add totalTarget to the return object
-      totalTarget: fmt(totalMonthTargetMins)
+      totalTarget: fmt(totalMonthTargetMins),
+      // Add new fields for the redesigned report card
+      adjustmentValue: Math.round(adjustmentAmount).toLocaleString(),
+      netWorkFinal: fmt(totalMonthTargetMins + finalDifference)
     }
   };
 }
@@ -449,5 +485,145 @@ function saveWorkWeekSettings(settings) {
   return { success: true };
 }
 function getGroupedLogs(userId, year, month) { var ss = SpreadsheetApp.getActiveSpreadsheet(); var logs = ss.getSheetByName("Logs").getDataRange().getDisplayValues(); var targetYM = year + "/" + month; var grouped = {}; for (var i = 1; i < logs.length; i++) { var d = String(logs[i][4]).split(' ')[0].trim(); if (String(logs[i][0]) == String(userId) && d.startsWith(targetYM)) { if(!grouped[d]) grouped[d] = []; grouped[d].push({ row: i+1, actionName: translateAction(logs[i][2]), rawAction: logs[i][2], time: logs[i][5], note: logs[i][6] }); } } var res = []; var keys = Object.keys(grouped).sort().reverse(); keys.forEach(k => { grouped[k].sort((a,b)=>(a.time>b.time)?1:-1); res.push({ date: k, items: grouped[k] }); }); return res; }
-function getUnreadNotifications() { var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName("Notifications"); if (!sheet) return []; var data = sheet.getDataRange().getValues(); var unreadMessages = []; for (var i = data.length - 1; i > 0; i--) { if (data[i][2] == "Unread") { unreadMessages.push(data[i][1]); } } return unreadMessages; }
-function markNotificationsAsRead() { var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName("Notifications"); if (!sheet) return; var data = sheet.getDataRange().getValues(); for (var i = 1; i < data.length; i++) { if (data[i][2] == "Unread") { sheet.getRange(i + 1, 3).setValue("Read"); } } }
+// --- Notification System (Overhauled) ---
+
+// For Admins: Get actionable requests
+function getActionableNotifications() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Notifications");
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var requests = [];
+  for (var i = data.length - 1; i > 0; i--) {
+    // TargetUser: 'admin', Status: 'Pending'
+    if (data[i][4] === 'admin' && data[i][3] === 'Pending') {
+      requests.push({
+        id: data[i][0],
+        message: data[i][2],
+        details: data[i][6] // JSON string with userId, userName, date
+      });
+    }
+  }
+  return requests;
+}
+
+// For Users: Get notifications targeted to them
+function getMyNotifications(userId) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Notifications");
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var notifs = [];
+  for (var i = data.length - 1; i > 0; i--) {
+    if (String(data[i][4]) == String(userId) && data[i][3] !== 'Read') {
+       notifs.push({ id: data[i][0], message: data[i][2] });
+    }
+  }
+  return notifs;
+}
+
+// Mark user's own notifications as read
+function markMyNotificationsAsRead(userId) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Notifications");
+  if (!sheet) return;
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][4]) == String(userId) && data[i][3] !== 'Read') {
+      sheet.getRange(i + 1, 4).setValue('Read');
+    }
+  }
+  return { success: true };
+}
+
+
+function respondToLeaveRequest(notificationId, isApproved) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Notifications");
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) == String(notificationId)) {
+      var details = JSON.parse(data[i][6]);
+      var targetUserId = details.userId;
+      var newStatus = isApproved ? 'Approved' : 'Rejected';
+
+      // Update the admin's request notification
+      sheet.getRange(i + 1, 4).setValue(newStatus); // Update status
+
+      // Create a new notification for the user
+      var userMessage = `درخواست مرخصی شما برای تاریخ ${details.date} ${isApproved ? 'تایید' : 'رد'} شد.`;
+      sheet.appendRow([
+        new Date().getTime(), new Date(), userMessage,
+        "Unread", targetUserId, "LeaveResponse", "{}", true
+      ]);
+
+      return { success: true };
+    }
+  }
+  return { success: false, message: "درخواست یافت نشد." };
+}
+
+function submitLeaveRequest(userId, userName, date) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Notifications");
+
+    var requestDetails = JSON.stringify({ userId: userId, userName: userName, date: date });
+    var message = `درخواست مرخصی از طرف ${userName} برای تاریخ ${date}`;
+
+    // More robust duplicate check
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+        if (data[i][5] === 'LeaveRequest' && data[i][3] === 'Pending' && data[i][6] === requestDetails) {
+            return { success: false, message: "شما قبلاً یک درخواست فعال برای این تاریخ ثبت کرده‌اید." };
+        }
+    }
+
+    sheet.appendRow([
+        new Date().getTime(), new Date(), message,
+        "Pending", "admin", "LeaveRequest", requestDetails, false
+    ]);
+    return { success: true };
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
+// --- Bonus Management Functions ---
+
+function getUserBonuses(userId, yearMonth) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Bonuses");
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var userBonuses = [];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][1]) == String(userId) && data[i][2] == yearMonth) {
+      userBonuses.push({
+        id: data[i][0],
+        amount: parseFloat(data[i][3]),
+        description: data[i][4],
+        isForfeited: data[i][5] === false // Special override flag
+      });
+    }
+  }
+  return userBonuses;
+}
+
+function saveBonus(userId, yearMonth, amount, description) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Bonuses");
+  sheet.appendRow([
+    new Date().getTime(), userId, yearMonth,
+    amount, description, true // Default to forfeitable
+  ]);
+  return { success: true };
+}
+
+function updateBonusForfeit(bonusId, shouldForfeit) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Bonuses");
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) == String(bonusId)) {
+      sheet.getRange(i + 1, 6).setValue(shouldForfeit);
+      return { success: true };
+    }
+  }
+  return { success: false, message: "مزیت مورد نظر یافت نشد." };
+}
