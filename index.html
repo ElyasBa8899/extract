@@ -380,7 +380,13 @@
     function sh(){document.getElementById('loader').style.display='flex'}
     function hd(){document.getElementById('loader').style.display='none'}
     function handleError(e){hd(); showMessage(e.message || e, 'error', 'خطا');}
-    function fmtMins(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (n < 10 ? "0" + n : n); }
+    function fmtMins(m) {
+        var isNeg = m < 0;
+        m = Math.abs(m);
+        var h = Math.floor(m / 60);
+        var n = Math.floor(m % 60);
+        return (isNeg ? "-" : "") + h + ":" + (n < 10 ? "0" + n : n);
+    }
     function doLogout(){
       document.getElementById('viewUser').classList.add('hidden');
       document.getElementById('viewAdmin').classList.add('hidden');

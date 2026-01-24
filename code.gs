@@ -46,6 +46,9 @@ function setupSheet() {
       notifSheet.getRange(1, notifSheet.getLastColumn() + 1).setValue("TargetUserID");
     }
   }
+  // Ensure ID columns are text
+  usersSheet.getRange("A:A").setNumberFormat("@");
+  ss.getSheetByName("Logs").getRange("A:A").setNumberFormat("@");
 
   // 4. Holidays
   if (!ss.getSheetByName("Holidays")) {
@@ -86,25 +89,30 @@ function setupSheet() {
 
 function getMonthlyReportCalc(userId, year, month) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  userId = String(userId).trim();
   var user = getUserById(userId);
-  if (!user) throw new Error("User not found");
+  if (!user) throw new Error("کاربر یافت نشد: " + userId);
 
-  // CRITICAL BUG FIX: Use getDisplayValues() to get time as a string, not a Date object.
   var logsSheet = ss.getSheetByName("Logs");
-  var logsDisplay = logsSheet.getDataRange().getDisplayValues(); // Use display values for time strings
-  var logsRaw = logsSheet.getDataRange().getValues(); // Use raw values for dates
+  var logsDisplay = logsSheet.getDataRange().getDisplayValues();
+  var logsRaw = logsSheet.getDataRange().getValues();
 
   var holidays = getHolidaysList();
-  var approvedLeaves = getApprovedLeavesForUser(userId); // Get approved leaves
+  var approvedLeaves = getApprovedLeavesForUser(userId);
   var workWeekSettings = getWorkWeekSettings();
   var dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  var targetYM = year + "/" + month;
+
+  // Ensure month has leading zero for strict startsWith check
+  var mStr = String(month);
+  if (mStr.length === 1) mStr = "0" + mStr;
+  var targetYM = year + "/" + mStr;
   var daysData = {};
 
   // Process logs into a daily structure
   for (var i = 1; i < logsRaw.length; i++) {
     var d = String(logsDisplay[i][4]).split(' ')[0].trim();
-    if (String(logsRaw[i][0]) == String(userId) && d.startsWith(targetYM)) {
+    var logUid = String(logsDisplay[i][0]).trim();
+    if ((logUid == userId || Number(logUid) == Number(userId)) && d.startsWith(targetYM)) {
       if (!daysData[d]) daysData[d] = { logs: [] };
       daysData[d].logs.push({
         act: logsRaw[i][2],
@@ -135,14 +143,13 @@ function getMonthlyReportCalc(userId, year, month) {
     var dayOfWeek = currentDate.getDay(); // 0=Sun, 5=Fri
 
     var dayTarget = 0;
-    // Fridays, holidays, and approved leave days have 0 target hours
     if (!isH && !isOnLeave) {
       var dayName = dayNames[dayOfWeek];
       var dayStatus = workWeekSettings[dayName];
       if (dayStatus === "Full Day") {
-        dayTarget = (user.dailyHours || 0) * 60;
+        dayTarget = (parseFloat(user.dailyHours) || 0) * 60;
       } else if (dayStatus === "Half Day") {
-        dayTarget = (user.thursdayHours || 0) * 60;
+        dayTarget = (parseFloat(user.thursdayHours) || 0) * 60;
       }
     }
     totalMonthTargetMins += dayTarget;
@@ -154,53 +161,71 @@ function getMonthlyReportCalc(userId, year, month) {
     if (items.length > 0) {
       items.sort((a, b) => a.ts - b.ts);
 
-      // Calculate Shift Window
       var firstEntry = items.find(x => x.act === 'Entry');
       var sStart = 0;
       if (firstEntry) {
         var entMins = timeToMins(firstEntry.timeStr);
         var s1 = timeToMins(user.shift1Start);
         var s2 = timeToMins(user.shift2Start);
-        // Determine which shift they are using
         var baseStart = s1;
         if (s2 > 0 && Math.abs(entMins - s2) < Math.abs(entMins - s1)) baseStart = s2;
-
         sStart = baseStart;
         if (entMins > baseStart) dailyDelayMins = entMins - baseStart;
       }
       var sEnd = sStart + dayTarget;
 
-      var lastTime = null, state = 'OUT';
+      var lastTime = null, lastAct = null, state = 'OUT';
       items.forEach(function(l) {
         var currentTs = l.ts;
-        if (l.act == 'Entry') {
-          if (state == 'OUT') { lastTime = currentTs; state = 'IN'; }
-        } else if (state == 'IN') {
-          if (l.act == 'Exit' || l.act == 'AutoExit' || l.act == 'LeaveStart') {
-            if (lastTime && l.act !== 'AutoExit') {
-              var duration = (currentTs - lastTime) / 60000;
-              workMs += (currentTs - lastTime);
+        var currentMins = timeToMins(l.timeStr);
 
-              if (dayTarget > 0) {
-                // Calculate Overlap with Shift [sStart, sEnd]
-                var intervalStart = timeToMins(items.find(x => x.ts === lastTime).timeStr);
-                var intervalEnd = timeToMins(l.timeStr);
-                // Handle midnight crossing if necessary (though rare in this app)
-                var overlapStart = Math.max(intervalStart, sStart);
-                var overlapEnd = Math.min(intervalEnd, sEnd);
-                var inside = Math.max(0, overlapEnd - overlapStart);
-                dayInsideMins += inside;
-                dayOutsideMins += Math.max(0, duration - inside);
-              } else {
-                dayOutsideMins += duration;
+        if (l.act == 'Entry') {
+          if (state == 'OUT') { lastTime = currentTs; lastAct = 'Entry'; state = 'IN'; }
+        }
+        else if (state == 'IN') {
+          if (l.act == 'Exit' || l.act == 'AutoExit' || l.act == 'LeaveStart') {
+            if (lastTime) {
+              var duration = (currentTs - lastTime) / 60000;
+              if (l.act !== 'AutoExit') {
+                workMs += (currentTs - lastTime);
+                if (dayTarget > 0) {
+                  var intervalStart = timeToMins(items.find(x => x.ts === lastTime).timeStr);
+                  var overlapStart = Math.max(intervalStart, sStart);
+                  var overlapEnd = Math.min(currentMins, sEnd);
+                  var inside = Math.max(0, overlapEnd - overlapStart);
+                  dayInsideMins += inside;
+                  dayOutsideMins += Math.max(0, duration - inside);
+                } else {
+                  dayOutsideMins += duration;
+                }
               }
             }
             state = (l.act == 'LeaveStart') ? 'LEAVE' : 'OUT';
-            lastTime = (l.act == 'LeaveStart') ? currentTs : null;
+            lastTime = currentTs; lastAct = l.act;
           }
-        } else if (state == 'LEAVE') {
-          if (l.act == 'LeaveEnd') { if (lastTime) leaveMs += (currentTs - lastTime); state = 'IN'; lastTime = currentTs; }
-          else if (l.act == 'Exit' || l.act == 'AutoExit') { if (lastTime) leaveMs += (currentTs - lastTime); state = 'OUT'; lastTime = null; }
+        }
+        else if (state == 'LEAVE') {
+          if (l.act == 'LeaveEnd' || l.act == 'Exit' || l.act == 'AutoExit') {
+            if (lastTime) {
+              var duration = (currentTs - lastTime) / 60000;
+              if (l.act !== 'AutoExit') {
+                leaveMs += (currentTs - lastTime);
+                if (dayTarget > 0) {
+                  var intervalStart = timeToMins(items.find(x => x.ts === lastTime).timeStr);
+                  var overlapStart = Math.max(intervalStart, sStart);
+                  var overlapEnd = Math.min(currentMins, sEnd);
+                  var inside = Math.max(0, overlapEnd - overlapStart);
+                  dayInsideMins += inside; // Approved leave time during shift counts as 'inside' (no penalty)
+                  dayOutsideMins += Math.max(0, duration - inside);
+                } else {
+                  dayOutsideMins += duration;
+                }
+              }
+            }
+            state = (l.act == 'LeaveEnd') ? 'IN' : 'OUT';
+            lastTime = (l.act == 'LeaveEnd') ? currentTs : null;
+            lastAct = l.act;
+          }
         }
       });
       if (state == 'IN' || state == 'LEAVE') missingExit = true;
@@ -282,7 +307,7 @@ function getMonthlyReportCalc(userId, year, month) {
       totalPenalty: Math.round(totalMissingMins * 3),
       countDelay: countDelay,
       countAbsence: countAbsence,
-      netPerformance: Math.round(netAdjustmentMins),
+      netPerformance: Math.round(totalMonthTargetMins + netAdjustmentMins),
       totalDelay: totalDelay,
       totalOvertime: totalOvertime,
       totalTarget: totalMonthTargetMins,
@@ -343,7 +368,7 @@ function timeToMins(t) {
 function getUserById(id) {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
     if (!sheet) return null;
-    // FIX: Use getDisplayValues() to ensure time is read as a string 'HH:mm'
+    id = String(id).trim();
     var data = sheet.getDataRange().getDisplayValues();
     if (data.length < 2) return null;
 
@@ -352,11 +377,12 @@ function getUserById(id) {
     headers.forEach((h, i) => { if (h) headerMap[h] = i; });
 
     const idIndex = headerMap['ID'];
-    if (idIndex === undefined) return null; // Can't find anyone without an ID column
+    if (idIndex === undefined) return null;
 
     for (var i = 1; i < data.length; i++) {
         var row = data[i];
-        if (String(row[idIndex]) == String(id)) {
+        var rowId = String(row[idIndex]).trim();
+        if (rowId == id || Number(rowId) == Number(id)) {
             const get = (key) => headerMap[key] !== undefined ? row[headerMap[key]] : undefined;
             return {
                 id: get('ID'),
@@ -440,6 +466,7 @@ function getLastStatus(id) {
 
 function getTodayUserSummary(userId) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  userId = String(userId).trim();
   var logs = ss.getSheetByName("Logs").getDataRange().getDisplayValues();
   var now = new Date();
   var jalali = getJalaliDate(now);
@@ -447,7 +474,8 @@ function getTodayUserSummary(userId) {
   var lastStatus = "Exit";
   for (var i = 1; i < logs.length; i++) {
     var d = String(logs[i][4]).split(' ')[0].trim();
-    if (String(logs[i][0]) == String(userId)) {
+    var logUid = String(logs[i][0]).trim();
+    if (logUid == userId || Number(logUid) == Number(userId)) {
       if (d == jalali) list.push({ time: logs[i][5], action: translateAction(logs[i][2]), raw: logs[i][2] });
       lastStatus = logs[i][2];
     }
@@ -631,7 +659,7 @@ function getWorkWeekSettings() {
   var data = s.getDataRange().getValues();
   var settings = {};
   for (var i = 1; i < data.length; i++) {
-    settings[data[i][0]] = data[i][1];
+    settings[String(data[i][0]).trim()] = String(data[i][1]).trim();
   }
   return settings;
 }
@@ -650,13 +678,19 @@ function saveWorkWeekSettings(settings) {
 }
 function getGroupedLogs(userId, year, month) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  userId = String(userId).trim();
   var logs = ss.getSheetByName("Logs").getDataRange().getDisplayValues();
-  var targetYM = year + "/" + month;
+
+  var mStr = String(month);
+  if (mStr.length === 1) mStr = "0" + mStr;
+  var targetYM = year + "/" + mStr;
+
   var grouped = {};
 
   for (var i = 1; i < logs.length; i++) {
     var d = String(logs[i][4]).split(' ')[0].trim();
-    if (String(logs[i][0]) == String(userId) && d.startsWith(targetYM)) {
+    var logUid = String(logs[i][0]).trim();
+    if ((logUid == userId || Number(logUid) == Number(userId)) && d.startsWith(targetYM)) {
       if (!grouped[d]) grouped[d] = [];
       grouped[d].push({
         row: i + 1,
