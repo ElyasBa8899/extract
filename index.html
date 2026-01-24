@@ -11,15 +11,15 @@
   <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
   <style>
     :root {
-      --bg-body: #0f172a; --bg-card: #1e293b; --bg-input: #334155;
-      --border-color: #475569; --text-main: #f8fafc; --text-muted: #94a3b8;
+      --bg-body: #0a0f1d; --bg-card: #161e2e; --bg-input: #1f2937;
+      --border-color: #374151; --text-main: #ffffff; --text-muted: #d1d5db;
       --primary: #3b82f6; --primary-hover: #2563eb;
-      --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
-      --radius: 12px;
+      --success: #10b981; --warning: #fbbf24; --danger: #f87171;
+      --radius: 16px;
     }
     body { font-family: 'Vazirmatn', sans-serif; background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
 
-    .pro-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .pro-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-bottom: 20px; }
     .form-control, .form-select { background-color: var(--bg-input) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important; border-radius: 8px; padding: 10px 15px; }
     .form-control:focus, .form-select:focus { border-color: var(--primary) !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important; }
 
@@ -31,8 +31,8 @@
 
     .stat-card { position: relative; background: linear-gradient(145deg, #1e293b, #334155); border-radius: var(--radius); padding: 20px; height: 100%; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; display: flex; flex-direction: column; justify-content: center; transition: transform 0.2s; }
     .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-    .stat-label { color: #cbd5e1; font-size: 0.9rem; margin-bottom: 8px; font-weight: 500; }
-    .stat-value { font-size: 1.6rem; font-weight: 800; color: white; letter-spacing: 1px; }
+    .stat-label { color: #ffffff; font-size: 1rem; margin-bottom: 10px; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--warning); letter-spacing: 1px; }
     .stat-icon { position: absolute; left: 15px; bottom: 15px; font-size: 2.5rem; opacity: 0.1; color: white; }
     .card-blue { border-bottom: 4px solid var(--primary); }
     .card-green { border-bottom: 4px solid var(--success); }
@@ -49,8 +49,8 @@
 
     .table-container { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border-color); margin-top: 15px; }
     .table-custom { width: 100%; border-collapse: collapse; }
-    .table-custom th { background-color: var(--bg-input); color: var(--text-muted); padding: 15px; text-align: center; border-bottom: 2px solid var(--border-color); }
-    .table-custom td { background-color: var(--bg-card); color: var(--text-main); padding: 14px; border-bottom: 1px solid #334155; text-align: center; vertical-align: middle; }
+    .table-custom th { background-color: var(--bg-input); color: #ffffff; padding: 15px; text-align: center; border-bottom: 2px solid var(--border-color); font-weight: 700; }
+    .table-custom td { background-color: var(--bg-card); color: #ffffff; padding: 14px; border-bottom: 1px solid #334155; text-align: center; vertical-align: middle; }
 
     .notif-btn { position: relative; border: 1px solid var(--border-color); background: var(--bg-input); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; cursor: pointer; }
     .notif-btn:hover { background: var(--primary); border-color: var(--primary); }
@@ -59,9 +59,10 @@
     .hidden { display: none !important; }
     .modal-content { background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); }
     .btn-close { filter: invert(1); }
-    #mdlUser .text-muted {
-      color: var(--text-main) !important;
+    #mdlUser .text-muted, #mdlCalendar .text-muted, #mdlRules .text-muted {
+      color: #d1d5db !important;
     }
+    .modal-body { color: #ffffff !important; }
     /* FullCalendar Customizations */
     .fc { direction: rtl; }
     .fc .fc-toolbar-title { font-size: 1.1rem !important; color: var(--text-main); }
@@ -138,22 +139,36 @@
   </div>
 
   <!-- داشبورد کاربر -->
-  <div id="viewUserDash" class="container hidden" style="max-width: 900px; padding-top: 30px;">
-    <div class="pro-card d-flex justify-content-between align-items-center mb-4"><h4 class="m-0">کارنامه عملکرد</h4><button onclick="backToUserPanel()" class="btn btn-outline-light btn-sm">بازگشت</button></div>
+  <div id="viewUserDash" class="container hidden" style="max-width: 1000px; padding-top: 30px;">
+    <div class="pro-card d-flex justify-content-between align-items-center mb-4">
+      <h4 class="m-0 fw-bold">کارنامه عملکرد ماهانه</h4>
+      <div class="d-flex gap-2">
+        <button onclick="mRules.show()" class="btn btn-warning btn-sm"><i class="fas fa-book me-1"></i> قوانین</button>
+        <button onclick="backToUserPanel()" class="btn btn-outline-light btn-sm">بازگشت</button>
+      </div>
+    </div>
     <div class="pro-card">
-      <div class="row g-2 justify-content-center mb-4"><select id="uYear" class="form-select w-auto text-center"></select><select id="uMonth" class="form-select w-auto text-center"></select><button onclick="loadUserSelfReport()" class="btn btn-primary px-4">نمایش</button></div>
+      <div class="row g-2 justify-content-center mb-4"><select id="uYear" class="form-select w-auto text-center"></select><select id="uMonth" class="form-select w-auto text-center"></select><button onclick="loadUserSelfReport()" class="btn btn-primary px-4">نمایش گزارش</button></div>
 
       <div id="uDash" class="hidden">
         <div class="row g-3 mb-4">
           <div class="col-6 col-md-4"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div><div class="stat-label">ساعت موظفی</div><div class="stat-value" id="uTarg">0</div></div></div>
-          <div class="col-6 col-md-4"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-label">حضور واقعی</div><div class="stat-value text-info" id="uWork">0</div></div></div>
-          <div class="col-6 col-md-4"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-label">کارکرد نهایی</div><div class="stat-value" id="uNet">0</div></div></div>
-          <div class="col-6 col-md-4"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-user-clock"></i></div><div class="stat-label">تعداد تاخیر</div><div class="stat-value text-danger" id="uDelayCount">0</div></div></div>
-          <div class="col-6 col-md-4"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-user-times"></i></div><div class="stat-label">تعداد غیبت</div><div class="stat-value text-danger" id="uAbsenceCount">0</div></div></div>
-          <div class="col-12 col-md-4"><div class="stat-card card-green"><div class="stat-icon"><i class="fas fa-wallet"></i></div><div class="stat-label">مبلغ حقوق پرداختی</div><div class="stat-value text-success" style="font-size: 1.3rem" id="uSal">0</div></div></div>
+          <div class="col-6 col-md-4"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-label">حضور خالص</div><div class="stat-value text-info" id="uWork">0</div></div></div>
+          <div class="col-6 col-md-4"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-label">کارکرد نهایی</div><div class="stat-value" id="uNet">0</div><small class="text-muted" style="font-size:0.7rem">با احتساب ضریب اضافه کار و جریمه</small></div></div>
+
+          <div class="col-4"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-user-clock"></i></div><div class="stat-label">تعداد تاخیر</div><div class="stat-value text-danger" id="uDelayCount">0</div></div></div>
+          <div class="col-4"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-user-times"></i></div><div class="stat-label">تعداد غیبت</div><div class="stat-value text-danger" id="uAbsenceCount">0</div></div></div>
+          <div class="col-4"><div class="stat-card card-green"><div class="stat-icon"><i class="fas fa-gift"></i></div><div class="stat-label">مبلغ مزایا</div><div class="stat-value text-success" id="uBenefitValue">0</div></div></div>
+
+          <div class="col-12"><div class="stat-card card-green" style="background: linear-gradient(145deg, #064e3b, #065f46); border: 2px solid #10b981;">
+            <div class="d-flex justify-content-between align-items-center">
+              <div><div class="stat-label">مبلغ کل حقوق قابل پرداخت</div><div class="stat-value text-white" style="font-size: 2.2rem" id="uSal">0</div></div>
+              <button onclick="mBreakdown.show()" class="btn btn-light"><i class="fas fa-list-ul me-2"></i>ریز محاسبات</button>
+            </div>
+          </div></div>
         </div>
 
-        <div class="table-container"><div class="table-responsive"><table class="table-custom w-100 text-center"><thead><tr><th>تاریخ</th><th>کارکرد</th><th>تاخیر (دقیقه)</th><th class="text-danger">جریمه (کسر)</th></tr></thead><tbody id="uTbMain"></tbody></table></div></div>
+        <div class="table-container"><div class="table-responsive"><table class="table-custom w-100 text-center"><thead><tr><th>تاریخ</th><th>کارکرد</th><th>تاخیر (دقیقه)</th><th class="text-danger">جریمه (کسر)</th><th>وضعیت</th></tr></thead><tbody id="uTbMain"></tbody></table></div></div>
       </div>
     </div>
   </div>
@@ -182,13 +197,22 @@
         <div id="dash" class="hidden">
           <div class="row g-3 mb-4">
             <div class="col-6 col-lg-3"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div><div class="stat-label">کل موظفی</div><div class="stat-value" id="vTarg">0</div></div></div>
-            <div class="col-6 col-lg-3"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-label">کل کارکرد</div><div class="stat-value" id="vWork">0</div></div></div>
-            <div class="col-6 col-lg-3"><div class="stat-card card-green"><div class="stat-icon"><i class="fas fa-arrow-up"></i></div><div class="stat-label">اضافه کاری</div><div class="stat-value text-success" id="vOvertime">0</div></div></div>
-            <div class="col-6 col-lg-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-arrow-down"></i></div><div class="stat-label">کل تاخیر</div><div class="stat-value text-danger" id="vDelay">0</div></div></div>
-            <div class="col-6 col-lg-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-sort-amount-down"></i></div><div class="stat-label">جریمه (کسر شده)</div><div class="stat-value text-danger" id="vPenalty">0</div></div></div>
-            <div class="col-6 col-lg-3"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-times"></i></div><div class="stat-label">تعداد غیبت</div><div class="stat-value" id="vAbsence">0</div></div></div>
-            <div class="col-12 col-lg-6"><div id="vBenefits" class="stat-card"><div class="stat-icon" style="font-size: 4rem;"><i class="fas fa-gift"></i></div><div class="stat-label">وضعیت مزایا</div><div class="stat-value" id="vBenefitsStatus"></div><small id="vBenefitsReason"></small></div></div>
-            <div class="col-12 col-lg-6"><div class="stat-card card-green"><div class="stat-icon" style="font-size: 4rem;"><i class="fas fa-coins"></i></div><div class="stat-label">مبلغ نهایی قابل پرداخت</div><div class="stat-value text-success" style="font-size: 2.2rem;" id="vSal">0</div></div></div>
+            <div class="col-6 col-lg-3"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-label">حضور خالص</div><div class="stat-value" id="vWork">0</div></div></div>
+            <div class="col-6 col-lg-3"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-label">کارکرد نهایی</div><div class="stat-value text-info" id="vNet">0</div></div></div>
+            <div class="col-6 col-lg-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-arrow-down"></i></div><div class="stat-label">کل جریمه کسر شده</div><div class="stat-value text-danger" id="vPenalty">0</div></div></div>
+
+            <div class="col-12 col-lg-6">
+              <div class="stat-card card-green">
+                <div class="stat-label">مدیریت مزایا (این ماه)</div>
+                <div class="d-flex gap-2">
+                  <input type="number" id="vBenAmount" class="form-control" placeholder="مبلغ مزایا">
+                  <button onclick="saveBen()" class="btn btn-primary">ثبت</button>
+                  <button id="btnApproveBen" onclick="approveBen()" class="btn btn-success hidden">تایید نهایی</button>
+                </div>
+                <div id="vBenStatus" class="mt-2 small">وضعیت: نامشخص</div>
+              </div>
+            </div>
+            <div class="col-12 col-lg-6"><div class="stat-card card-green" style="background: linear-gradient(145deg, #064e3b, #065f46); border: 2px solid #10b981;"><div class="stat-icon" style="font-size: 4rem;"><i class="fas fa-coins"></i></div><div class="stat-label">مبلغ نهایی قابل پرداخت</div><div class="stat-value text-white" style="font-size: 2.2rem;" id="vSal">0</div></div></div>
           </div>
 
           <ul class="nav nav-tabs mb-3 border-secondary"><li class="nav-item"><button class="nav-link active" onclick="swTab('tab1',this)">گزارش مالی</button></li><li class="nav-item"><button class="nav-link" onclick="swTab('tab2',this)">ریز ترددها</button></li></ul>
@@ -205,10 +229,56 @@
 
   <div id="mdlUser" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 id="muTitle">کاربر</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="uid"><div class="row g-3"><div class="col-12"><input type="text" id="fn" class="form-control" placeholder="نام کامل"></div><div class="col-6"><input type="text" id="un" class="form-control" placeholder="نام کاربری"></div><div class="col-6"><input type="text" id="pw" class="form-control" placeholder="رمز عبور"></div><div class="col-6"><label class="small text-muted">ساعت کاری روزانه</label><input type="number" id="hr" class="form-control" placeholder="مثال: 8"></div><div class="col-6"><label class="small text-muted">ساعت کاری پنجشنبه</label><input type="number" id="thr" class="form-control" placeholder="مثال: 4"></div><div class="col-6"><label class="small text-muted">شروع شیفت اول</label><input type="text" id="s1" class="form-control" placeholder="HH:mm" dir="ltr"></div><div class="col-6"><label class="small text-muted">شروع شیفت دوم (اختیاری)</label><input type="text" id="s2" class="form-control" placeholder="HH:mm" dir="ltr"></div><div class="col-12"><div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" role="switch" id="isPartTime"><label class="form-check-label" for="isPartTime">کارمند پاره‌وقت (محاسبه بدون جریمه)</label></div></div><div class="col-12"><label class="small text-muted">حقوق ثابت ماهانه (ریال)</label><input type="number" id="tsal" class="form-control border-success" placeholder="مبلغ کل حقوق"></div></div></div><div class="modal-footer"><button onclick="subUser()" class="btn btn-primary">ذخیره</button></div></div></div></div>
 
-  <div id="mdlCalendar" class="modal fade"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">تقویم تعطیلات</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><p class="small text-muted mb-3">برای ثبت یا حذف تعطیلی رسمی، روی روز مورد نظر در تقویم کلیک کنید.</p><div id="holidayCalendar"></div></div></div></div></div>
+  <div id="mdlCalendar" class="modal fade"><div class="modal-dialog modal-md modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">مدیریت روزهای تعطیل</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body">
+    <div class="row g-2 mb-3">
+      <div class="col-4"><select id="calYear" class="form-select"></select></div>
+      <div class="col-5"><select id="calMonth" class="form-select"></select></div>
+      <div class="col-3"><button onclick="renderHolidayList()" class="btn btn-primary w-100">نمایش</button></div>
+    </div>
+    <div class="table-container" style="max-height: 400px; overflow: auto;"><table class="table-custom w-100 text-center"><thead><tr><th>تاریخ</th><th>روز</th><th>وضعیت</th><th>اقدام</th></tr></thead><tbody id="holidayListBody"></tbody></table></div>
+  </div></div></div></div>
   <div id="mdlAlert" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-warning"><div class="modal-header bg-warning text-dark"><h5 class="modal-title"><i class="fas fa-bell me-2"></i>پیام‌های سیستم</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="notifList" class="notif-list p-2"></div></div><div class="modal-footer"><button onclick="ackNotif()" class="btn btn-dark w-100">علامت‌گذاری به عنوان خوانده شده</button></div></div></div></div>
 
   <div id="mdlLeaveRequests" class="modal fade"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">مدیریت درخواست‌های مرخصی</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="table-responsive"><table class="table-custom"><thead><tr><th>کارمند</th><th>از تاریخ</th><th>تا تاریخ</th><th>وضعیت</th><th>اقدام</th></tr></thead><tbody id="leaveRequestsBody"></tbody></table></div></div></div></div></div>
+
+  <!-- مودال ریز محاسبات -->
+  <div id="mdlBreakdown" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5><i class="fas fa-calculator me-2"></i>ریز محاسبات حقوق</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body">
+    <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>حقوق پایه ماهانه:</span><span id="bBase" class="fw-bold text-info">0</span></div>
+    <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>نرخ هر دقیقه (ریال):</span><span id="bRate" class="fw-bold">0</span></div>
+    <div class="d-flex justify-content-between border-bottom border-secondary py-2 text-danger"><span>کل کسر کار (با جریمه ۳ برابر):</span><span id="bMissing" class="fw-bold">0</span></div>
+    <div class="d-flex justify-content-between border-bottom border-secondary py-2 text-success"><span>کل اضافه کار (با ضریب ۱.۴):</span><span id="bOvertime" class="fw-bold">0</span></div>
+    <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>خالص تعدیل زمان (دقیقه):</span><span id="bAdj" class="fw-bold">0</span></div>
+    <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>حقوق کارکرد (پس از تعدیل):</span><span id="bWorkSal" class="fw-bold text-info">0</span></div>
+    <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>مزایا و پاداش:</span><span id="bBen" class="fw-bold text-success">0</span></div>
+    <div class="mt-3 p-3 bg-dark rounded border border-success d-flex justify-content-between align-items-center">
+      <span class="fw-bold">قابل پرداخت نهایی:</span><span id="bFinal" class="fs-4 fw-bold text-warning">0</span>
+    </div>
+  </div></div></div></div>
+
+  <!-- مودال قوانین -->
+  <div id="mdlRules" class="modal fade"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><div class="modal-header"><h5><i class="fas fa-book-open me-2"></i>قوانین و نحوه محاسبات</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" style="font-size: 0.95rem; line-height: 1.8;">
+    <div class="bg-dark p-3 rounded mb-3 border-start border-primary border-4">
+      <h6 class="text-primary fw-bold mb-2">۱. جریمه تاخیر و غیبت (کسر کار)</h6>
+      <p class="mb-0">هر دقیقه غیبت در ساعات موظفی یا تاخیر در ورود، با <b>ضریب ۳ (جریمه ۳ برابری)</b> محاسبه می‌شود.
+      <br><small class="text-muted">مثال: اگر ۱۰ دقیقه دیر بیایید، ۳۰ دقیقه از زمان کارکرد شما کسر می‌شود.</small></p>
+    </div>
+    <div class="bg-dark p-3 rounded mb-3 border-start border-success border-4">
+      <h6 class="text-success fw-bold mb-2">۲. پاداش اضافه کاری</h6>
+      <p class="mb-0">ساعات حضور فراتر از ساعات موظفی، با <b>ضریب ۱.۴</b> به عنوان اضافه کار در نظر گرفته می‌شود.</p>
+    </div>
+    <div class="bg-dark p-3 rounded mb-3 border-start border-warning border-4">
+      <h6 class="text-warning fw-bold mb-2">۳. سیستم خروج خودکار</h6>
+      <p class="mb-0">اگر ورود ثبت شود اما تا <b>۱۵ ساعت بعد</b> خروجی ثبت نگردد، سیستم به صورت خودکار وضعیت را "خروج خودکار" ثبت کرده و هیچ زمانی برای آن روز محاسبه نمی‌شود.</p>
+    </div>
+    <div class="bg-dark p-3 rounded mb-3 border-start border-info border-4">
+      <h6 class="text-info fw-bold mb-2">۴. تعطیلات و مرخصی</h6>
+      <p class="mb-0">در روزهای تعطیل رسمی و مرخصی‌های تایید شده، ساعت موظفی شما <b>صفر</b> منظور شده و جریمه‌ای بابت عدم حضور تعلق نمی‌گیرد.</p>
+    </div>
+    <div class="bg-dark p-3 rounded border-start border-danger border-4">
+      <h6 class="text-danger fw-bold mb-2">۵. ابطال مزایا</h6>
+      <p class="mb-0">در صورت داشتن بیش از <b>۵ مورد تاخیر</b> یا <b>۲ روز غیبت</b> در ماه، پاداش و مزایای خودکار لغو خواهد شد (مگر با تایید دستی مدیریت).</p>
+    </div>
+  </div></div></div></div>
 
   <!-- Generic Message Modal -->
   <div id="mdlMessage" class="modal fade" tabindex="-1">
@@ -227,13 +297,12 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
-  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/fa.js'></script>
-  <script src="https://cdn.jsdelivr.net/npm/jalali-moment/dist/jalali-moment.browser.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment-jalaali@0.9.6/build/moment-jalaali.js"></script>
   <script>
     var curU=null, selU=null;
     var calendar;
-    var mU=new bootstrap.Modal(document.getElementById('mdlUser')), mL=new bootstrap.Modal(document.getElementById('mdlLog')), mCalendar=new bootstrap.Modal(document.getElementById('mdlCalendar')), mM=new bootstrap.Modal(document.getElementById('mdlManual')), mAlert=new bootstrap.Modal(document.getElementById('mdlAlert')), mMessage = new bootstrap.Modal(document.getElementById('mdlMessage')), mLeave = new bootstrap.Modal(document.getElementById('mdlLeaveRequests'));
+    var mU=new bootstrap.Modal(document.getElementById('mdlUser')), mL=new bootstrap.Modal(document.getElementById('mdlLog')), mCalendar=new bootstrap.Modal(document.getElementById('mdlCalendar')), mM=new bootstrap.Modal(document.getElementById('mdlManual')), mAlert=new bootstrap.Modal(document.getElementById('mdlAlert')), mMessage = new bootstrap.Modal(document.getElementById('mdlMessage')), mLeave = new bootstrap.Modal(document.getElementById('mdlLeaveRequests')), mBreakdown = new bootstrap.Modal(document.getElementById('mdlBreakdown')), mRules = new bootstrap.Modal(document.getElementById('mdlRules'));
     var isEdit=false;
 
     function openLeaveRequests() {
@@ -302,9 +371,9 @@
     }
 
     window.onload=function(){
-      var ys=[document.getElementById('sYear'),document.getElementById('uYear')]; for(var i=0;i<21;i++){var v=1403+i;ys.forEach(s=>{var o=document.createElement('option');o.value=v;o.innerText=v;if(v==1404)o.selected=true;s.appendChild(o)})}
+      var ys=[document.getElementById('sYear'),document.getElementById('uYear'),document.getElementById('calYear')]; for(var i=0;i<21;i++){var v=1403+i;ys.forEach(s=>{if(!s)return; var o=document.createElement('option');o.value=v;o.innerText=v;if(v==1404)o.selected=true;s.appendChild(o)})}
       var ms=[{v:'01',n:'فروردین'},{v:'02',n:'اردیبهشت'},{v:'03',n:'خرداد'},{v:'04',n:'تیر'},{v:'05',n:'مرداد'},{v:'06',n:'شهریور'},{v:'07',n:'مهر'},{v:'08',n:'آبان'},{v:'09',n:'آذر'},{v:'10',n:'دی'},{v:'11',n:'بهمن'},{v:'12',n:'اسفند'}];
-      var mS=[document.getElementById('sMonth'),document.getElementById('uMonth')]; mS.forEach(s=>{ms.forEach(m=>{var o=document.createElement('option');o.value=m.v;o.innerText=m.n;if(m.v=='09')o.selected=true;s.appendChild(o)})});
+      var mS=[document.getElementById('sMonth'),document.getElementById('uMonth'),document.getElementById('calMonth')]; mS.forEach(s=>{ms.forEach(m=>{var o=document.createElement('option');o.value=m.v;o.innerText=m.n;if(m.v=='10')o.selected=true;s.appendChild(o)})});
       document.getElementById('todayDate').innerText=new Date().toLocaleDateString('fa-IR-u-nu-latn');
     };
 
@@ -414,12 +483,23 @@
       google.script.run.withSuccessHandler(r => {
         hd();
         document.getElementById('uDash').classList.remove('hidden');
-        document.getElementById('uSal').innerText = r.stats.totalSalary;
+        document.getElementById('uSal').innerText = r.stats.totalSalary + " ریال";
         document.getElementById('uWork').innerText = fmtMins(r.stats.totalWork);
         document.getElementById('uTarg').innerText = fmtMins(r.stats.totalTarget);
         document.getElementById('uNet').innerText = fmtMins(r.stats.netPerformance);
         document.getElementById('uDelayCount').innerText = r.stats.countDelay;
         document.getElementById('uAbsenceCount').innerText = r.stats.countAbsence;
+        document.getElementById('uBenefitValue').innerText = r.stats.breakdown.benefitAmount + " ریال";
+
+        // Populate Breakdown Modal
+        document.getElementById('bBase').innerText = r.stats.breakdown.baseSalary + " ریال";
+        document.getElementById('bRate').innerText = r.stats.breakdown.minuteRate + " ریال";
+        document.getElementById('bMissing').innerText = fmtMins(r.stats.breakdown.totalMissing);
+        document.getElementById('bOvertime').innerText = fmtMins(r.stats.breakdown.totalOvertime);
+        document.getElementById('bAdj').innerText = fmtMins(r.stats.breakdown.netAdjustment);
+        document.getElementById('bWorkSal').innerText = r.stats.breakdown.workSalary + " ریال";
+        document.getElementById('bBen').innerText = r.stats.breakdown.benefitAmount + " ریال (" + r.stats.breakdown.benefitStatus + ")";
+        document.getElementById('bFinal').innerText = r.stats.totalSalary + " ریال";
 
         var h = '';
         r.details.forEach(d => { h += `<tr><td>${d.date}</td><td>${d.work}</td><td>${d.delay}</td><td class="text-danger">${d.penalty}</td><td class="text-white small">${d.status}</td></tr>` });
@@ -463,26 +543,16 @@
         document.getElementById('dash').classList.remove('hidden');
         document.getElementById('vTarg').innerText = fmtMins(r.stats.totalTarget);
         document.getElementById('vWork').innerText = fmtMins(r.stats.totalWork);
-        document.getElementById('vOvertime').innerText = fmtMins(r.stats.totalOvertime);
-        document.getElementById('vDelay').innerText = fmtMins(r.stats.totalDelay);
-        document.getElementById('vPenalty').innerText = fmtMins(r.stats.totalPenalty);
-        document.getElementById('vAbsence').innerText = r.stats.countAbsence;
-        document.getElementById('vSal').innerText = r.stats.totalSalary;
+        document.getElementById('vNet').innerText = fmtMins(r.stats.netPerformance);
+        document.getElementById('vPenalty').innerText = fmtMins(r.stats.breakdown.latenessPenalty);
+        document.getElementById('vSal').innerText = r.stats.totalSalary + " ریال";
 
-        var benefitsCard = document.getElementById('vBenefits');
-        var benefitsStatusEl = document.getElementById('vBenefitsStatus');
-        var benefitsReasonEl = document.getElementById('vBenefitsReason');
-
-        benefitsStatusEl.innerText = r.stats.benefitsStatus;
-        benefitsReasonEl.innerText = r.stats.benefitsRevocationReason || '';
-
-        benefitsCard.classList.remove('card-green', 'card-red');
-        if (r.stats.benefitsStatus === 'حذف شده') {
-          benefitsCard.classList.add('card-red');
-          benefitsStatusEl.classList.add('text-danger');
+        document.getElementById('vBenAmount').value = r.stats.breakdown.benefitRaw;
+        document.getElementById('vBenStatus').innerText = "وضعیت مزایا: " + r.stats.breakdown.benefitStatus;
+        if (r.stats.breakdown.benefitStatus === 'در انتظار تایید') {
+          document.getElementById('btnApproveBen').classList.remove('hidden');
         } else {
-          benefitsCard.classList.add('card-green');
-          benefitsStatusEl.classList.remove('text-danger');
+          document.getElementById('btnApproveBen').classList.add('hidden');
         }
 
         var h = '';
@@ -491,6 +561,17 @@
       }).withFailureHandler(handleError).getMonthlyReportCalc(selU.id, y, m);
 
       google.script.run.withSuccessHandler(g => { var h = ""; g.forEach((x, i) => { var l = x.items.map(z => `<div class="timeline-item"><span>${z.actionName}</span><span class="text-info">${z.time}</span><button class="btn btn-sm btn-outline-secondary py-0" onclick="openEditLog(${z.row},'${z.time}')"><i class="fas fa-pen"></i></button></div>`).join(''); h += `<div class="accordion-item mb-2"><h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#c${i}"><span>${x.date}</span></button></h2><div id="c${i}" class="accordion-collapse collapse" data-bs-parent="#accLogs"><div class="accordion-body">${l}</div></div></div>` }); document.getElementById('accLogs').innerHTML = h || 'خالی' }).withFailureHandler(handleError).getGroupedLogs(selU.id, y, m);
+    }
+
+    function saveBen() {
+      if (!selU) return;
+      var y = document.getElementById('sYear').value, m = document.getElementById('sMonth').value, a = document.getElementById('vBenAmount').value;
+      sh(); google.script.run.withSuccessHandler(() => { hd(); loadRep(); showMessage('مبلغ مزایا ثبت شد. منتظر تایید نهایی باشید.', 'success'); }).saveMonthlyBenefit(selU.id, y, m, a);
+    }
+    function approveBen() {
+      if (!selU) return;
+      var y = document.getElementById('sYear').value, m = document.getElementById('sMonth').value;
+      sh(); google.script.run.withSuccessHandler(() => { hd(); loadRep(); showMessage('مزایا تایید و به حقوق اضافه شد.', 'success'); }).approveMonthlyBenefit(selU.id, y, m);
     }
 
     function swTab(t, el) { document.getElementById('tab1').classList.add('hidden'); document.getElementById('tab2').classList.add('hidden'); document.getElementById(t).classList.remove('hidden'); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); el.classList.add('active'); }
@@ -543,74 +624,47 @@
     function subLog(){var r=document.getElementById('lid').value,t=document.getElementById('ltm').value;if(t.length!==5||!t.includes(':')){showMessage('14:30', 'error');return}sh();google.script.run.withSuccessHandler(()=>{hd();mL.hide();loadRep()}).updateLogTime(r,t);}
     function openCalendarSettings() {
         mCalendar.show();
-
-        // Use a short delay to ensure the modal is visible before rendering the calendar
-        setTimeout(initializeCalendar, 200);
+        renderHolidayList();
     }
 
-    function initializeCalendar() {
-        var calendarEl = document.getElementById('holidayCalendar');
-        if (!calendarEl) return;
-        if (calendar) calendar.destroy();
+    function renderHolidayList() {
+      var month = document.getElementById('calMonth').value;
+      var year = parseInt(document.getElementById('calYear').value);
+      var targetYM = year + "/" + month;
+      sh();
+      google.script.run.withSuccessHandler(holidays => {
+        hd();
+        var mNum = parseInt(month);
+        var daysInMonth = (mNum <= 6) ? 31 : (mNum <= 11 ? 30 : 29);
+        if (mNum == 12) {
+          const rem = (year - 474) % 33;
+          if ([1, 5, 9, 13, 17, 22, 26, 30].includes(rem)) daysInMonth = 30;
+        }
 
-        sh();
-        google.script.run.withSuccessHandler(holidays => {
-            hd();
-            let holidayEvents = [];
-            if(Array.isArray(holidays)) {
-                holidayEvents = holidays.map(h => ({
-                    id: h,
-                    title: 'تعطیل رسمی',
-                    start: moment(h, 'jYYYY/jMM/jDD').format('YYYY-MM-DD'),
-                    allDay: true,
-                    classNames: ['holiday-event']
-                }));
-            }
+        var dayNames = ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"];
+        var h = '';
+        for (var d = 1; d <= daysInMonth; d++) {
+          var dStr = (d < 10) ? "0" + d : d;
+          var fullDate = targetYM + "/" + dStr;
+          var isH = holidays.includes(fullDate);
 
-            // Calculate start and end of current Jalali month for the view
-            const startOfMonth = moment().startOf('jMonth');
-            const endOfMonth = moment().endOf('jMonth');
-            const startG = startOfMonth.format('YYYY-MM-DD');
-            const endG = endOfMonth.clone().add(1, 'days').format('YYYY-MM-DD');
+          // Use moment to get day name
+          var m = moment(fullDate, 'jYYYY/jMM/jDD');
+          var dayName = m.locale('fa').format('dddd');
 
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                headerToolbar: { right: 'prev,next today', center: 'title', left: '' },
-                locale: 'fa',
-                firstDay: 6, // Saturday
-                initialDate: startG,
-                dayCellDidMount: function(arg) {
-                    arg.el.setAttribute('data-jalali-date', moment(arg.date).format('jYYYY/jMM/jDD'));
-                },
-                initialView: 'dayGridMonth',
-                showNonCurrentDates: false,
-                fixedWeekCount: false,
-                events: holidayEvents,
-                dateClick: function(info) {
-                    const clickedDate = moment(info.date).format('jYYYY/jMM/jDD');
-                    const existingEvent = calendar.getEventById(clickedDate);
+          h += `<tr>
+            <td>${fullDate}</td>
+            <td>${dayName}</td>
+            <td><span class="badge ${isH ? 'bg-danger' : 'bg-success'}">${isH ? 'تعطیل' : 'کاری'}</span></td>
+            <td><button onclick="toggleH('${fullDate}')" class="btn btn-sm ${isH ? 'btn-outline-success' : 'btn-outline-danger'}">${isH ? 'برگشت به کاری' : 'تعطیل کردن'}</button></td>
+          </tr>`;
+        }
+        document.getElementById('holidayListBody').innerHTML = h;
+      }).getHolidaysList();
+    }
 
-                    sh();
-                    if (existingEvent) {
-                        google.script.run.withSuccessHandler(() => {
-                            hd();
-                            existingEvent.remove();
-                        }).withFailureHandler(handleError).removeHolidayFromSheet(clickedDate);
-                    } else {
-                        google.script.run.withSuccessHandler(() => {
-                            hd();
-                            calendar.addEvent({
-                                id: clickedDate,
-                                title: 'تعطیل رسمی',
-                                start: info.dateStr,
-                                allDay: true,
-                                classNames: ['holiday-event']
-                            });
-                        }).withFailureHandler(handleError).addHolidayToSheet(clickedDate);
-                    }
-                }
-            });
-            calendar.render();
-        }).withFailureHandler(handleError).getHolidaysList();
+    function toggleH(date) {
+      sh(); google.script.run.withSuccessHandler(() => { hd(); renderHolidayList(); }).toggleHoliday(date);
     }
     function openManual(){document.getElementById('mDate').value="1404/09/25";mM.show();}
     function subManual(){var d=document.getElementById('mDate').value,t=document.getElementById('mTime').value,a=document.getElementById('mAct').value;if(t.length!==5||!t.includes(':')){showMessage('09:00', 'error');return}sh();google.script.run.withSuccessHandler((r)=>{hd();mM.hide();loadRep();if(r.success)showMessage('ok','success');else showMessage(r.message, 'error');}).withFailureHandler(handleError).adminAddLog(selU.id,selU.name,d,t,a);}

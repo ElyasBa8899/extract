@@ -65,6 +65,21 @@ function setupSheet() {
   if (!ss.getSheetByName("LeaveRequests")) {
     ss.insertSheet("LeaveRequests").appendRow(["ID", "UserID", "UserName", "StartDate", "EndDate", "Status"]);
   }
+
+  // 7. Monthly Benefits
+  if (!ss.getSheetByName("MonthlyBenefits")) {
+    ss.insertSheet("MonthlyBenefits").appendRow(["UserID", "Year", "Month", "Amount", "Status"]);
+  }
+
+  // 8. Create Hourly Trigger for autoExitCheck if not exists
+  var triggers = ScriptApp.getProjectTriggers();
+  var triggerExists = triggers.some(t => t.getHandlerFunction() === 'autoExitCheck');
+  if (!triggerExists) {
+    ScriptApp.newTrigger('autoExitCheck')
+      .timeBased()
+      .everyHours(1)
+      .create();
+  }
 }
 
 // --- توابع محاسباتی هسته (Core Logic) ---
@@ -134,25 +149,58 @@ function getMonthlyReportCalc(userId, year, month) {
 
     var items = daysData[k] ? daysData[k].logs : [];
     var workMs = 0, leaveMs = 0, dailyDelayMins = 0, missingExit = false;
+    var dayInsideMins = 0, dayOutsideMins = 0;
 
     if (items.length > 0) {
       items.sort((a, b) => a.ts - b.ts);
+
+      // Calculate Shift Window
+      var firstEntry = items.find(x => x.act === 'Entry');
+      var sStart = 0;
+      if (firstEntry) {
+        var entMins = timeToMins(firstEntry.timeStr);
+        var s1 = timeToMins(user.shift1Start);
+        var s2 = timeToMins(user.shift2Start);
+        // Determine which shift they are using
+        var baseStart = s1;
+        if (s2 > 0 && Math.abs(entMins - s2) < Math.abs(entMins - s1)) baseStart = s2;
+
+        sStart = baseStart;
+        if (entMins > baseStart) dailyDelayMins = entMins - baseStart;
+      }
+      var sEnd = sStart + dayTarget;
+
       var lastTime = null, state = 'OUT';
       items.forEach(function(l) {
+        var currentTs = l.ts;
         if (l.act == 'Entry') {
-          if (state == 'OUT') {
-            lastTime = l.ts;
-            state = 'IN';
-            dailyDelayMins += calculateStrictDelay(l.timeStr, user.shift1Start, user.shift2Start);
-          }
+          if (state == 'OUT') { lastTime = currentTs; state = 'IN'; }
         } else if (state == 'IN') {
-          if (l.act == 'Exit') { if (lastTime) workMs += (l.ts - lastTime); state = 'OUT'; lastTime = null; }
-          else if (l.act == 'AutoExit') { state = 'OUT'; lastTime = null; }
-          else if (l.act == 'LeaveStart') { if (lastTime) workMs += (l.ts - lastTime); state = 'LEAVE'; lastTime = l.ts; }
+          if (l.act == 'Exit' || l.act == 'AutoExit' || l.act == 'LeaveStart') {
+            if (lastTime && l.act !== 'AutoExit') {
+              var duration = (currentTs - lastTime) / 60000;
+              workMs += (currentTs - lastTime);
+
+              if (dayTarget > 0) {
+                // Calculate Overlap with Shift [sStart, sEnd]
+                var intervalStart = timeToMins(items.find(x => x.ts === lastTime).timeStr);
+                var intervalEnd = timeToMins(l.timeStr);
+                // Handle midnight crossing if necessary (though rare in this app)
+                var overlapStart = Math.max(intervalStart, sStart);
+                var overlapEnd = Math.min(intervalEnd, sEnd);
+                var inside = Math.max(0, overlapEnd - overlapStart);
+                dayInsideMins += inside;
+                dayOutsideMins += Math.max(0, duration - inside);
+              } else {
+                dayOutsideMins += duration;
+              }
+            }
+            state = (l.act == 'LeaveStart') ? 'LEAVE' : 'OUT';
+            lastTime = (l.act == 'LeaveStart') ? currentTs : null;
+          }
         } else if (state == 'LEAVE') {
-          if (l.act == 'LeaveEnd') { if (lastTime) leaveMs += (l.ts - lastTime); state = 'IN'; lastTime = l.ts; }
-          else if (l.act == 'Exit') { if (lastTime) leaveMs += (l.ts - lastTime); state = 'OUT'; lastTime = null; }
-          else if (l.act == 'AutoExit') { state = 'OUT'; lastTime = null; }
+          if (l.act == 'LeaveEnd') { if (lastTime) leaveMs += (currentTs - lastTime); state = 'IN'; lastTime = currentTs; }
+          else if (l.act == 'Exit' || l.act == 'AutoExit') { if (lastTime) leaveMs += (currentTs - lastTime); state = 'OUT'; lastTime = null; }
         }
       });
       if (state == 'IN' || state == 'LEAVE') missingExit = true;
@@ -161,9 +209,9 @@ function getMonthlyReportCalc(userId, year, month) {
     var wMin = Math.floor(workMs / 60000);
     totWork += wMin;
     totalDelay += dailyDelayMins;
-    if (wMin > dayTarget) {
-      totalOvertime += (wMin - dayTarget);
-    }
+
+    var dayMissingMins = Math.max(0, dayTarget - dayInsideMins);
+    totalOvertime += dayOutsideMins;
     var statusText = "", isAbsent = false;
 
     if (items.length === 0 && dayTarget > 0) {
@@ -188,37 +236,32 @@ function getMonthlyReportCalc(userId, year, month) {
       date: k,
       work: fmt(wMin),
       delay: dailyDelayMins,
-      penalty: fmt(isAbsent ? (dayTarget * 3) : (dailyDelayMins * 3)),
+      missing: dayMissingMins,
+      penalty: fmt((dayMissingMins * 3)),
       status: statusText
     });
   }
 
-  var perMinuteRate = 0;
+  var minuteRate = 0;
   if (totalMonthTargetMins > 0) {
-    perMinuteRate = (user.totalMonthlySalary || 0) / totalMonthTargetMins;
+    minuteRate = (parseFloat(user.totalMonthlySalary) || 0) / totalMonthTargetMins;
   }
 
-  var finalPay;
-  var rawDifference = totWork - totalMonthTargetMins;
-  var finalDifference;
+  // New Strict Logic Implementation (Based on Shift Overlap)
+  // totalOvertime now contains all minutes worked outside the target shift window
+  // We also need to account for missing minutes from the target shift window
+  var totalMissingMins = 0;
+  // Recalculate summary to get total missing
+  summary.forEach(s => {
+    if (s.missing) totalMissingMins += s.missing;
+  });
 
-  if (user.isPartTime) {
-    // Part-time logic: No penalties, simple ratio calculation
-    totalPenaltyMins = 0; // Ensure no penalties are applied
-    finalDifference = rawDifference; // Net balance is just the raw difference
-    if (totalMonthTargetMins > 0) {
-      finalPay = (user.totalMonthlySalary || 0) * (totWork / totalMonthTargetMins);
-    } else {
-      finalPay = 0; // Avoid division by zero if there's no target work time
-    }
-  } else {
-    // Full-time logic (existing logic)
-    finalDifference = rawDifference - totalPenaltyMins;
+  var netAdjustmentMins = (totalOvertime * 1.4) - (totalMissingMins * 3);
+  var salaryFromWork = (parseFloat(user.totalMonthlySalary) || 0) + (netAdjustmentMins * minuteRate);
 
-    // Apply the 1.4 multiplier to the final time balance (positive or negative)
-    var adjustmentAmount = (finalDifference * OVERTIME_MULTIPLIER) * perMinuteRate;
-    finalPay = (parseFloat(user.totalMonthlySalary) || 0) + adjustmentAmount;
-  }
+  var benefitsData = getMonthlyBenefits(userId, year, month);
+  var approvedBenefits = (benefitsData.status === 'تایید شده') ? benefitsData.amount : 0;
+  var finalPay = salaryFromWork + approvedBenefits;
 
   var benefitsStatus = "برقرار";
   var benefitsRevocationReason = "";
@@ -239,14 +282,24 @@ function getMonthlyReportCalc(userId, year, month) {
       totalPenalty: totalPenaltyMins,
       countDelay: countDelay,
       countAbsence: countAbsence,
-      netPerformance: finalDifference,
-      netBalance: Math.abs(finalDifference),
-      netSign: finalDifference >= 0 ? "+" : "-",
+      netPerformance: effectiveDiff,
       totalDelay: totalDelay,
       totalOvertime: totalOvertime,
       totalTarget: totalMonthTargetMins,
       benefitsStatus: benefitsStatus,
-      benefitsRevocationReason: benefitsRevocationReason
+      benefitsRevocationReason: benefitsRevocationReason,
+      // Additional breakdown for the user/admin
+      breakdown: {
+        baseSalary: Math.round(parseFloat(user.totalMonthlySalary) || 0).toLocaleString() + " ریال",
+        workSalary: Math.round(salaryFromWork).toLocaleString() + " ریال",
+        benefitAmount: Math.round(approvedBenefits).toLocaleString() + " ریال",
+        benefitStatus: benefitsData.status,
+        benefitRaw: benefitsData.amount,
+        totalMissing: totalMissingMins,
+        totalOvertime: Math.round(totalOvertime),
+        netAdjustment: Math.round(netAdjustmentMins),
+        minuteRate: Math.round(minuteRate).toLocaleString()
+      }
     }
   };
 }
@@ -526,6 +579,19 @@ function setMonthDays(y,m,d) { var s=SpreadsheetApp.getActiveSpreadsheet().getSh
 function getMonthDays(y,m) { var s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings"); if(!s)return 26; var k=y+"-"+m; var d=s.getDataRange().getDisplayValues(); for(var i=1;i<d.length;i++)if(d[i][0].trim()==k)return parseInt(d[i][1]); return 26; }
 function getHolidaysList() { var d=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Holidays").getDataRange().getDisplayValues(); var r=[]; for(var i=1;i<d.length;i++)r.push(d[i][0].trim()); return r; }
 
+function toggleHoliday(date) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Holidays");
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) == String(date)) {
+      sheet.deleteRow(i + 1);
+      return { success: true, status: 'removed' };
+    }
+  }
+  sheet.appendRow([date, "تعطیل رسمی"]);
+  return { success: true, status: 'added' };
+}
+
 function addHolidayToSheet(date) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Holidays");
   sheet.appendRow([date, ""]);
@@ -536,7 +602,7 @@ function removeHolidayFromSheet(date) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Holidays");
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    if (data[i][0] == date) {
+    if (String(data[i][0]) == String(date)) {
       sheet.deleteRow(i + 1);
       return { success: true };
     }
@@ -661,6 +727,45 @@ function updateLeaveStatus(requestId, newStatus) {
     }
   }
   throw new Error("درخواست مرخصی یافت نشد.");
+}
+
+function getMonthlyBenefits(userId, year, month) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("MonthlyBenefits");
+  if (!sheet) return { amount: 0, status: 'نامشخص' };
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) == String(userId) && String(data[i][1]) == String(year) && String(data[i][2]) == String(month)) {
+      return { amount: parseFloat(data[i][3]) || 0, status: data[i][4] };
+    }
+  }
+  return { amount: 0, status: 'ثبت نشده' };
+}
+
+function saveMonthlyBenefit(userId, year, month, amount) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("MonthlyBenefits");
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) == String(userId) && String(data[i][1]) == String(year) && String(data[i][2]) == String(month)) {
+      sheet.getRange(i + 1, 4).setValue(amount);
+      sheet.getRange(i + 1, 5).setValue('در انتظار تایید');
+      return { success: true };
+    }
+  }
+  sheet.appendRow([userId, year, month, amount, 'در انتظار تایید']);
+  return { success: true };
+}
+
+function approveMonthlyBenefit(userId, year, month) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("MonthlyBenefits");
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) == String(userId) && String(data[i][1]) == String(year) && String(data[i][2]) == String(month)) {
+      sheet.getRange(i + 1, 5).setValue('تایید شده');
+      addNotification(userId, "مزایای ماه " + month + " برای شما تایید شد.");
+      return { success: true };
+    }
+  }
+  return { success: false };
 }
 
 function getApprovedLeavesForUser(userId) {
