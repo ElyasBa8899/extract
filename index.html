@@ -72,6 +72,20 @@
     .fc-day-today { background-color: rgba(59, 130, 246, 0.15) !important; }
     .fc-day-other .fc-daygrid-day-top { opacity: 0.5; }
     .holiday-event { background-color: var(--danger) !important; border-color: var(--danger) !important; color: white !important; display: block; text-align: center; }
+
+    /* Mobile Optimizations */
+    @media (max-width: 576px) {
+      .container { padding-left: 12px; padding-right: 12px; }
+      .pro-card { padding: 16px; margin-bottom: 12px; }
+      .stat-card { padding: 12px; }
+      .stat-label { font-size: 0.85rem; margin-bottom: 5px; }
+      .stat-value { font-size: 1.3rem; }
+      .btn-action-large { height: 60px; font-size: 1rem; margin-bottom: 8px; }
+      .table-custom th, .table-custom td { padding: 10px 5px; font-size: 0.8rem; }
+      h4, h5 { font-size: 1.1rem; }
+      .modal-dialog { margin: 10px; }
+      .stat-icon { font-size: 1.8rem; left: 10px; bottom: 10px; }
+    }
   </style>
 </head>
 <body>
@@ -82,8 +96,8 @@
   </div>
 
   <!-- صفحه لاگین -->
-  <div id="viewLogin" class="container d-flex justify-content-center align-items:center" style="min-height: 100vh;">
-    <div class="pro-card p-5" style="width: 100%; max-width: 400px;">
+  <div id="viewLogin" class="container d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="pro-card p-4 p-md-5" style="width: 100%; max-width: 400px;">
       <div class="text-center mb-4"><i class="fas fa-fingerprint fa-3x text-primary"></i><h3 class="fw-bold mt-3">ورود به سامانه</h3></div>
       <div class="mb-3"><input type="text" id="lUser" class="form-control text-center" placeholder="نام کاربری" dir="ltr"></div>
       <div class="mb-4"><input type="password" id="lPass" class="form-control text-center" placeholder="رمز عبور" dir="ltr"></div>
@@ -93,7 +107,7 @@
   </div>
 
   <!-- پنل کاربر -->
-  <div id="viewUser" class="container hidden" style="max-width: 550px; padding-top: 30px;">
+  <div id="viewUser" class="container hidden" style="max-width: 550px; padding-top: 15px; padding-bottom: 50px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div class="d-flex align-items-center gap-3">
         <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="fas fa-user"></i></div>
@@ -120,8 +134,8 @@
     </div>
 
     <div class="pro-card">
-      <h6 class="mb-3 border-bottom border-secondary pb-2">ثبت مرخصی روزانه</h6>
-      <div class="row g-1 align-items-end">
+      <h6 class="mb-3 border-bottom border-secondary pb-2"><i class="fas fa-calendar-plus me-2 text-info"></i>ثبت مرخصی روزانه</h6>
+      <div class="row g-2 align-items-end">
         <div class="col-12 mb-2"><small class="text-muted">از تاریخ:</small></div>
         <div class="col-4"><select id="lsY" class="form-select px-1 text-center small"></select></div>
         <div class="col-4"><select id="lsM" class="form-select px-1 text-center small"></select></div>
@@ -256,27 +270,48 @@
   </div></div></div></div>
 
   <!-- مودال قوانین -->
-  <div id="mdlRules" class="modal fade"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><div class="modal-header"><h5><i class="fas fa-book-open me-2"></i>قوانین و نحوه محاسبات</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" style="font-size: 0.95rem; line-height: 1.8;">
-    <div class="bg-dark p-3 rounded mb-3 border-start border-primary border-4">
-      <h6 class="text-primary fw-bold mb-2">۱. جریمه تاخیر و غیبت (کسر کار)</h6>
-      <p class="mb-0">هر دقیقه غیبت در ساعات موظفی یا تاخیر در ورود، با <b>ضریب ۳ (جریمه ۳ برابری)</b> محاسبه می‌شود.
-      <br><small class="text-muted">مثال: اگر ۱۰ دقیقه دیر بیایید، ۳۰ دقیقه از زمان کارکرد شما کسر می‌شود.</small></p>
+  <div id="mdlRules" class="modal fade"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><div class="modal-header"><h5><i class="fas fa-book-open me-2"></i>راهنمای جامع قوانین و محاسبات</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" style="font-size: 0.9rem; line-height: 1.8;">
+    <div class="pro-card mb-3 border-primary" style="background: rgba(59, 130, 246, 0.05);">
+      <h6 class="text-primary fw-bold mb-3"><i class="fas fa-minus-circle me-2"></i>۱. کسر کار و جریمه دیرکرد</h6>
+      <p class="mb-2">هر دقیقه تاخیر در ورود یا خروج زودهنگام در ساعات شیفت، با <b>ضریب ۳ (جریمه ۳ برابری)</b> محاسبه می‌شود.</p>
+      <div class="bg-dark p-2 rounded small border border-secondary">
+        <b>مثال عددی:</b> اگر ۲۰ دقیقه دیرتر از شروع شیفت وارد شوید:
+        <br>۲۰ دقیقه × ۳ = ۶۰ دقیقه (۱ ساعت) از کارکرد نهایی شما کسر می‌گردد.
+      </div>
     </div>
-    <div class="bg-dark p-3 rounded mb-3 border-start border-success border-4">
-      <h6 class="text-success fw-bold mb-2">۲. پاداش اضافه کاری</h6>
-      <p class="mb-0">ساعات حضور فراتر از ساعات موظفی، با <b>ضریب ۱.۴</b> به عنوان اضافه کار در نظر گرفته می‌شود.</p>
+
+    <div class="pro-card mb-3 border-success" style="background: rgba(16, 185, 129, 0.05);">
+      <h6 class="text-success fw-bold mb-3"><i class="fas fa-plus-circle me-2"></i>۲. اضافه‌کاری و پاداش حضور</h6>
+      <p class="mb-2">ساعاتی که فراتر از موظفی روزانه در محل کار حضور داشته باشید، با <b>ضریب ۱.۴</b> پاداش داده می‌شود.</p>
+      <div class="bg-dark p-2 rounded small border border-secondary">
+        <b>مثال عددی:</b> اگر ۱۰۰ دقیقه اضافه‌کاری داشته باشید:
+        <br>۱۰۰ دقیقه × ۱.۴ = ۱۴۰ دقیقه (۲ ساعت و ۲۰ دقیقه) به کارکرد نهایی شما اضافه می‌گردد.
+      </div>
     </div>
-    <div class="bg-dark p-3 rounded mb-3 border-start border-warning border-4">
-      <h6 class="text-warning fw-bold mb-2">۳. سیستم خروج خودکار</h6>
-      <p class="mb-0">اگر ورود ثبت شود اما تا <b>۱۵ ساعت بعد</b> خروجی ثبت نگردد، سیستم به صورت خودکار وضعیت را "خروج خودکار" ثبت کرده و هیچ زمانی برای آن روز محاسبه نمی‌شود.</p>
+
+    <div class="pro-card mb-3 border-warning" style="background: rgba(251, 191, 36, 0.05);">
+      <h6 class="text-warning fw-bold mb-3"><i class="fas fa-ghost me-2"></i>۳. سیستم هوشمند خروج خودکار</h6>
+      <p class="mb-2">جهت حفظ نظم، اگر بیش از <b>۱۵ ساعت</b> از زمان ورود شما بگذرد و خروجی ثبت نکنید:</p>
+      <ul class="mb-0">
+        <li>سیستم وضعیت را "خروج خودکار" ثبت می‌کند.</li>
+        <li>کارکرد آن روز <b>صفر</b> لحاظ شده و جریمه غیبت تعلق می‌گیرد.</li>
+        <li>پیام هشدار برای شما و مدیریت ارسال می‌گردد.</li>
+      </ul>
     </div>
-    <div class="bg-dark p-3 rounded mb-3 border-start border-info border-4">
-      <h6 class="text-info fw-bold mb-2">۴. تعطیلات و مرخصی</h6>
-      <p class="mb-0">در روزهای تعطیل رسمی و مرخصی‌های تایید شده، ساعت موظفی شما <b>صفر</b> منظور شده و جریمه‌ای بابت عدم حضور تعلق نمی‌گیرد.</p>
+
+    <div class="pro-card mb-3 border-info" style="background: rgba(6, 182, 212, 0.05);">
+      <h6 class="text-info fw-bold mb-3"><i class="fas fa-umbrella-beach me-2"></i>۴. تعطیلات و مرخصی</h6>
+      <p class="mb-0">در روزهایی که در تقویم "تعطیل رسمی" هستند یا مرخصی شما توسط مدیر "تایید" شده است، ساعت موظفی شما <b>صفر</b> است و هیچ جریمه‌ای بابت عدم حضور ندارید.</p>
     </div>
-    <div class="bg-dark p-3 rounded border-start border-danger border-4">
-      <h6 class="text-danger fw-bold mb-2">۵. ابطال مزایا</h6>
-      <p class="mb-0">در صورت داشتن بیش از <b>۵ مورد تاخیر</b> یا <b>۲ روز غیبت</b> در ماه، پاداش و مزایای خودکار لغو خواهد شد (مگر با تایید دستی مدیریت).</p>
+
+    <div class="pro-card border-danger" style="background: rgba(248, 113, 113, 0.05);">
+      <h6 class="text-danger fw-bold mb-3"><i class="fas fa-exclamation-triangle me-2"></i>۵. شرط دریافت پاداش و مزایا</h6>
+      <p class="mb-1">در صورتی که در طول یک ماه:</p>
+      <ul class="mb-2">
+        <li>بیش از <b>۵ مورد</b> تاخیر یا کسر کار داشته باشید.</li>
+        <li>یا بیش از <b>۲ روز</b> غیبت غیرموجه داشته باشید.</li>
+      </ul>
+      <p class="mb-0 fw-bold text-danger">پاداش و مزایای ماهانه به صورت خودکار لغو خواهد شد.</p>
     </div>
   </div></div></div></div>
 
