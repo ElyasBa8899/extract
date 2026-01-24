@@ -59,7 +59,7 @@
     .hidden { display: none !important; }
     .modal-content { background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); }
     .btn-close { filter: invert(1); }
-    #mdlUser .text-muted, #mdlCalendar .text-muted, #mdlRules .text-muted, #mdlAlert .text-muted {
+    #mdlUser .text-muted, #mdlCalendar .text-muted, #mdlRules .text-muted, #mdlAlert .text-muted, #mdlBreakdown .text-muted {
       color: #fbbf24 !important; /* Yellow for high contrast */
     }
     .modal-body { color: #ffffff !important; }
@@ -698,7 +698,15 @@
       var api = isEdit ? 'updateUserInfo' : 'adminSaveUser';
       var args = isEdit ? [id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift1End, shift2Start, shift2End, isPartTime] : [name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift1End, shift2Start, shift2End, isPartTime];
 
-      google.script.run.withSuccessHandler(() => { hd(); mU.hide(); ldUs(); showMessage('عملیات موفقیت آمیز بود', 'success'); }).withFailureHandler(handleError)[api](...args);
+      google.script.run.withSuccessHandler((r) => {
+        hd(); mU.hide();
+        if (r && r.user) {
+          selU = r.user; // Update global selU immediately
+          document.getElementById('repTitle').innerText = selU.name;
+        }
+        ldUs();
+        showMessage('عملیات موفقیت آمیز بود', 'success');
+      }).withFailureHandler(handleError)[api](...args);
     }
     function openEditLog(r,t){document.getElementById('lid').value=r;document.getElementById('ltm').value=t.substring(0,5);mL.show();}
     function subLog(){

@@ -324,7 +324,7 @@ function getMonthlyReportCalc(userId, year, month) {
         rawMissing: Math.round(totalMissingMins),
         missingPenalty: Math.round(missingPenaltyMins),
         netAdjustment: Math.round(netAdjMins),
-        minuteRate: Math.round(minuteRate).toLocaleString()
+        minuteRate: minuteRate.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})
       }
     }
   };
@@ -625,8 +625,10 @@ function updateUserInfo(id, name, username, password, dailyHours, thursdayHours,
       set("Shift2Start", shift2Start); set("Shift2End", shift2End);
       set("isPartTime", isPartTime);
       SpreadsheetApp.flush();
+
+      var updatedUser = getUserById(id);
       lock.releaseLock();
-      return { success: true };
+      return { success: true, user: updatedUser };
     }
   }
   lock.releaseLock();
