@@ -22,12 +22,23 @@ function setupSheet() {
   var usersSheet = ss.getSheetByName("Users");
   if (!usersSheet) {
     usersSheet = ss.insertSheet("Users");
-    usersSheet.appendRow(["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"]);
+    usersSheet.appendRow(["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift1End", "Shift2Start", "Shift2End", "isPartTime"]);
+  } else {
+    var headers = usersSheet.getRange(1, 1, 1, usersSheet.getLastColumn()).getValues()[0];
+    if (headers.indexOf("Shift1End") === -1) {
+      usersSheet.insertColumnAfter(9);
+      usersSheet.getRange(1, 10).setValue("Shift1End");
+    }
+    if (headers.indexOf("Shift2End") === -1) {
+      usersSheet.insertColumnAfter(11);
+      usersSheet.getRange(1, 12).setValue("Shift2End");
+    }
   }
 
   // Check if the sheet has only the header row (i.e., no actual users)
   if (usersSheet.getLastRow() < 2) {
-    usersSheet.appendRow([1, "مدیر سیستم", "admin", "123", "admin", 8, 4, 10000000, "08:30", "17:00", "FALSE"]);
+    // ID, Name, Username, Pwd, Role, D_hr, Th_hr, Sal, S1S, S1E, S2S, S2E, isPT
+    usersSheet.appendRow([1, "مدیر سیستم", "admin", "123", "admin", 8, 4, 10000000, "08:30", "", "17:00", "", "FALSE"]);
   }
 
   // 2. Logs
@@ -181,19 +192,23 @@ function getMonthlyReportCalc(userId, year, month) {
     if (items.length > 0) {
       items.sort((a, b) => a.ts - b.ts);
 
-      // Shift Windows Setup
-      var s1Start = timeToMins(user.shift1Start);
-      var s2Start = timeToMins(user.shift2Start);
-      var breakTime = 14 * 60; // 14:00
-      var secondShiftMin = 17 * 60; // 17:00
+      // Shift Windows Setup: Fixed vs Flexible
+      var s1S = timeToMins(user.shift1Start);
+      var s1E = timeToMins(user.shift1End);
+      var s2S = timeToMins(user.shift2Start);
+      var s2E = timeToMins(user.shift2End);
 
       var insideZones = [];
       if (dayTarget > 0) {
-        if (s2Start > 0) {
-          insideZones.push({ s: s1Start, e: breakTime });
-          insideZones.push({ s: s2Start, e: 23 * 60 + 59 });
+        if (s1E > 0) {
+          // Fixed Shift Mode
+          insideZones.push({ s: s1S, e: s1E });
+          if (s2S > 0 && s2E > 0) {
+            insideZones.push({ s: s2S, e: s2E });
+          }
         } else {
-          insideZones.push({ s: s1Start, e: s1Start + dayTarget });
+          // Flexible Mode: Start at Shift1Start, End after TargetHours
+          insideZones.push({ s: s1S, e: s1S + dayTarget });
         }
       }
 
@@ -260,7 +275,7 @@ function getMonthlyReportCalc(userId, year, month) {
       work: fmt(Math.round(dayPresenceMins)),
       delay: Math.round(dayMissingMins),
       missing: Math.round(dayMissingMins),
-      penalty: fmt(Math.round(dayMissingMins * 3)),
+      penalty: fmt(Math.round(dayMissingMins * (user.isPartTime ? 1 : PENALTY_MULTIPLIER))),
       status: statusText
     });
   }
@@ -270,16 +285,7 @@ function getMonthlyReportCalc(userId, year, month) {
     minuteRate = (parseFloat(user.totalMonthlySalary) || 0) / totalMonthTargetMins;
   }
 
-  // New Strict Logic Implementation (Based on Shift Overlap)
-  // totalOvertime now contains all minutes worked outside the target shift window
-  // We also need to account for missing minutes from the target shift window
-  var totalMissingMins = 0;
-  // Recalculate summary to get total missing
-  summary.forEach(s => {
-    if (s.missing) totalMissingMins += s.missing;
-  });
-
-  var netAdjustmentMins = (totalOvertimeMins * 1.4) - (totalMissingMins * 3);
+  var netAdjustmentMins = (totalOvertimeMins * OVERTIME_MULTIPLIER) - (totalMissingMins * (user.isPartTime ? 1 : PENALTY_MULTIPLIER));
   var salaryFromWork = (parseFloat(user.totalMonthlySalary) || 0) + (netAdjustmentMins * minuteRate);
 
   var benefitsData = getMonthlyBenefits(userId, year, month);
@@ -302,7 +308,7 @@ function getMonthlyReportCalc(userId, year, month) {
       daysConfig: getMonthDays(year, month),
       totalSalary: Math.round(finalPay).toLocaleString() + " ریال",
       totalWork: Math.round(totWorkMins),
-      totalPenalty: Math.round(totalMissingMins * 3),
+      totalPenalty: Math.round(totalMissingMins * (user.isPartTime ? 1 : PENALTY_MULTIPLIER)),
       countDelay: countDelay,
       countAbsence: countAbsence,
       netPerformance: Math.round(totalMonthTargetMins + netAdjustmentMins),
@@ -387,8 +393,10 @@ function getUserById(id) {
                 dailyHours: get('DailyHours'),
                 thursdayHours: get('ThursdayHours'),
                 totalMonthlySalary: get('TotalMonthlySalary'),
-                shift1Start: get('Shift1Start'), // This will now be a string 'HH:mm'
-                shift2Start: get('Shift2Start'), // This will now be a string 'HH:mm'
+                shift1Start: get('Shift1Start'),
+                shift1End: get('Shift1End'),
+                shift2Start: get('Shift2Start'),
+                shift2End: get('Shift2End'),
                 isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
             };
         }
@@ -537,7 +545,7 @@ function getEmployeesList() {
     headers.forEach((h, i) => { if (h) headerMap[h] = i; });
 
     // Validate that all essential headers are present
-    const requiredHeaders = ["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift2Start", "isPartTime"];
+    const requiredHeaders = ["ID", "Name", "Username", "Password", "Role", "DailyHours", "ThursdayHours", "TotalMonthlySalary", "Shift1Start", "Shift1End", "Shift2Start", "Shift2End", "isPartTime"];
     const missingHeaders = requiredHeaders.filter(h => !(h in headerMap));
     if (missingHeaders.length > 0) {
         throw new Error("ستون‌های زیر در شیت Users وجود ندارند: " + missingHeaders.join(', '));
@@ -557,8 +565,10 @@ function getEmployeesList() {
         dailyHours: get('DailyHours'),
         thursdayHours: get('ThursdayHours'),
         totalMonthlySalary: get('TotalMonthlySalary'),
-        shift1Start: get('Shift1Start'), // This will now be a string 'HH:mm'
-        shift2Start: get('Shift2Start'), // This will now be a string 'HH:mm'
+        shift1Start: get('Shift1Start'),
+        shift1End: get('Shift1End'),
+        shift2Start: get('Shift2Start'),
+        shift2End: get('Shift2End'),
         isPartTime: get('isPartTime') === true || String(get('isPartTime')).toUpperCase() === 'TRUE'
       });
     });
@@ -572,20 +582,51 @@ function getEmployeesList() {
 }
 
 
-function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
+function updateUserInfo(id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift1End, shift2Start, shift2End, isPartTime) {
   var s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
   var d = s.getDataRange().getValues();
+  var headers = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0].map(h => String(h).trim());
+  var colMap = {};
+  headers.forEach((h, i) => colMap[h] = i + 1);
+
   for (var i = 1; i < d.length; i++) {
     if (String(d[i][0]) == String(id)) {
-      s.getRange(i + 1, 2, 1, 10).setValues([[name, username, password, "user", dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime]]);
+      const set = (h, v) => s.getRange(i + 1, colMap[h]).setValue(v);
+      set("Name", name); set("Username", username); set("Password", password);
+      set("DailyHours", dailyHours); set("ThursdayHours", thursdayHours);
+      set("TotalMonthlySalary", totalMonthlySalary);
+      set("Shift1Start", shift1Start); set("Shift1End", shift1End);
+      set("Shift2Start", shift2Start); set("Shift2End", shift2End);
+      set("isPartTime", isPartTime);
       return { success: true };
     }
   }
   return { success: false };
 }
 
-function adminSaveUser(name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime) {
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([new Date().getTime(), name, username, password, 'user', dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime]);
+function adminSaveUser(name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift1End, shift2Start, shift2End, isPartTime) {
+  var s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  var headers = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0].map(h => String(h).trim());
+  var row = new Array(headers.length).fill("");
+
+  var colMap = {};
+  headers.forEach((h, i) => colMap[h] = i);
+
+  row[colMap["ID"]] = new Date().getTime();
+  row[colMap["Name"]] = name;
+  row[colMap["Username"]] = username;
+  row[colMap["Password"]] = password;
+  row[colMap["Role"]] = "user";
+  row[colMap["DailyHours"]] = dailyHours;
+  row[colMap["ThursdayHours"]] = thursdayHours;
+  row[colMap["TotalMonthlySalary"]] = totalMonthlySalary;
+  row[colMap["Shift1Start"]] = shift1Start;
+  row[colMap["Shift1End"]] = shift1End;
+  row[colMap["Shift2Start"]] = shift2Start;
+  row[colMap["Shift2End"]] = shift2End;
+  row[colMap["isPartTime"]] = isPartTime;
+
+  s.appendRow(row);
   return { success: true };
 }
 function adminAddLog(userId, userName, jalaliDateStr, timeStr, action) {

@@ -227,7 +227,7 @@
   <div id="mdlManual" class="modal fade"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h6>ثبت دستی تردد</h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="text" id="mDate" class="form-control mb-2 text-center" dir="ltr"><input type="text" id="mTime" class="form-control mb-2 text-center fs-4" placeholder="HH:mm" dir="ltr"><select id="mAct" class="form-select mb-3"><option value="Entry">ورود</option><option value="Exit">خروج</option></select><button onclick="subManual()" class="btn btn-success w-100">ثبت</button></div></div></div></div>
   <div id="mdlLog" class="modal fade"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h6>ویرایش ساعت</h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><input type="hidden" id="lid"><input type="text" id="ltm" class="form-control text-center fs-2 mb-3" placeholder="HH:mm" dir="ltr" maxlength="5"><button onclick="subLog()" class="btn btn-primary w-100">ذخیره</button></div></div></div></div>
 
-  <div id="mdlUser" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 id="muTitle">کاربر</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="uid"><div class="row g-3"><div class="col-12"><input type="text" id="fn" class="form-control" placeholder="نام کامل"></div><div class="col-6"><input type="text" id="un" class="form-control" placeholder="نام کاربری"></div><div class="col-6"><input type="text" id="pw" class="form-control" placeholder="رمز عبور"></div><div class="col-6"><label class="small text-muted">ساعت کاری روزانه</label><input type="number" id="hr" class="form-control" placeholder="مثال: 8"></div><div class="col-6"><label class="small text-muted">ساعت کاری پنجشنبه</label><input type="number" id="thr" class="form-control" placeholder="مثال: 4"></div><div class="col-6"><label class="small text-muted">شروع شیفت اول</label><input type="text" id="s1" class="form-control" placeholder="HH:mm" dir="ltr"></div><div class="col-6"><label class="small text-muted">شروع شیفت دوم (اختیاری)</label><input type="text" id="s2" class="form-control" placeholder="HH:mm" dir="ltr"></div><div class="col-12"><div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" role="switch" id="isPartTime"><label class="form-check-label" for="isPartTime">کارمند پاره‌وقت (محاسبه بدون جریمه)</label></div></div><div class="col-12"><label class="small text-muted">حقوق ثابت ماهانه (ریال)</label><input type="number" id="tsal" class="form-control border-success" placeholder="مبلغ کل حقوق"></div></div></div><div class="modal-footer"><button onclick="subUser()" class="btn btn-primary">ذخیره</button></div></div></div></div>
+  <div id="mdlUser" class="modal fade"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 id="muTitle">کاربر</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="uid"><div class="row g-3"><div class="col-12"><input type="text" id="fn" class="form-control" placeholder="نام کامل"></div><div class="col-6"><input type="text" id="un" class="form-control" placeholder="نام کاربری"></div><div class="col-6"><input type="text" id="pw" class="form-control" placeholder="رمز عبور"></div><div class="col-6"><label class="small text-muted">ساعت کاری روزانه</label><input type="number" id="hr" class="form-control" placeholder="مثال: 8"></div><div class="col-6"><label class="small text-muted">ساعت کاری پنجشنبه</label><input type="number" id="thr" class="form-control" placeholder="مثال: 4"></div><div class="col-6"><label class="small text-muted">شروع شیفت ۱</label><input type="text" id="s1" class="form-control" placeholder="08:30" dir="ltr"></div><div class="col-6"><label class="small text-muted">پایان شیفت ۱ (اختیاری)</label><input type="text" id="e1" class="form-control" placeholder="16:30" dir="ltr"></div><div class="col-6"><label class="small text-muted">شروع شیفت ۲ (اختیاری)</label><input type="text" id="s2" class="form-control" placeholder="17:00" dir="ltr"></div><div class="col-6"><label class="small text-muted">پایان شیفت ۲ (اختیاری)</label><input type="text" id="e2" class="form-control" placeholder="21:00" dir="ltr"></div><div class="col-12 border-top border-secondary pt-2 mt-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="isPartTime"><label class="form-check-label" for="isPartTime">کارمند پاره‌وقت (جریمه ۱ برابر)</label></div><small class="text-muted d-block mt-1">نکته: برای شیفت پاره‌وقت (شناور)، فیلد "پایان شیفت" را خالی بگذارید.</small></div><div class="col-12"><label class="small text-muted">حقوق ثابت ماهانه (ریال)</label><input type="number" id="tsal" class="form-control border-success" placeholder="مبلغ کل حقوق"></div></div></div><div class="modal-footer"><button onclick="subUser()" class="btn btn-primary">ذخیره</button></div></div></div></div>
 
   <div id="mdlCalendar" class="modal fade"><div class="modal-dialog modal-md modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">مدیریت روزهای تعطیل</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body">
     <div class="row g-2 mb-3">
@@ -589,7 +589,9 @@
       document.getElementById('fn').value = ""; document.getElementById('un').value = ""; document.getElementById('pw').value = "";
       document.getElementById('hr').value = 8; document.getElementById('thr').value = 4; document.getElementById('tsal').value = "";
       document.getElementById('s1').value = "";
+      document.getElementById('e1').value = "";
       document.getElementById('s2').value = "";
+      document.getElementById('e2').value = "";
       mU.show();
     }
 
@@ -604,8 +606,10 @@
       document.getElementById('hr').value = selU.dailyHours;
       document.getElementById('thr').value = selU.thursdayHours;
       document.getElementById('tsal').value = selU.totalMonthlySalary;
-      document.getElementById('s1').value = selU.shift1Start;
-      document.getElementById('s2').value = selU.shift2Start;
+      document.getElementById('s1').value = selU.shift1Start || "";
+      document.getElementById('e1').value = selU.shift1End || "";
+      document.getElementById('s2').value = selU.shift2Start || "";
+      document.getElementById('e2').value = selU.shift2End || "";
       document.getElementById('isPartTime').checked = selU.isPartTime;
       mU.show();
     }
@@ -615,14 +619,16 @@
       var name = document.getElementById('fn').value, username = document.getElementById('un').value, password = document.getElementById('pw').value;
       var dailyHours = document.getElementById('hr').value, thursdayHours = document.getElementById('thr').value, totalMonthlySalary = document.getElementById('tsal').value;
       var shift1Start = document.getElementById('s1').value;
+      var shift1End = document.getElementById('e1').value;
       var shift2Start = document.getElementById('s2').value;
+      var shift2End = document.getElementById('e2').value;
       var isPartTime = document.getElementById('isPartTime').checked;
 
       if(!name || !username || !password || !totalMonthlySalary) { showMessage('تمام فیلدها الزامی است', 'error'); return; }
 
       sh();
       var api = isEdit ? 'updateUserInfo' : 'adminSaveUser';
-      var args = isEdit ? [id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime] : [name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift2Start, isPartTime];
+      var args = isEdit ? [id, name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift1End, shift2Start, shift2End, isPartTime] : [name, username, password, dailyHours, thursdayHours, totalMonthlySalary, shift1Start, shift1End, shift2Start, shift2End, isPartTime];
 
       google.script.run.withSuccessHandler(() => { hd(); mU.hide(); ldUs(); showMessage('عملیات موفقیت آمیز بود', 'success'); }).withFailureHandler(handleError)[api](...args);
     }
