@@ -691,9 +691,10 @@ function getHolidaysList() { var d=SpreadsheetApp.getActiveSpreadsheet().getShee
 
 function toggleHoliday(date) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Holidays");
-  var data = sheet.getDataRange().getValues();
+  var data = sheet.getDataRange().getDisplayValues();
+  date = String(date).trim();
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) == String(date)) {
+    if (String(data[i][0]).trim() == date) {
       sheet.deleteRow(i + 1);
       return { success: true, status: 'removed' };
     }
@@ -833,12 +834,16 @@ function getLeaveRequests() {
 
 function updateLeaveStatus(requestId, newStatus) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("LeaveRequests");
-  var data = sheet.getDataRange().getValues();
+  var data = sheet.getDataRange().getDisplayValues();
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]) == String(requestId)) {
       sheet.getRange(i + 1, 6).setValue(newStatus); // Column 6 is 'Status'
       var userId = data[i][1];
-      addNotification(userId, "درخواست مرخصی شما " + newStatus + " شد.");
+      var startDate = data[i][3];
+      var endDate = data[i][4];
+      var statusVerb = (newStatus === 'تایید شده') ? 'تایید شد' : (newStatus === 'رد شده' ? 'رد شد' : newStatus);
+      var msg = "درخواست مرخصی شما از تاریخ " + startDate + " تا " + endDate + " " + statusVerb + ".";
+      addNotification(userId, msg);
       return { success: true };
     }
   }
@@ -905,7 +910,10 @@ function addNotification(userId, message) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Notifications");
   if (!sheet) return;
-  sheet.appendRow([new Date(), message, "Unread", userId]);
+  var now = new Date();
+  var jalaliDate = getJalaliDate(now);
+  var timeStr = Utilities.formatDate(now, "Asia/Tehran", "HH:mm:ss");
+  sheet.appendRow([jalaliDate + " " + timeStr, message, "Unread", userId]);
 }
 
 function getUnreadNotifications(userId) {
