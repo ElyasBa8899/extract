@@ -398,7 +398,8 @@
       curU = null; selU = null;
     }
     function doLogin(){
-      var u=document.getElementById('lUser').value, p=document.getElementById('lPass').value; if(!u||!p)return;
+      var u=document.getElementById('lUser').value.trim(), p=document.getElementById('lPass').value.trim();
+      if(!u||!p) { document.getElementById('lMsg').innerText='نام کاربری و رمز عبور الزامی است'; return; }
       sh(); google.script.run.withSuccessHandler(r=>{
         hd();
         if(r.success){
@@ -485,9 +486,11 @@
 
     // User Self-Report (Updated)
     function loadUserSelfReport() {
+      if(!curU) return;
       sh(); var y = document.getElementById('uYear').value, m = document.getElementById('uMonth').value;
       google.script.run.withSuccessHandler(r => {
         hd();
+        if(!r || !r.stats || !r.details) { showMessage('خطا در دریافت اطلاعات', 'error'); return; }
         document.getElementById('uDash').classList.remove('hidden');
         document.getElementById('uSal').innerText = r.stats.totalSalary;
         document.getElementById('uWork').innerText = fmtMins(r.stats.totalWork);
@@ -546,6 +549,7 @@
       if (!selU) return; sh(); var y = document.getElementById('sYear').value, m = document.getElementById('sMonth').value;
       google.script.run.withSuccessHandler(r => {
         hd();
+        if(!r || !r.stats || !r.details) { showMessage('خطا در دریافت اطلاعات گزارش', 'error'); return; }
         document.getElementById('dash').classList.remove('hidden');
         document.getElementById('vTarg').innerText = fmtMins(r.stats.totalTarget);
         document.getElementById('vWork').innerText = fmtMins(r.stats.totalWork);
@@ -566,7 +570,11 @@
         document.getElementById('tbMain').innerHTML = h || '<tr><td colspan=5>خالی</td></tr>'
       }).withFailureHandler(handleError).getMonthlyReportCalc(selU.id, y, m);
 
-      google.script.run.withSuccessHandler(g => { var h = ""; g.forEach((x, i) => { var l = x.items.map(z => `<div class="timeline-item"><span>${z.actionName}</span><span class="text-info">${z.time}</span><button class="btn btn-sm btn-outline-secondary py-0" onclick="openEditLog(${z.row},'${z.time}')"><i class="fas fa-pen"></i></button></div>`).join(''); h += `<div class="accordion-item mb-2"><h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#c${i}"><span>${x.date}</span></button></h2><div id="c${i}" class="accordion-collapse collapse" data-bs-parent="#accLogs"><div class="accordion-body">${l}</div></div></div>` }); document.getElementById('accLogs').innerHTML = h || 'خالی' }).withFailureHandler(handleError).getGroupedLogs(selU.id, y, m);
+      google.script.run.withSuccessHandler(g => {
+        if(!Array.isArray(g)) return;
+        var h = ""; g.forEach((x, i) => { var l = x.items.map(z => `<div class="timeline-item"><span>${z.actionName}</span><span class="text-info">${z.time}</span><button class="btn btn-sm btn-outline-secondary py-0" onclick="openEditLog(${z.row},'${z.time}')"><i class="fas fa-pen"></i></button></div>`).join(''); h += `<div class="accordion-item mb-2"><h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#c${i}"><span>${x.date}</span></button></h2><div id="c${i}" class="accordion-collapse collapse" data-bs-parent="#accLogs"><div class="accordion-body">${l}</div></div></div>` });
+        document.getElementById('accLogs').innerHTML = h || 'خالی';
+      }).withFailureHandler(handleError).getGroupedLogs(selU.id, y, m);
     }
 
     function saveBen() {
@@ -616,7 +624,7 @@
 
     function subUser() {
       var id = document.getElementById('uid').value;
-      var name = document.getElementById('fn').value, username = document.getElementById('un').value, password = document.getElementById('pw').value;
+      var name = document.getElementById('fn').value.trim(), username = document.getElementById('un').value.trim(), password = document.getElementById('pw').value.trim();
       var dailyHours = document.getElementById('hr').value, thursdayHours = document.getElementById('thr').value, totalMonthlySalary = document.getElementById('tsal').value;
       var shift1Start = document.getElementById('s1').value;
       var shift1End = document.getElementById('e1').value;
@@ -633,7 +641,15 @@
       google.script.run.withSuccessHandler(() => { hd(); mU.hide(); ldUs(); showMessage('عملیات موفقیت آمیز بود', 'success'); }).withFailureHandler(handleError)[api](...args);
     }
     function openEditLog(r,t){document.getElementById('lid').value=r;document.getElementById('ltm').value=t.substring(0,5);mL.show();}
-    function subLog(){var r=document.getElementById('lid').value,t=document.getElementById('ltm').value;if(t.length!==5||!t.includes(':')){showMessage('14:30', 'error');return}sh();google.script.run.withSuccessHandler(()=>{hd();mL.hide();loadRep()}).updateLogTime(r,t);}
+    function subLog(){
+      var r=document.getElementById('lid').value,t=document.getElementById('ltm').value.trim();
+      if(!/^([0-1]\d|2[0-3]):([0-5]\d)$/.test(t)){
+        showMessage('فرمت صحیح ساعت: 14:30', 'error');
+        return;
+      }
+      sh();
+      google.script.run.withSuccessHandler(()=>{hd();mL.hide();loadRep()}).withFailureHandler(handleError).updateLogTime(r,t);
+    }
     function openCalendarSettings() {
         mCalendar.show();
         renderHolidayList();
@@ -678,8 +694,23 @@
     function toggleH(date) {
       sh(); google.script.run.withSuccessHandler(() => { hd(); renderHolidayList(); }).toggleHoliday(date);
     }
-    function openManual(){document.getElementById('mDate').value="1404/09/25";mM.show();}
-    function subManual(){var d=document.getElementById('mDate').value,t=document.getElementById('mTime').value,a=document.getElementById('mAct').value;if(t.length!==5||!t.includes(':')){showMessage('09:00', 'error');return}sh();google.script.run.withSuccessHandler((r)=>{hd();mM.hide();loadRep();if(r.success)showMessage('ok','success');else showMessage(r.message, 'error');}).withFailureHandler(handleError).adminAddLog(selU.id,selU.name,d,t,a);}
+    function openManual(){
+      var now = moment();
+      document.getElementById('mDate').value = now.format('jYYYY/jMM/jDD');
+      document.getElementById('mTime').value = now.format('HH:mm');
+      mM.show();
+    }
+    function subManual(){
+      var d=document.getElementById('mDate').value.trim(),t=document.getElementById('mTime').value.trim(),a=document.getElementById('mAct').value;
+      if(!/^\d{4}\/\d{2}\/\d{2}$/.test(d)){ showMessage('فرمت تاریخ: 1404/01/01', 'error'); return; }
+      if(!/^([0-1]\d|2[0-3]):([0-5]\d)$/.test(t)){ showMessage('فرمت ساعت: 09:00', 'error'); return; }
+      sh();
+      google.script.run.withSuccessHandler((r)=>{
+        hd();mM.hide();
+        if(r.success) { showMessage('با موفقیت ثبت شد','success'); loadRep(); }
+        else showMessage(r.message, 'error');
+      }).withFailureHandler(handleError).adminAddLog(selU.id,selU.name,d,t,a);
+    }
   </script>
 </body>
 </html>
