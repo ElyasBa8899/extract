@@ -288,7 +288,10 @@ function getMonthlyReportCalc(userId, year, month) {
     minuteRate = baseSalary / totalMonthTargetMins;
   }
 
-  var netAdjustmentMins = (totalOvertimeMins * OVERTIME_MULTIPLIER) - (totalMissingMins * (user.isPartTime ? 1 : PENALTY_MULTIPLIER));
+  var overtimeBonusMins = totalOvertimeMins * OVERTIME_MULTIPLIER;
+  var missingPenaltyMins = totalMissingMins * (user.isPartTime ? 1 : PENALTY_MULTIPLIER);
+
+  var netAdjustmentMins = overtimeBonusMins - missingPenaltyMins;
   var salaryFromWork = baseSalary + (netAdjustmentMins * minuteRate);
 
   var benefitsData = getMonthlyBenefits(userId, year, month);
@@ -327,7 +330,9 @@ function getMonthlyReportCalc(userId, year, month) {
         benefitStatus: benefitsData.status,
         benefitRaw: benefitsData.amount,
         totalMissing: Math.round(totalMissingMins),
+        totalMissingPenalty: Math.round(missingPenaltyMins),
         totalOvertime: Math.round(totalOvertimeMins),
+        totalOvertimeBonus: Math.round(overtimeBonusMins),
         netAdjustment: Math.round(netAdjustmentMins),
         minuteRate: Math.round(minuteRate).toLocaleString()
       }
