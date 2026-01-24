@@ -94,175 +94,173 @@ function getMonthlyReportCalc(userId, year, month) {
   if (!user) throw new Error("کاربر یافت نشد: " + userId);
 
   var logsSheet = ss.getSheetByName("Logs");
-  var logsDisplay = logsSheet.getDataRange().getDisplayValues();
-  var logsRaw = logsSheet.getDataRange().getValues();
+  var logsData = logsSheet.getDataRange().getDisplayValues();
 
   var holidays = getHolidaysList();
   var approvedLeaves = getApprovedLeavesForUser(userId);
   var workWeekSettings = getWorkWeekSettings();
   var dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-  // Ensure month has leading zero for strict startsWith check
-  var mStr = String(month);
-  if (mStr.length === 1) mStr = "0" + mStr;
-  var targetYM = year + "/" + mStr;
+  var targetY = parseInt(year);
+  var targetM = parseInt(month);
   var daysData = {};
 
-  // Process logs into a daily structure
+  // Strict log filtering: Parse dates and handle IDs as strings
+  for (var i = 1; i < logsData.length; i++) {
+    var logUid = String(logsData[i][0]).trim();
+    if (logUid !== userId && Number(logUid) !== Number(userId)) continue;
+
+    var fullDateStr = String(logsData[i][4]).trim(); // YYYY/MM/DD ...
+    var dateParts = fullDateStr.split(' ')[0].split('/');
+    if (dateParts.length < 3) continue;
+
+    var ly = parseInt(dateParts[0]), lm = parseInt(dateParts[1]), ld = parseInt(dateParts[2]);
+    if (ly !== targetY || lm !== targetM) continue;
+
+    var key = ly + "/" + (lm < 10 ? "0" + lm : lm) + "/" + (ld < 10 ? "0" + ld : ld);
+    if (!daysData[key]) daysData[key] = { logs: [] };
+
+    // Use Timestamp from column 3 for accurate duration (it's the real Date object usually, but getDisplayValues turns it into string)
+    // Actually getValues() for timestamp is better
+  }
+
+  // Re-read with getValues for timestamps
+  var logsRaw = logsSheet.getDataRange().getValues();
   for (var i = 1; i < logsRaw.length; i++) {
-    var d = String(logsDisplay[i][4]).split(' ')[0].trim();
-    var logUid = String(logsDisplay[i][0]).trim();
-    if ((logUid == userId || Number(logUid) == Number(userId)) && d.startsWith(targetYM)) {
-      if (!daysData[d]) daysData[d] = { logs: [] };
-      daysData[d].logs.push({
-        act: logsRaw[i][2],
-        ts: new Date(logsRaw[i][3]).getTime(),
-        timeStr: logsDisplay[i][5], // HH:mm:ss from display values
-        isAuto: logsDisplay[i][7]
-      });
-    }
+    var logUid = String(logsRaw[i][0]).trim();
+    if (logUid !== userId && Number(logUid) !== Number(userId)) continue;
+
+    var fullDateStr = String(logsData[i][4]).trim();
+    var dateParts = fullDateStr.split(' ')[0].split('/');
+    if (dateParts.length < 3) continue;
+
+    var ly = parseInt(dateParts[0]), lm = parseInt(dateParts[1]), ld = parseInt(dateParts[2]);
+    if (ly !== targetY || lm !== targetM) continue;
+
+    var key = ly + "/" + (lm < 10 ? "0" + lm : lm) + "/" + (ld < 10 ? "0" + ld : ld);
+    daysData[key].logs.push({
+      act: logsRaw[i][2],
+      ts: new Date(logsRaw[i][3]).getTime(),
+      timeStr: logsData[i][5] // HH:mm:ss
+    });
   }
 
   var summary = [];
-  var totWork = 0;
+  var totWorkMins = 0;
   var countDelay = 0;
   var countAbsence = 0;
-  var totalPenaltyMins = 0;
-  var totalMonthTargetMins = 0; // Will be calculated dynamically
-  var totalDelay = 0;
-  var totalOvertime = 0;
+  var totalMonthTargetMins = 0;
+  var totalOvertimeMins = 0;
+  var totalMissingMins = 0;
 
-  var daysInMonth = getJalaliDaysInMonth(parseInt(year), parseInt(month));
+  var daysInMonth = getJalaliDaysInMonth(targetY, targetM);
 
   for (var d = 1; d <= daysInMonth; d++) {
     var dStr = (d < 10) ? "0" + d : d;
-    var k = targetYM + "/" + dStr;
+    var mStr = (targetM < 10) ? "0" + targetM : targetM;
+    var k = targetY + "/" + mStr + "/" + dStr;
+
     var isH = holidays.some(h => h.trim() == k);
-    var isOnLeave = approvedLeaves.some(l => k >= l.start && k <= l.end); // Check if the date is within a leave period
-    var currentDate = jalaliToGregorian(year, month, dStr);
-    var dayOfWeek = currentDate.getDay(); // 0=Sun, 5=Fri
+    var isOnLeave = approvedLeaves.some(l => k >= l.start && k <= l.end);
+    var gregorianDate = jalaliToGregorian(targetY, targetM, d);
+    var dayOfWeek = gregorianDate.getDay();
 
     var dayTarget = 0;
     if (!isH && !isOnLeave) {
       var dayName = dayNames[dayOfWeek];
       var dayStatus = workWeekSettings[dayName];
-      if (dayStatus === "Full Day") {
-        dayTarget = (parseFloat(user.dailyHours) || 0) * 60;
-      } else if (dayStatus === "Half Day") {
-        dayTarget = (parseFloat(user.thursdayHours) || 0) * 60;
-      }
+      if (dayStatus === "Full Day") dayTarget = (parseFloat(user.dailyHours) || 0) * 60;
+      else if (dayStatus === "Half Day") dayTarget = (parseFloat(user.thursdayHours) || 0) * 60;
     }
     totalMonthTargetMins += dayTarget;
 
     var items = daysData[k] ? daysData[k].logs : [];
-    var workMs = 0, leaveMs = 0, dailyDelayMins = 0, missingExit = false;
-    var dayInsideMins = 0, dayOutsideMins = 0;
+    var dayPresenceMins = 0, dayInsideMins = 0, dayOutsideMins = 0;
+    var missingExit = false;
 
     if (items.length > 0) {
       items.sort((a, b) => a.ts - b.ts);
 
-      var firstEntry = items.find(x => x.act === 'Entry');
-      var sStart = 0;
-      if (firstEntry) {
-        var entMins = timeToMins(firstEntry.timeStr);
-        var s1 = timeToMins(user.shift1Start);
-        var s2 = timeToMins(user.shift2Start);
-        var baseStart = s1;
-        if (s2 > 0 && Math.abs(entMins - s2) < Math.abs(entMins - s1)) baseStart = s2;
-        sStart = baseStart;
-        if (entMins > baseStart) dailyDelayMins = entMins - baseStart;
+      // Shift Windows Setup
+      var s1Start = timeToMins(user.shift1Start);
+      var s2Start = timeToMins(user.shift2Start);
+      var breakTime = 14 * 60; // 14:00
+      var secondShiftMin = 17 * 60; // 17:00
+
+      var insideZones = [];
+      if (dayTarget > 0) {
+        if (s2Start > 0) {
+          insideZones.push({ s: s1Start, e: breakTime });
+          insideZones.push({ s: s2Start, e: 23 * 60 + 59 });
+        } else {
+          insideZones.push({ s: s1Start, e: s1Start + dayTarget });
+        }
       }
-      var sEnd = sStart + dayTarget;
 
-      var lastTime = null, lastAct = null, state = 'OUT';
+      var lastTime = null, state = 'OUT';
       items.forEach(function(l) {
-        var currentTs = l.ts;
-        var currentMins = timeToMins(l.timeStr);
-
         if (l.act == 'Entry') {
-          if (state == 'OUT') { lastTime = currentTs; lastAct = 'Entry'; state = 'IN'; }
-        }
-        else if (state == 'IN') {
-          if (l.act == 'Exit' || l.act == 'AutoExit' || l.act == 'LeaveStart') {
+          if (state == 'OUT') { lastTime = l.ts; state = 'IN'; }
+        } else if (state == 'IN' || state == 'LEAVE') {
+          if (l.act == 'Exit' || l.act == 'AutoExit' || l.act == 'LeaveStart' || l.act == 'LeaveEnd') {
             if (lastTime) {
-              var duration = (currentTs - lastTime) / 60000;
-              if (l.act !== 'AutoExit') {
-                workMs += (currentTs - lastTime);
-                if (dayTarget > 0) {
-                  var intervalStart = timeToMins(items.find(x => x.ts === lastTime).timeStr);
-                  var overlapStart = Math.max(intervalStart, sStart);
-                  var overlapEnd = Math.min(currentMins, sEnd);
-                  var inside = Math.max(0, overlapEnd - overlapStart);
-                  dayInsideMins += inside;
-                  dayOutsideMins += Math.max(0, duration - inside);
-                } else {
-                  dayOutsideMins += duration;
-                }
+              var segStartTs = lastTime;
+              var segEndTs = l.ts;
+              var durationMins = (segEndTs - segStartTs) / 60000;
+
+              if (l.act !== 'AutoExit' && l.act !== 'LeaveEnd') {
+                 // Calculate presence and overlaps
+                 var isPhysical = (state == 'IN');
+                 if (isPhysical) dayPresenceMins += durationMins;
+
+                 // Logic: Time (Presence or Approved Leave) inside shift zones counts as 'Inside'
+                 var segStartMins = timeToMins(items.find(x => x.ts === segStartTs).timeStr);
+                 var segEndMins = timeToMins(l.timeStr);
+
+                 var segInside = 0;
+                 insideZones.forEach(z => {
+                   var overlapS = Math.max(segStartMins, z.s);
+                   var overlapE = Math.min(segEndMins, z.e);
+                   segInside += Math.max(0, overlapE - overlapS);
+                 });
+
+                 dayInsideMins += segInside;
+                 if (isPhysical) {
+                   dayOutsideMins += Math.max(0, durationMins - segInside);
+                 }
               }
             }
-            state = (l.act == 'LeaveStart') ? 'LEAVE' : 'OUT';
-            lastTime = currentTs; lastAct = l.act;
-          }
-        }
-        else if (state == 'LEAVE') {
-          if (l.act == 'LeaveEnd' || l.act == 'Exit' || l.act == 'AutoExit') {
-            if (lastTime) {
-              var duration = (currentTs - lastTime) / 60000;
-              if (l.act !== 'AutoExit') {
-                leaveMs += (currentTs - lastTime);
-                if (dayTarget > 0) {
-                  var intervalStart = timeToMins(items.find(x => x.ts === lastTime).timeStr);
-                  var overlapStart = Math.max(intervalStart, sStart);
-                  var overlapEnd = Math.min(currentMins, sEnd);
-                  var inside = Math.max(0, overlapEnd - overlapStart);
-                  dayInsideMins += inside; // Approved leave time during shift counts as 'inside' (no penalty)
-                  dayOutsideMins += Math.max(0, duration - inside);
-                } else {
-                  dayOutsideMins += duration;
-                }
-              }
-            }
-            state = (l.act == 'LeaveEnd') ? 'IN' : 'OUT';
-            lastTime = (l.act == 'LeaveEnd') ? currentTs : null;
-            lastAct = l.act;
+
+            if (l.act == 'LeaveStart') state = 'LEAVE';
+            else if (l.act == 'LeaveEnd') state = 'IN';
+            else state = 'OUT';
+
+            lastTime = l.ts;
           }
         }
       });
-      if (state == 'IN' || state == 'LEAVE') missingExit = true;
+      if (state !== 'OUT') missingExit = true;
     }
-
-    var wMin = Math.floor(workMs / 60000);
-    totWork += wMin;
-    totalDelay += dailyDelayMins;
 
     var dayMissingMins = Math.max(0, dayTarget - dayInsideMins);
-    totalOvertime += dayOutsideMins;
-    var statusText = "", isAbsent = false;
+    totWorkMins += dayPresenceMins;
+    totalOvertimeMins += dayOutsideMins;
+    totalMissingMins += dayMissingMins;
 
-    if (items.length === 0 && dayTarget > 0) {
-      isAbsent = true;
-      statusText = "غیبت";
-      countAbsence++;
-      totalPenaltyMins += (dayTarget * PENALTY_MULTIPLIER);
-    } else {
-      if (dailyDelayMins > 0) {
-        statusText = "تاخیر: " + dailyDelayMins + "دقیقه";
-        countDelay++;
-        totalPenaltyMins += (dailyDelayMins * PENALTY_MULTIPLIER);
-      } else {
-        statusText = "تکمیل";
-      }
+    var statusText = "تکمیل";
+    if (dayTarget > 0) {
+      if (items.length === 0) { statusText = "غیبت"; countAbsence++; }
+      else if (dayMissingMins > 0) { statusText = "کسر کار: " + Math.round(dayMissingMins) + "دقیقه"; countDelay++; }
     }
-
     if (isH) statusText = "تعطیل رسمی";
     if (missingExit) statusText = "⚠️ عدم خروج";
 
     summary.push({
       date: k,
-      work: fmt(wMin),
-      delay: dailyDelayMins,
-      missing: dayMissingMins,
-      penalty: fmt((dayMissingMins * 3)),
+      work: fmt(Math.round(dayPresenceMins)),
+      delay: Math.round(dayMissingMins),
+      missing: Math.round(dayMissingMins),
+      penalty: fmt(Math.round(dayMissingMins * 3)),
       status: statusText
     });
   }
@@ -281,7 +279,7 @@ function getMonthlyReportCalc(userId, year, month) {
     if (s.missing) totalMissingMins += s.missing;
   });
 
-  var netAdjustmentMins = (totalOvertime * 1.4) - (totalMissingMins * 3);
+  var netAdjustmentMins = (totalOvertimeMins * 1.4) - (totalMissingMins * 3);
   var salaryFromWork = (parseFloat(user.totalMonthlySalary) || 0) + (netAdjustmentMins * minuteRate);
 
   var benefitsData = getMonthlyBenefits(userId, year, month);
@@ -292,10 +290,10 @@ function getMonthlyReportCalc(userId, year, month) {
   var benefitsRevocationReason = "";
   if (countDelay > 5) {
     benefitsStatus = "حذف شده";
-    benefitsRevocationReason = "تاخیر بیش از 5 بار";
+    benefitsRevocationReason = "بیش از 5 کسر کار";
   } else if (countAbsence > 2) {
     benefitsStatus = "حذف شده";
-    benefitsRevocationReason = "غیبت بیش از 2 بار";
+    benefitsRevocationReason = "بیش از 2 غیبت";
   }
 
   return {
@@ -303,25 +301,24 @@ function getMonthlyReportCalc(userId, year, month) {
     stats: {
       daysConfig: getMonthDays(year, month),
       totalSalary: Math.round(finalPay).toLocaleString() + " ریال",
-      totalWork: totWork,
+      totalWork: Math.round(totWorkMins),
       totalPenalty: Math.round(totalMissingMins * 3),
       countDelay: countDelay,
       countAbsence: countAbsence,
       netPerformance: Math.round(totalMonthTargetMins + netAdjustmentMins),
-      totalDelay: totalDelay,
-      totalOvertime: totalOvertime,
-      totalTarget: totalMonthTargetMins,
+      totalDelay: Math.round(totalMissingMins),
+      totalOvertime: Math.round(totalOvertimeMins),
+      totalTarget: Math.round(totalMonthTargetMins),
       benefitsStatus: benefitsStatus,
       benefitsRevocationReason: benefitsRevocationReason,
-      // Additional breakdown for the user/admin
       breakdown: {
         baseSalary: Math.round(parseFloat(user.totalMonthlySalary) || 0).toLocaleString() + " ریال",
         workSalary: Math.round(salaryFromWork).toLocaleString() + " ریال",
         benefitAmount: Math.round(approvedBenefits).toLocaleString() + " ریال",
         benefitStatus: benefitsData.status,
         benefitRaw: benefitsData.amount,
-        totalMissing: totalMissingMins,
-        totalOvertime: Math.round(totalOvertime),
+        totalMissing: Math.round(totalMissingMins),
+        totalOvertime: Math.round(totalOvertimeMins),
         netAdjustment: Math.round(netAdjustmentMins),
         minuteRate: Math.round(minuteRate).toLocaleString()
       }
@@ -808,8 +805,8 @@ function getApprovedLeavesForUser(userId) {
   var data = sheet.getDataRange().getDisplayValues();
   var leaves = [];
   for (var i = 1; i < data.length; i++) {
-    // Check if the user ID matches and the status is 'تایید شده'
-    if (String(data[i][1]) == String(userId) && data[i][5] === 'تایید شده') {
+    var rowUid = String(data[i][1]).trim();
+    if ((rowUid == userId || Number(rowUid) == Number(userId)) && data[i][5] === 'تایید شده') {
       leaves.push({
         start: data[i][3], // StartDate
         end: data[i][4]     // EndDate
