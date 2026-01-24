@@ -36,8 +36,15 @@ function setupSheet() {
   }
 
   // 3. Notifications
-  if (!ss.getSheetByName("Notifications")) {
-    ss.insertSheet("Notifications").appendRow(["Date", "Message", "Status"]);
+  var notifSheet = ss.getSheetByName("Notifications");
+  if (!notifSheet) {
+    notifSheet = ss.insertSheet("Notifications");
+    notifSheet.appendRow(["Date", "Message", "Status", "TargetUserID"]);
+  } else {
+    var headers = notifSheet.getRange(1, 1, 1, Math.max(notifSheet.getLastColumn(), 1)).getValues()[0];
+    if (headers.indexOf("TargetUserID") === -1) {
+      notifSheet.getRange(1, notifSheet.getLastColumn() + 1).setValue("TargetUserID");
+    }
   }
 
   // 4. Holidays
@@ -140,10 +147,12 @@ function getMonthlyReportCalc(userId, year, month) {
           }
         } else if (state == 'IN') {
           if (l.act == 'Exit') { if (lastTime) workMs += (l.ts - lastTime); state = 'OUT'; lastTime = null; }
+          else if (l.act == 'AutoExit') { state = 'OUT'; lastTime = null; }
           else if (l.act == 'LeaveStart') { if (lastTime) workMs += (l.ts - lastTime); state = 'LEAVE'; lastTime = l.ts; }
         } else if (state == 'LEAVE') {
           if (l.act == 'LeaveEnd') { if (lastTime) leaveMs += (l.ts - lastTime); state = 'IN'; lastTime = l.ts; }
           else if (l.act == 'Exit') { if (lastTime) leaveMs += (l.ts - lastTime); state = 'OUT'; lastTime = null; }
+          else if (l.act == 'AutoExit') { state = 'OUT'; lastTime = null; }
         }
       });
       if (state == 'IN' || state == 'LEAVE') missingExit = true;
@@ -225,11 +234,12 @@ function getMonthlyReportCalc(userId, year, month) {
     details: summary,
     stats: {
       daysConfig: getMonthDays(year, month),
-      totalSalary: Math.round(finalPay).toLocaleString(),
+      totalSalary: Math.round(finalPay).toLocaleString() + " ریال",
       totalWork: totWork,
       totalPenalty: totalPenaltyMins,
       countDelay: countDelay,
       countAbsence: countAbsence,
+      netPerformance: finalDifference,
       netBalance: Math.abs(finalDifference),
       netSign: finalDifference >= 0 ? "+" : "-",
       totalDelay: totalDelay,
@@ -432,7 +442,7 @@ function getJalaliDate(d) {
   return j;
 }
 
-function translateAction(a) { if (a == 'Entry') return 'ورود'; if (a == 'Exit') return 'خروج'; if (a == 'LeaveStart') return 'شروع مرخصی'; return 'پایان مرخصی'; }
+function translateAction(a) { if (a == 'Entry') return 'ورود'; if (a == 'Exit') return 'خروج'; if (a == 'LeaveStart') return 'شروع مرخصی'; if (a == 'AutoExit') return 'خروج خودکار'; return 'پایان مرخصی'; }
 function fmt(m) { var h = Math.floor(m / 60); var n = m % 60; return h + ":" + (n < 10 ? "0" + n : n); }
 
 // --- Admin Functions (Updated) ---
@@ -593,11 +603,11 @@ function getGroupedLogs(userId, year, month) {
   }
 
   var res = [];
-  // Sort keys numerically based on the day, and from latest to earliest date
+  // Sort keys numerically based on the day (Ascending: Day 1 at the top)
   var keys = Object.keys(grouped).sort((a, b) => {
     var dayA = parseInt(a.split('/')[2]);
     var dayB = parseInt(b.split('/')[2]);
-    return dayB - dayA; // Sort in descending order (e.g., day 31, 30, 29...)
+    return dayA - dayB;
   });
 
   keys.forEach(k => {
@@ -615,6 +625,7 @@ function submitLeaveRequest(userInfo, startDate, endDate) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("LeaveRequests");
   var newId = new Date().getTime(); // Simple unique ID
   sheet.appendRow([newId, userInfo.id, userInfo.name, startDate, endDate, "در انتظار"]);
+  addNotification('admin', "درخواست مرخصی جدید از طرف " + userInfo.name);
   return { success: true, message: "درخواست مرخصی شما ثبت شد و در انتظار تایید مدیر است." };
 }
 
@@ -644,6 +655,8 @@ function updateLeaveStatus(requestId, newStatus) {
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]) == String(requestId)) {
       sheet.getRange(i + 1, 6).setValue(newStatus); // Column 6 is 'Status'
+      var userId = data[i][1];
+      addNotification(userId, "درخواست مرخصی شما " + newStatus + " شد.");
       return { success: true };
     }
   }
@@ -667,5 +680,68 @@ function getApprovedLeavesForUser(userId) {
   return leaves;
 }
 
-function getUnreadNotifications() { var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName("Notifications"); if (!sheet) return []; var data = sheet.getDataRange().getValues(); var unreadMessages = []; for (var i = data.length - 1; i > 0; i--) { if (data[i][2] == "Unread") { unreadMessages.push(data[i][1]); } } return unreadMessages; }
-function markNotificationsAsRead() { var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName("Notifications"); if (!sheet) return; var data = sheet.getDataRange().getValues(); for (var i = 1; i < data.length; i++) { if (data[i][2] == "Unread") { sheet.getRange(i + 1, 3).setValue("Read"); } } }
+function addNotification(userId, message) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Notifications");
+  if (!sheet) return;
+  sheet.appendRow([new Date(), message, "Unread", userId]);
+}
+
+function getUnreadNotifications(userId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Notifications");
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getDisplayValues();
+  var unreadMessages = [];
+  for (var i = data.length - 1; i > 0; i--) {
+    if (data[i][2] == "Unread" && (String(data[i][3]) == String(userId) || (userId === 'admin' && String(data[i][3]) == 'admin'))) {
+      unreadMessages.push({
+        msg: data[i][1],
+        date: data[i][0]
+      });
+    }
+  }
+  return unreadMessages;
+}
+
+function markNotificationsAsRead(userId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Notifications");
+  if (!sheet) return;
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][2] == "Unread" && (String(data[i][3]) == String(userId) || (userId === 'admin' && String(data[i][3]) == 'admin'))) {
+      sheet.getRange(i + 1, 3).setValue("Read");
+    }
+  }
+}
+
+function autoExitCheck() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var logsSheet = ss.getSheetByName("Logs");
+  var logs = logsSheet.getDataRange().getValues();
+  var now = new Date();
+  var users = getEmployeesList();
+
+  users.forEach(user => {
+    var lastAction = null;
+    var lastTime = null;
+    for (var i = logs.length - 1; i > 0; i--) {
+      if (String(logs[i][0]) == String(user.id)) {
+        lastAction = logs[i][2];
+        lastTime = new Date(logs[i][3]);
+        break;
+      }
+    }
+    if (lastAction === 'Entry' || lastAction === 'LeaveEnd') {
+      var diffHours = (now - lastTime) / (1000 * 60 * 60);
+      if (diffHours > 15) {
+        var jalali = getJalaliDate(now);
+        var timeStr = Utilities.formatDate(now, "Asia/Tehran", "HH:mm:ss");
+        logsSheet.appendRow([user.id, user.name, "AutoExit", now, jalali, timeStr, "خروج خودکار سیستم", "System"]);
+        addNotification(user.id, "خروج خودکار ثبت شد (بیش از ۱۵ ساعت حضور)");
+        addNotification('admin', "خروج خودکار برای " + user.name + " ثبت شد.");
+      }
+    }
+  });
+}

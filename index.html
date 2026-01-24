@@ -98,7 +98,10 @@
         <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="fas fa-user"></i></div>
         <h5 id="uName" class="m-0 fw-bold">کارمند</h5>
       </div>
-      <button onclick="doLogout()" class="btn btn-outline-danger btn-sm px-3">خروج</button>
+      <div class="d-flex align-items-center gap-2">
+        <button onclick="openNotifications(curU.id)" class="notif-btn" title="پیام‌ها"><i class="fas fa-bell"></i><span id="uNotifBadge" class="notif-badge hidden">0</span></button>
+        <button onclick="doLogout()" class="btn btn-outline-danger btn-sm px-3">خروج</button>
+      </div>
     </div>
     <div class="pro-card text-center py-4"><small class="text-muted text-uppercase">وضعیت کنونی</small><h2 id="uStat" class="mt-2 mb-0 fw-bold">-</h2></div>
 
@@ -117,11 +120,18 @@
 
     <div class="pro-card">
       <h6 class="mb-3 border-bottom border-secondary pb-2">ثبت مرخصی روزانه</h6>
-      <div class="row g-2">
-        <div class="col-6"><label class="small text-muted">از تاریخ</label><input type="text" id="leaveStartDate" class="form-control text-center" placeholder="YYYY/MM/DD" dir="ltr"></div>
-        <div class="col-6"><label class="small text-muted">تا تاریخ</label><input type="text" id="leaveEndDate" class="form-control text-center" placeholder="YYYY/MM/DD" dir="ltr"></div>
+      <div class="row g-1 align-items-end">
+        <div class="col-12 mb-2"><small class="text-muted">از تاریخ:</small></div>
+        <div class="col-4"><select id="lsY" class="form-select px-1 text-center small"></select></div>
+        <div class="col-4"><select id="lsM" class="form-select px-1 text-center small"></select></div>
+        <div class="col-4"><select id="lsD" class="form-select px-1 text-center small"></select></div>
+
+        <div class="col-12 my-2 mt-3"><small class="text-muted">تا تاریخ:</small></div>
+        <div class="col-4"><select id="leY" class="form-select px-1 text-center small"></select></div>
+        <div class="col-4"><select id="leM" class="form-select px-1 text-center small"></select></div>
+        <div class="col-4"><select id="leD" class="form-select px-1 text-center small"></select></div>
       </div>
-      <button onclick="submitLeaveRequest()" class="btn btn-info w-100 mt-3">ارسال درخواست</button>
+      <button onclick="submitLeaveRequest()" class="btn btn-info w-100 mt-3">ارسال درخواست مرخصی</button>
     </div>
 
     <button onclick="openUserDash()" class="btn btn-primary w-100 py-3 mb-5">مشاهده کارنامه ماهانه</button>
@@ -135,10 +145,12 @@
 
       <div id="uDash" class="hidden">
         <div class="row g-3 mb-4">
-          <div class="col-6 col-md-3"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div><div class="stat-label">موظفی</div><div class="stat-value" id="uTarg">0</div></div></div>
-          <div class="col-6 col-md-3"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-label">جریمه (دقیقه)</div><div class="stat-value text-danger" id="uPenalty">0</div></div></div>
-          <div class="col-6 col-md-3"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-label">کارکرد مفید</div><div class="stat-value text-info" id="uWork">0</div></div></div>
-          <div class="col-6 col-md-3"><div class="stat-card card-green"><div class="stat-icon"><i class="fas fa-wallet"></i></div><div class="stat-label">حقوق نهایی</div><div class="stat-value text-success" id="uSal">0</div></div></div>
+          <div class="col-6 col-md-4"><div class="stat-card card-orange"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div><div class="stat-label">ساعت موظفی</div><div class="stat-value" id="uTarg">0</div></div></div>
+          <div class="col-6 col-md-4"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-label">حضور واقعی</div><div class="stat-value text-info" id="uWork">0</div></div></div>
+          <div class="col-6 col-md-4"><div class="stat-card card-blue"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-label">کارکرد نهایی</div><div class="stat-value" id="uNet">0</div></div></div>
+          <div class="col-6 col-md-4"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-user-clock"></i></div><div class="stat-label">تعداد تاخیر</div><div class="stat-value text-danger" id="uDelayCount">0</div></div></div>
+          <div class="col-6 col-md-4"><div class="stat-card card-red"><div class="stat-icon"><i class="fas fa-user-times"></i></div><div class="stat-label">تعداد غیبت</div><div class="stat-value text-danger" id="uAbsenceCount">0</div></div></div>
+          <div class="col-12 col-md-4"><div class="stat-card card-green"><div class="stat-icon"><i class="fas fa-wallet"></i></div><div class="stat-label">مبلغ حقوق پرداختی</div><div class="stat-value text-success" style="font-size: 1.3rem" id="uSal">0</div></div></div>
         </div>
 
         <div class="table-container"><div class="table-responsive"><table class="table-custom w-100 text-center"><thead><tr><th>تاریخ</th><th>کارکرد</th><th>تاخیر (دقیقه)</th><th class="text-danger">جریمه (کسر)</th></tr></thead><tbody id="uTbMain"></tbody></table></div></div>
@@ -151,7 +163,7 @@
     <div class="pro-card d-flex justify-content-between align-items-center mb-4">
       <h4 class="m-0 fw-bold text-white">داشبورد مدیریت</h4>
       <div class="d-flex align-items-center gap-2">
-        <button onclick="checkNotifications()" class="notif-btn" title="پیام‌ها"><i class="fas fa-bell"></i><span id="notifBadge" class="notif-badge hidden">0</span></button>
+        <button onclick="openNotifications('admin')" class="notif-btn" title="پیام‌ها"><i class="fas fa-bell"></i><span id="notifBadge" class="notif-badge hidden">0</span></button>
         <button onclick="openLeaveRequests()" class="btn btn-outline-warning btn-sm px-3">درخواست‌های مرخصی</button>
         <button onclick="openCalendarSettings()" class="btn btn-outline-info btn-sm px-3">تنظیمات تقویم</button>
         <button onclick="doLogout()" class="btn btn-danger btn-sm px-3">خروج</button>
@@ -322,50 +334,77 @@
       }).withFailureHandler(handleError).loginUser(u,p);
     }
 
-    function checkNotifications() {
+    function openNotifications(userId = 'admin') {
+      checkNotifications(userId);
+      mAlert.show();
+    }
+    function checkNotifications(userId = 'admin') {
       google.script.run.withSuccessHandler(msgs => {
-        var badge = document.getElementById('notifBadge');
+        var badge = (userId === 'admin') ? document.getElementById('notifBadge') : document.getElementById('uNotifBadge');
         if(msgs.length > 0) {
           badge.innerText = msgs.length;
           badge.classList.remove('hidden');
           var h = "";
-          msgs.forEach(m => { h += `<div class="mb-3 border-bottom border-secondary pb-2"><i class="fas fa-exclamation-circle text-warning me-2"></i><span class="text-white">${m}</span></div>`; });
+          msgs.forEach(m => {
+            h += `<div class="mb-3 border-bottom border-secondary pb-2">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                      <span><i class="fas fa-bell me-1"></i> اعلان</span>
+                      <span>${m.date}</span>
+                    </div>
+                    <span class="text-white fw-bold">${m.msg}</span>
+                  </div>`;
+          });
           document.getElementById('notifList').innerHTML = h;
         } else {
           badge.classList.add('hidden');
           document.getElementById('notifList').innerHTML = '<div class="text-center text-muted">پیام جدیدی وجود ندارد</div>';
         }
-      }).getUnreadNotifications();
+      }).getUnreadNotifications(userId);
     }
-    function ackNotif() { sh(); google.script.run.withSuccessHandler(() => { hd(); mAlert.hide(); checkNotifications(); }).markNotificationsAsRead(); }
-    document.querySelector('.notif-btn').onclick = function() { checkNotifications(); mAlert.show(); };
+    function ackNotif() {
+      var uid = (curU && curU.role === 'admin') ? 'admin' : curU.id;
+      sh(); google.script.run.withSuccessHandler(() => { hd(); mAlert.hide(); checkNotifications(uid); }).markNotificationsAsRead(uid);
+    }
 
-    function initUs(u){document.getElementById('viewUser').classList.remove('hidden');document.getElementById('uName').innerText=u.name;updB(u.summary.status);renderToday(u.summary.history);}
+    function initUs(u){
+      document.getElementById('viewUser').classList.remove('hidden');
+      document.getElementById('uName').innerText=u.name;
+      updB(u.summary.status);
+      renderToday(u.summary.history);
+      checkNotifications(u.id);
+      populateLeaveDropdowns();
+    }
     function renderToday(l){var h="";if(l.length==0)h='<div class="text-center text-muted py-3 small">خالی</div>';else l.forEach(x=>{var b=x.raw=='Entry'?'bg-success':(x.raw=='Exit'?'bg-danger':'bg-warning');h+=`<div class="timeline-item"><div><span class="badge ${b} rounded-pill">${x.action}</span></div><span class="text-info fw-bold" style="font-family:monospace">${x.time}</span></div>`});document.getElementById('todayLogsList').innerHTML=h;}
     function updB(s){var b1=document.querySelector('.act-entry'),b2=document.querySelector('.act-leave'),b3=document.querySelector('.act-exit'),st=document.getElementById('uStat');b1.disabled=false;b2.disabled=false;b3.disabled=false;if(s=='Exit'){st.innerHTML='<span class="text-exit">خارج</span>';b2.disabled=true;b3.disabled=true;}else if(s.includes('LeaveStart')){st.innerHTML='<span class="text-leave">مرخصی</span>';b1.disabled=true;b3.disabled=true;b2.innerText='پایان مرخصی';}else{st.innerHTML='<span class="text-entry">حاضر</span>';b1.disabled=true;b2.innerText='مرخصی ساعتی';}}
     function act(t){sh();google.script.run.withSuccessHandler(r=>{hd();if(r.success){if(t=='Exit'){showMessage('خروج شما با موفقیت ثبت شد.', 'success'); doLogout();}else{updB(r.newStatus);renderToday(r.summary.history);}}else showMessage(r.message, 'error')}).withFailureHandler(handleError).registerAction(curU.id,curU.name,t);}
     function openUserDash(){document.getElementById('viewUser').classList.add('hidden');document.getElementById('viewUserDash').classList.remove('hidden');}
     function backToUserPanel(){document.getElementById('viewUserDash').classList.add('hidden');document.getElementById('viewUser').classList.remove('hidden');}
 
+    function populateLeaveDropdowns() {
+      const years = [1403, 1404, 1405, 1406];
+      const months = [{v:'01',n:'فروردین'},{v:'02',n:'اردیبهشت'},{v:'03',n:'خرداد'},{v:'04',n:'تیر'},{v:'05',n:'مرداد'},{v:'06',n:'شهریور'},{v:'07',n:'مهر'},{v:'08',n:'آبان'},{v:'09',n:'آذر'},{v:'10',n:'دی'},{v:'11',n:'بهمن'},{v:'12',n:'اسفند'}];
+      const sY=document.getElementById('lsY'), sM=document.getElementById('lsM'), sD=document.getElementById('lsD');
+      const eY=document.getElementById('leY'), eM=document.getElementById('leM'), eD=document.getElementById('leD');
+      if(!sY.options.length){
+        [sY,eY].forEach(s=>years.forEach(y=>{var o=document.createElement('option');o.value=y;o.innerText=y;if(y==1404)o.selected=true;s.appendChild(o)}));
+        [sM,eM].forEach(s=>months.forEach(m=>{var o=document.createElement('option');o.value=m.v;o.innerText=m.n;s.appendChild(o)}));
+        const upd=(yE,mE,dE)=>{
+          const y=parseInt(yE.value), m=parseInt(mE.value);
+          let days = (m<=6)?31:30;
+          if(m==12){ const rem=(y-474)%33; days=([1,5,9,13,17,22,26,30].indexOf(rem)!==-1)?30:29; }
+          dE.innerHTML=''; for(let i=1;i<=days;i++){ let v=i<10?'0'+i:i; let o=document.createElement('option');o.value=v;o.innerText=i;dE.appendChild(o);}
+        };
+        [ [sY,sM,sD], [eY,eM,eD] ].forEach(g=>{ g[0].onchange=()=>upd(...g); g[1].onchange=()=>upd(...g); upd(...g); });
+      }
+    }
+
     function submitLeaveRequest() {
-      var startDate = document.getElementById('leaveStartDate').value.trim();
-      var endDate = document.getElementById('leaveEndDate').value.trim();
-      if (!startDate || !endDate) {
-        showMessage('لطفاً هر دو تاریخ شروع و پایان را وارد کنید.', 'error');
-        return;
-      }
-      // Basic format validation
-      var dateFormat = /^\d{4}\/\d{2}\/\d{2}$/;
-      if (!dateFormat.test(startDate) || !dateFormat.test(endDate)) {
-        showMessage('فرمت تاریخ باید YYYY/MM/DD باشد.', 'error');
-        return;
-      }
+      var startDate = `${document.getElementById('lsY').value}/${document.getElementById('lsM').value}/${document.getElementById('lsD').value}`;
+      var endDate = `${document.getElementById('leY').value}/${document.getElementById('leM').value}/${document.getElementById('leD').value}`;
       sh();
       google.script.run.withSuccessHandler(r => {
         hd();
         showMessage(r.message, 'success');
-        document.getElementById('leaveStartDate').value = '';
-        document.getElementById('leaveEndDate').value = '';
       }).withFailureHandler(handleError).submitLeaveRequest(curU, startDate, endDate);
     }
 
@@ -378,7 +417,10 @@
         document.getElementById('uSal').innerText = r.stats.totalSalary;
         document.getElementById('uWork').innerText = fmtMins(r.stats.totalWork);
         document.getElementById('uTarg').innerText = fmtMins(r.stats.totalTarget);
-        document.getElementById('uPenalty').innerText = fmtMins(r.stats.totalPenalty);
+        document.getElementById('uNet').innerText = fmtMins(r.stats.netPerformance);
+        document.getElementById('uDelayCount').innerText = r.stats.countDelay;
+        document.getElementById('uAbsenceCount').innerText = r.stats.countAbsence;
+
         var h = '';
         r.details.forEach(d => { h += `<tr><td>${d.date}</td><td>${d.work}</td><td>${d.delay}</td><td class="text-danger">${d.penalty}</td><td class="text-white small">${d.status}</td></tr>` });
         document.getElementById('uTbMain').innerHTML = h || '<tr><td colspan=5>خالی</td></tr>';
@@ -509,11 +551,7 @@
     function initializeCalendar() {
         var calendarEl = document.getElementById('holidayCalendar');
         if (!calendarEl) return;
-
-        // Destroy previous instance if it exists to prevent memory leaks
-        if (calendar) {
-            calendar.destroy();
-        }
+        if (calendar) calendar.destroy();
 
         sh();
         google.script.run.withSuccessHandler(holidays => {
@@ -529,18 +567,23 @@
                 }));
             }
 
+            // Calculate start and end of current Jalali month for the view
+            const startOfMonth = moment().startOf('jMonth');
+            const endOfMonth = moment().endOf('jMonth');
+            const startG = startOfMonth.format('YYYY-MM-DD');
+            const endG = endOfMonth.clone().add(1, 'days').format('YYYY-MM-DD');
+
             calendar = new FullCalendar.Calendar(calendarEl, {
-                headerToolbar: {
-                    right: 'prev,next today',
-                    center: 'title',
-                    left: ''
-                },
+                headerToolbar: { right: 'prev,next today', center: 'title', left: '' },
                 locale: 'fa',
+                firstDay: 6, // Saturday
+                initialDate: startG,
                 dayCellDidMount: function(arg) {
                     arg.el.setAttribute('data-jalali-date', moment(arg.date).format('jYYYY/jMM/jDD'));
                 },
                 initialView: 'dayGridMonth',
-                showNonCurrentDates: false, //  Hides days from other months
+                showNonCurrentDates: false,
+                fixedWeekCount: false,
                 events: holidayEvents,
                 dateClick: function(info) {
                     const clickedDate = moment(info.date).format('jYYYY/jMM/jDD');
