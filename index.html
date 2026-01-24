@@ -59,8 +59,8 @@
     .hidden { display: none !important; }
     .modal-content { background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); }
     .btn-close { filter: invert(1); }
-    #mdlUser .text-muted, #mdlCalendar .text-muted, #mdlRules .text-muted {
-      color: #d1d5db !important;
+    #mdlUser .text-muted, #mdlCalendar .text-muted, #mdlRules .text-muted, #mdlAlert .text-muted {
+      color: #fbbf24 !important; /* Yellow for high contrast */
     }
     .modal-body { color: #ffffff !important; }
     /* FullCalendar Customizations */
@@ -483,23 +483,23 @@
       google.script.run.withSuccessHandler(r => {
         hd();
         document.getElementById('uDash').classList.remove('hidden');
-        document.getElementById('uSal').innerText = r.stats.totalSalary + " ریال";
+        document.getElementById('uSal').innerText = r.stats.totalSalary;
         document.getElementById('uWork').innerText = fmtMins(r.stats.totalWork);
         document.getElementById('uTarg').innerText = fmtMins(r.stats.totalTarget);
         document.getElementById('uNet').innerText = fmtMins(r.stats.netPerformance);
         document.getElementById('uDelayCount').innerText = r.stats.countDelay;
         document.getElementById('uAbsenceCount').innerText = r.stats.countAbsence;
-        document.getElementById('uBenefitValue').innerText = r.stats.breakdown.benefitAmount + " ریال";
+        document.getElementById('uBenefitValue').innerText = r.stats.breakdown.benefitAmount;
 
         // Populate Breakdown Modal
-        document.getElementById('bBase').innerText = r.stats.breakdown.baseSalary + " ریال";
+        document.getElementById('bBase').innerText = r.stats.breakdown.baseSalary;
         document.getElementById('bRate').innerText = r.stats.breakdown.minuteRate + " ریال";
         document.getElementById('bMissing').innerText = fmtMins(r.stats.breakdown.totalMissing);
         document.getElementById('bOvertime').innerText = fmtMins(r.stats.breakdown.totalOvertime);
         document.getElementById('bAdj').innerText = fmtMins(r.stats.breakdown.netAdjustment);
-        document.getElementById('bWorkSal').innerText = r.stats.breakdown.workSalary + " ریال";
-        document.getElementById('bBen').innerText = r.stats.breakdown.benefitAmount + " ریال (" + r.stats.breakdown.benefitStatus + ")";
-        document.getElementById('bFinal').innerText = r.stats.totalSalary + " ریال";
+        document.getElementById('bWorkSal').innerText = r.stats.breakdown.workSalary;
+        document.getElementById('bBen').innerText = r.stats.breakdown.benefitAmount + " (" + r.stats.breakdown.benefitStatus + ")";
+        document.getElementById('bFinal').innerText = r.stats.totalSalary;
 
         var h = '';
         r.details.forEach(d => { h += `<tr><td>${d.date}</td><td>${d.work}</td><td>${d.delay}</td><td class="text-danger">${d.penalty}</td><td class="text-white small">${d.status}</td></tr>` });
@@ -544,8 +544,8 @@
         document.getElementById('vTarg').innerText = fmtMins(r.stats.totalTarget);
         document.getElementById('vWork').innerText = fmtMins(r.stats.totalWork);
         document.getElementById('vNet').innerText = fmtMins(r.stats.netPerformance);
-        document.getElementById('vPenalty').innerText = fmtMins(r.stats.breakdown.latenessPenalty);
-        document.getElementById('vSal').innerText = r.stats.totalSalary + " ریال";
+        document.getElementById('vPenalty').innerText = fmtMins(r.stats.totalPenalty);
+        document.getElementById('vSal').innerText = r.stats.totalSalary;
 
         document.getElementById('vBenAmount').value = r.stats.breakdown.benefitRaw;
         document.getElementById('vBenStatus').innerText = "وضعیت مزایا: " + r.stats.breakdown.benefitStatus;
